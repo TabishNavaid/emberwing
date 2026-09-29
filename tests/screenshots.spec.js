@@ -25,8 +25,15 @@ for (const [label, viewport, dpr] of SIZES) {
     test(`${scene} @${t}s ${label}`, async ({ browser }) => {
       const ctx = await browser.newContext({ viewport, deviceScaleFactor: dpr });
       const page = await ctx.newPage();
+      // make shots repeatable so before/after diffs mean something:
+      // seed Math.random (camera shake, audio) and never run the real-time loop, we step by hand
+      await page.addInitScript(() => {
+        let s = 12345;
+        Math.random = () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648;
+        window.requestAnimationFrame = () => 0;
+      });
       await page.goto(`./?seed=3&scene=${scene}`);
-      await page.waitForFunction(() => document.body.classList.contains('ready'));
+      await page.waitForFunction(() => document.body.classList.contains('ready'), null, { polling: 50 });
       await page.evaluate(([t, ptr]) => {
         const w = window.__emberwing;
         const inp = w.game.input;
