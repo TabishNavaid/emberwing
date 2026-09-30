@@ -2,7 +2,7 @@ import { VIEW, DUR, FLIGHT, PAL, MUSIC } from '../config.js';
 import { clamp, lerp, approach, glow, ease, mix, invLerp, mulberry32 } from '../core/util.js';
 import { drawText, drawTextPop } from '../art/font.js';
 import { drawKnotRing, drawKnotBand } from '../art/knotwork.js';
-import { drawEmber, flapPose, FLOCK_COLORS } from '../art/ember.js';
+import { drawEmber, FLOCK_COLORS } from '../art/ember.js';
 import { drawSky, SKY, makeStars, drawStars, drawSea, drawStone, drawStack, drawCloud, drawWind, drawRays, drawRune, makeCliff } from '../art/world.js';
 import { drawHorn, drawSoundLines, drawCursorLight } from '../art/icons.js';
 import { drawBaseAurora } from '../art/aurora.js';
@@ -21,6 +21,10 @@ export class Flight {
     this.vy = 0;
     this.camX = 0;
     this.loopT = 0;
+    this.cheerT = 0;
+    this.rollT = 0;
+    this.streak = 0;
+    this.flapPh = 0;
     this.squash = 0;
     this.path = [];
     this.pathT = 0;
@@ -132,6 +136,13 @@ export class Flight {
 
     if (this.loopT > 0) this.loopT = Math.max(0, this.loopT - dt);
     this.squash = approach(this.squash, 0, 6, dt);
+    this.cheerT = Math.max(0, this.cheerT - dt);
+    if (this.rollT > 0) {
+      this.rollT = Math.max(0, this.rollT - dt);
+      if (g.rng() < dt * 40) g.particles.add({ x: this.ex - 10, y: this.ey + (g.rng() - 0.5) * 16, vx: -60, vy: 0, life: 0.5, color: g.rng() < 0.5 ? PAL.gold2 : PAL.teal, kind: 'spark', size: 1 });
+    }
+    // accumulate the phase, t * speed jumps the wings whenever the speed changes
+    this.flapPh += dt * (this.vy < -20 ? 4.5 : lerp(3.6, 2.4, conf));
 
     for (const ring of this.rings) {
       if (ring.state !== 'coming') {
@@ -148,12 +159,17 @@ export class Flight {
         const gold = ring.p > FLIGHT.WOBBLY_UNTIL;
         if (hit) {
           this.squash = 1;
+          this.cheerT = 0.4;
+          // every 3 in a row earns a barrel roll
+          this.streak++;
+          if (this.streak % 3 === 0) this.rollT = 0.7;
           g.audio.cue('ring');
           g.cam.shake(1 + ring.p * 2);
           g.particles.burst(rx, ring.y, 26 + Math.round(ring.p * 20), { speed: 80 + ring.p * 60, colors: gold ? [PAL.gold, PAL.gold2, '#fff6d8'] : ['#bff8ee', PAL.teal, '#ffffff'], kind: 'spark', size: 2, drag: 2.5, life: 0.8 }, g.rng);
         } else {
           // a miss is never a fail: ember does a loop and the ring's sparkles fly into it anyway
           this.loopT = 0.75;
+          this.streak = 0;
           for (let k = 0; k < 14; k++) {
             const a = (k / 14) * Math.PI * 2;
             g.particles.add({ x: rx + Math.cos(a) * r, y: ring.y + Math.sin(a) * r, vx: (this.ex - rx) * 1.6, vy: (this.ey - ring.y) * 1.6, life: 0.6, color: gold ? PAL.gold2 : '#bff8ee', kind: 'spark', size: 1, drag: 0.5 });
@@ -381,14 +397,19 @@ export class Flight {
       y -= Math.sin(k * Math.PI) * 18;
       x += Math.sin(k * Math.PI * 2) * 8;
     }
-    const climbing = this.vy < -20;
-    const flapSpeed = climbing ? 4.5 : lerp(3.6, 2.4, conf);
     const s = this.squash;
+    let sy = 1 - s * 0.2;
+    if (this.cheerT > 0) y -= Math.sin((this.cheerT / 0.4) * Math.PI) * 5; // little hop
+    // barrel roll: squash the body through zero and out upside down, reads as a roll in 2d
+    if (this.rollT > 0) sy *= Math.cos((1 - this.rollT / 0.7) * Math.PI * 2);
+    let mood = 'fly';
+    if (this.loopT > 0 || this.rollT > 0) mood = 'joy';
+    else if (this.cheerT > 0) mood = 'happy';
+    const glide = this.vy > 60 && conf > 0.4;
     glow(ctx, x - 6, y - 6, 26, PAL.teal, 0.3 + conf * 0.2);
     drawEmber(ctx, x, y, {
-      mood: this.loopT > 0 || s > 0.3 ? 'joy' : 'fly',
-      wing: this.vy > 60 && conf > 0.4 ? 'mid' : flapPose(t * flapSpeed),
-      glow: 2, rot, sx: 1 + s * 0.25, sy: 1 - s * 0.2,
+      mood, glow: 2, rot, sx: 1 + s * 0.25, sy, life: t,
+      ...(glide ? { wing: 'mid' } : { flap: this.flapPh }),
     });
   }
 }
