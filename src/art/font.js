@@ -79,20 +79,25 @@ function paint(ctx, str, x, y, scale, color) {
   }
 }
 
+// outline thickness in internal px. it used to be 1 font-pixel, which at scale 5-7 turned
+// into big black slabs around EMBER! and ACT II. 2px still reads over fog and aurora
+const outlineW = (scale, outline) => (outline ? Math.min(scale, 2) : 0);
+
 const cache = new Map();
 // dark outline so text reads over fog, sky or aurora. rendered once and cached
 function textSprite(str, scale, color, outline) {
   const key = `${str}|${scale}|${color}|${outline}`;
   let c = cache.get(key);
   if (c) return c;
-  const o = outline ? scale : 0;
+  const o = outlineW(scale, outline);
   const w = textWidth(str, scale) + o * 2;
   const h = textHeight(scale) + o * 2;
   let g;
-  [c, g] = makeCanvas(w, h + (outline ? scale : 0));
+  [c, g] = makeCanvas(w, h + o);
   if (outline) {
+    // dy goes to 2 for a little drop shadow
     for (let dy = -1; dy <= 2; dy++)
-      for (let dx = -1; dx <= 1; dx++) paint(g, str, o + dx * scale, o + dy * scale, scale, outline);
+      for (let dx = -1; dx <= 1; dx++) paint(g, str, o + dx * o, o + dy * o, scale, outline);
   }
   paint(g, str, o, o, scale, color);
   if (cache.size > 400) cache.clear(); // debug overlay makes a new string every frame
@@ -103,7 +108,7 @@ function textSprite(str, scale, color, outline) {
 // y is the top of the letters
 export function drawText(ctx, str, x, y, { scale = 1, color = '#fff', outline = '#0b0f1a', align = 'left', alpha = 1 } = {}) {
   const s = textSprite(str, scale, color, outline);
-  const o = outline ? scale : 0;
+  const o = outlineW(scale, outline);
   let dx = x - o;
   if (align === 'center') dx = x - Math.floor(textWidth(str, scale) / 2) - o;
   else if (align === 'right') dx = x - textWidth(str, scale) - o;

@@ -278,7 +278,7 @@ export class Flight {
     if (rise > 0.1) drawText(ctx, 'HOME IS UP THERE', W / 2, 236, { scale: 2, align: 'center', color: '#bff8ee', alpha: clamp(rise * 3) });
 
     this.drawTether(ctx, g.input.x, g.input.y, t);
-    drawCursorLight(ctx, g.input.x, g.input.y, t, 0.8);
+    drawCursorLight(ctx, g.input.x, g.input.y, t, 1);
   }
 
   // lighthouse -> home track across the top. someone who glances over mid-flight gets
@@ -286,7 +286,7 @@ export class Flight {
   drawJourney(ctx, p, t) {
     const x0 = 150, x1 = 330, y = 13;
     const px = Math.round(lerp(x0, x1, p));
-    drawKnotBand(ctx, x0, y, x1 - x0, { color: 'rgba(255,243,214,0.35)', period: 10, amp: 2 });
+    drawKnotBand(ctx, x0, y, x1 - x0, { color: 'rgba(255,243,214,0.5)', period: 10, amp: 2 });
     if (px > x0) drawKnotBand(ctx, x0, y, px - x0, { color: PAL.gold, period: 10, amp: 2 });
     // tiny lighthouse
     ctx.fillStyle = '#e8e0cc';

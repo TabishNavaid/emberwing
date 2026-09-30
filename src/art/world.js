@@ -360,8 +360,8 @@ export function drawFog(ctx, w, h, t, holes = [], o = {}) {
   }
   const [c, g] = f;
   const alpha = o.alpha ?? 0.92;
-  const color = o.color ?? '#46586e';
-  const color2 = o.color2 ?? '#6a8098';
+  const color = o.color ?? '#141c2a';
+  const color2 = o.color2 ?? '#2a3850';
   g.globalCompositeOperation = 'source-over';
   g.clearRect(0, 0, w, h);
   g.fillStyle = rgba(color, alpha);

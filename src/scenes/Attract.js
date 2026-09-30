@@ -1,7 +1,7 @@
 import { VIEW, DUR, PAL } from '../config.js';
 import { makeCanvas, glow, clamp, ease, lerp } from '../core/util.js';
 import { Dwell } from '../input/Dwell.js';
-import { drawText, textWidth } from '../art/font.js';
+import { drawText } from '../art/font.js';
 import { drawKnotRing, drawKnotFrame, drawKnotBand } from '../art/knotwork.js';
 import { drawEmber, flapPose, FLOCK_COLORS, eyeOffset } from '../art/ember.js';
 import { drawSky, SKY, makeStars, drawStars, drawSea, drawLighthouse, drawStone, drawCloud, drawWind, drawFlyingGull, drawFog } from '../art/world.js';
@@ -12,7 +12,7 @@ import { drawTree } from '../art/sprites.js';
 const { W, H } = VIEW;
 
 // storybook on the left, "next flyer" panel on the right
-const BOOK = { x: 14, y: 46, w: 252, h: 180 };
+const BOOK = { x: 14, y: 54, w: 252, h: 172 };
 const PANEL_X = 372;
 const LANTERN = { x: PANEL_X, y: 152, r: 34 };
 
@@ -93,13 +93,14 @@ export class Attract {
     this.drawBook(g, ctx, t);
     this.drawPanel(g, ctx, t);
 
-    drawText(ctx, 'EMBERWING', BOOK.x + 2, 14, { scale: 3, color: PAL.ember3 });
-    drawText(ctx, 'THE WAY HOME', BOOK.x + textWidth('EMBERWING', 3) + 10, 21, { scale: 1, color: PAL.cream });
+    // tagline sits under the title at scale 2, it was scale 1 (under 2in tall on the big screen)
+    drawText(ctx, 'EMBERWING', BOOK.x + 2, 6, { scale: 3, color: PAL.ember3 });
+    drawText(ctx, 'THE WAY HOME', BOOK.x + 3, 31, { scale: 2, color: PAL.cream });
 
     const n = g.store.count;
     if (n > 0) {
       const s = `${n} ${n === 1 ? 'DRAGON' : 'DRAGONS'} HOME TONIGHT`;
-      drawText(ctx, s, BOOK.x + BOOK.w / 2, 240, { scale: 1, align: 'center', color: '#bff8ee' });
+      drawText(ctx, s, BOOK.x + BOOK.w / 2, 246, { scale: 2, align: 'center', color: '#bff8ee' });
     }
 
     g.particles.draw(ctx);
@@ -119,7 +120,7 @@ export class Attract {
     const bob = Math.sin(t * 2.2) * 2 * (1 - p);
     const sc = 1 + pulse * 0.04 + p * 0.1;
     glow(ctx, LANTERN.x, LANTERN.y, 60 + pulse * 6, PAL.gold, 0.18 + p * 0.4);
-    drawKnotRing(ctx, LANTERN.x, LANTERN.y, LANTERN.r, p, { lobes: 9, amp: 3.5, width: 2, on: PAL.gold, off: hover ? 'rgba(255,226,138,0.55)' : 'rgba(255,226,138,0.3)' });
+    drawKnotRing(ctx, LANTERN.x, LANTERN.y, LANTERN.r, p, { lobes: 9, amp: 3.5, width: 2, on: PAL.gold, off: hover ? 'rgba(255,226,138,0.65)' : 'rgba(255,226,138,0.45)' });
     ctx.save();
     ctx.translate(LANTERN.x, LANTERN.y + bob);
     ctx.scale(sc, sc);
@@ -241,7 +242,9 @@ export class Attract {
       drawEmber(pg, ex, ey, { mood: t > 1.8 ? 'curious' : 'scared', wing: 'folded', glow: 0, look: -1, scale: 0.85, blink: t % 1.3 > 1.2 });
       const k = ease.inOutSine(clamp(t / 1.3));
       ghost = { x: lerp(30, eyes.x, k) + Math.sin(t * 5) * 18 * (1 - k), y: lerp(50, eyes.y, k) };
-      drawFog(pg, BOOK.w, BOOK.h, t, [{ x: ghost.x, y: ghost.y, r: 42 }], { alpha: 0.94 });
+      // same dark fog + warm beam as the real scene so the demo looks like the game
+      glow(pg, ghost.x, ghost.y, 44, PAL.gold, 0.45);
+      drawFog(pg, BOOK.w, BOOK.h, t, [{ x: ghost.x, y: ghost.y, r: 42 }], { alpha: 0.93 });
       glow(pg, eyes.x, eyes.y, 9, PAL.gold, 0.8);
       const fill = clamp((t - 1.4) / 1.2);
       if (fill > 0) drawKnotRing(pg, ex, ey - 4, 30, fill, { lobes: 8, amp: 2.5, on: PAL.gold });
@@ -269,7 +272,7 @@ export class Attract {
     pg.globalAlpha = 0.85;
     drawLantern(pg, ghost.x, ghost.y, 1, 0.8, t);
     pg.globalAlpha = 1;
-    drawText(pg, 'YOU', ghost.x, ghost.y - 22, { scale: 1, align: 'center', color: PAL.gold2 });
+    drawText(pg, 'YOU', ghost.x, ghost.y - 28, { scale: 2, align: 'center', color: PAL.gold2 });
     return t < FIND ? 'FIND EMBER' : 'FLY HOME!';
   }
 

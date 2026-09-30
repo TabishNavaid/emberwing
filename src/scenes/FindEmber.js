@@ -182,7 +182,7 @@ export class FindEmber {
     if (this.fogA > 0.01) {
       const holes = [{ x: inp.x, y: inp.y, r: 50 }, { x: 46, y: 96, r: 46, a: 0.55 }];
       if (this.found) holes.push({ x: this.ex, y: this.ey, r: 60 + this.burstT * 200 });
-      drawFog(ctx, W, H, t, holes, { alpha: 0.93 * this.fogA, color: '#141c2a', color2: '#2a3850' });
+      drawFog(ctx, W, H, t, holes, { alpha: 0.93 * this.fogA });
     }
     if (!gl.perched && gl.fy > -10) drawFlyingGull(ctx, gl.fx, gl.fy, gl.t, '#e8eef4');
 
@@ -206,7 +206,7 @@ export class FindEmber {
     const d = dist(inp.x, inp.y, e.x, e.y);
     const showRing = this.hold > 0.01 || d < INPUT.LOCK_RADIUS * 1.8;
     if (showRing && !this.found) {
-      drawKnotRing(ctx, this.ex, this.ey - 6, 34, this.hold, { lobes: 9, amp: 3, width: 2, on: PAL.gold, off: 'rgba(255,243,214,0.35)' });
+      drawKnotRing(ctx, this.ex, this.ey - 6, 34, this.hold, { lobes: 9, amp: 3, width: 2, on: PAL.gold, off: 'rgba(255,243,214,0.5)' });
     }
     if (this.found && this.burstT < 1.2) {
       const k = this.burstT / 1.2;
@@ -259,12 +259,13 @@ export class FindEmber {
     const blink = t % 1.7 > 1.55;
     if (d < 40) return; // inside the beam you see the real eyes on the sprite
     const amt = clamp(0.45 + warm * 0.4 + assist * 0.5);
-    glow(ctx, e.x, e.y, 10 + assist * 10 + warm * 6, PAL.gold, amt * 0.8);
-    const ey = Math.round(blink ? e.y + 1 : e.y - 1);
-    const h = blink ? 1 : 3;
+    // these two dots are the whole cue in the fog. they were 3px, which was tiny on the projector
+    glow(ctx, e.x, e.y, 14 + assist * 10 + warm * 6, PAL.gold, amt * 0.85);
+    const ey = Math.round(blink ? e.y + 1 : e.y - 2);
+    const h = blink ? 1 : 4;
     ctx.fillStyle = '#fff6d8';
-    ctx.fillRect(Math.round(e.x + 1), ey, 3, h);
-    ctx.fillRect(Math.round(e.x - 7), ey, 2, h);
+    ctx.fillRect(Math.round(e.x + 1), ey, 4, h);
+    ctx.fillRect(Math.round(e.x - 8), ey, 3, h);
     if (assist) drawSparkle(ctx, e.x + 10, e.y - 10, 2 + Math.round(g.beat.pulse * 2), PAL.gold2);
   }
 
