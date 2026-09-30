@@ -2,7 +2,7 @@ import { VIEW, DUR, INPUT, PAL } from '../config.js';
 import { clamp, dist, lerp, approach, glow, ease } from '../core/util.js';
 import { drawText, drawTextPop } from '../art/font.js';
 import { drawKnotRing } from '../art/knotwork.js';
-import { drawEmber, eyeOffset, flapPose } from '../art/ember.js';
+import { drawEmber, eyeOffset, flapPose, blinkAt } from '../art/ember.js';
 import { drawSky, SKY, drawSea, makeCliff, drawCliff, drawLighthouse, drawStone, drawCloud, drawFog, drawFlyingGull } from '../art/world.js';
 import { drawSparkle } from '../art/icons.js';
 import { drawGull, drawTree } from '../art/sprites.js';
@@ -55,18 +55,25 @@ export class FindEmber {
   }
 
   skip(g) {
-    if (!this.found) this.burst(g);
+    if (!this.found) this.burst();
     else g.scenes.go('flight', {}, { color: '#e8fff8' });
   }
 
-  burst(g) {
+  burst() {
     this.found = true;
     this.hold = 1;
     this.burstT = 0;
+    this.popped = false;
+  }
+
+  // fires 0.1s after burst(), once ember comes up out of its crouch
+  pop(g) {
+    this.popped = true;
     const e = this.eyes();
     g.cam.shake(3);
     g.audio.cue('burst');
-    g.particles.burst(this.ex, this.ey - 4, 70, { speed: 150, colors: [PAL.teal, PAL.gold, PAL.gold2, '#ffffff', PAL.ember3], kind: 'spark', size: 2, drag: 2.2, life: 1.3 }, g.rng);
+    // fewer, faster sparks so they fly clear and you can actually see the wiggle
+    g.particles.burst(this.ex, this.ey - 4, 45, { speed: 210, colors: [PAL.teal, PAL.gold, PAL.gold2, '#ffffff', PAL.ember3], kind: 'spark', size: 2, drag: 2.2, life: 1.2 }, g.rng);
     g.particles.burst(this.ex, this.ey - 4, 8, { speed: 50, colors: [PAL.teal], kind: 'glow', size: 8, drag: 1, life: 1 }, g.rng);
     g.particles.burst(e.x, e.y, 20, { speed: 60, colors: [PAL.gold2], kind: 'px', size: 1, grav: 40, drag: 1, life: 1.5 }, g.rng);
   }
@@ -75,6 +82,7 @@ export class FindEmber {
     const inp = g.input;
     if (this.found) {
       this.burstT += dt;
+      if (!this.popped && this.burstT >= 0.1) this.pop(g);
       this.fogA = approach(this.fogA, 0, 3.5, dt);
       if (this.burstT > 0.8) this.ey -= dt * 40 * ease.inCubic(clamp((this.burstT - 0.8) / 1));
       if (this.burstT > DUR.FIND_BURST) g.scenes.go('flight', { fromY: this.ey }, { color: '#e8fff8' });
@@ -106,7 +114,7 @@ export class FindEmber {
     else if (this.activeT > DUR.FIND_ASSIST_GLOW) this.prompt = 'FOLLOW THE SPARKS';
     else this.prompt = 'FIND THE EYES';
     if (this.activeT > DUR.FIND_AUTO_COMPLETE) this.hold += dt / DUR.FIND_AUTO_FILL;
-    if (this.hold >= 1) return this.burst(g);
+    if (this.hold >= 1) return this.burst();
 
     // assist: ember hops toward the light, and flutters up if the beam is in the sky
     if (hopping && !near) {
@@ -181,7 +189,7 @@ export class FindEmber {
     // fog has to be darker than the world under it, when it was lighter the beam looked like a shadow
     if (this.fogA > 0.01) {
       const holes = [{ x: inp.x, y: inp.y, r: 50 }, { x: 46, y: 96, r: 46, a: 0.55 }];
-      if (this.found) holes.push({ x: this.ex, y: this.ey, r: 60 + this.burstT * 200 });
+      if (this.popped) holes.push({ x: this.ex, y: this.ey, r: 60 + (this.burstT - 0.1) * 200 });
       drawFog(ctx, W, H, t, holes, { alpha: 0.93 * this.fogA });
     }
     if (!gl.perched && gl.fy > -10) drawFlyingGull(ctx, gl.fx, gl.fy, gl.t, '#e8eef4');
@@ -208,8 +216,8 @@ export class FindEmber {
     if (showRing && !this.found) {
       drawKnotRing(ctx, this.ex, this.ey - 6, 34, this.hold, { lobes: 9, amp: 3, width: 2, on: PAL.gold, off: 'rgba(255,243,214,0.5)' });
     }
-    if (this.found && this.burstT < 1.2) {
-      const k = this.burstT / 1.2;
+    if (this.popped && this.burstT < 1.3) {
+      const k = (this.burstT - 0.1) / 1.2;
       ctx.globalAlpha = 1 - k;
       drawKnotRing(ctx, this.ex, this.ey - 6, 34 + ease.outCubic(k) * 120, 1, { lobes: 12, amp: 4, width: 2, on: PAL.teal });
       ctx.globalAlpha = 1;
@@ -223,13 +231,13 @@ export class FindEmber {
       else drawText(ctx, msg, W / 2, 12, { scale: 3, align: 'center', color: msg === 'HOLD STEADY' ? PAL.gold2 : PAL.cream });
     } else {
       // one soft flash only (photosensitivity), never repeated
-      if (this.burstT < 0.4) {
-        ctx.globalAlpha = 0.35 * (1 - this.burstT / 0.4);
+      if (this.popped && this.burstT < 0.5) {
+        ctx.globalAlpha = 0.35 * (1 - (this.burstT - 0.1) / 0.4);
         ctx.fillStyle = '#fff6d8';
         ctx.fillRect(0, 0, W, H);
         ctx.globalAlpha = 1;
       }
-      drawTextPop(ctx, 'EMBER!', W / 2, 44, this.burstT * 1.6, { scale: 5, color: PAL.ember3 });
+      if (this.popped) drawTextPop(ctx, 'EMBER!', W / 2, 44, (this.burstT - 0.1) * 1.6, { scale: 5, color: PAL.ember3 });
     }
   }
 
@@ -256,7 +264,7 @@ export class FindEmber {
     const d = dist(inp.x, inp.y, e.x, e.y);
     const warm = clamp(1 - d / 160);
     const assist = this.activeT > DUR.FIND_ASSIST_GLOW ? 0.6 + 0.4 * g.beat.pulse : 0;
-    const blink = t % 1.7 > 1.55;
+    const blink = blinkAt(t);
     if (d < 40) return; // inside the beam you see the real eyes on the sprite
     const amt = clamp(0.45 + warm * 0.4 + assist * 0.5);
     // these two dots are the whole cue in the fog. they were 3px, which was tiny on the projector
@@ -273,12 +281,25 @@ export class FindEmber {
     const inp = g.input;
     const look = inp.x < this.ex - 10 ? -1 : inp.x > this.ex + 30 ? 1 : 0;
     if (this.found) {
+      // crouch (anticipation) -> pop up -> happy wiggle with wings flared -> start flapping
       const k = this.burstT;
-      const pop = k < 0.25 ? 1 + Math.sin((k / 0.25) * Math.PI) * 0.35 : 1;
-      drawEmber(ctx, this.ex, this.ey, {
-        mood: 'joy', wing: k < 0.7 ? 'burst' : flapPose(k * 3.2), glow: 2,
-        sx: 1 / Math.sqrt(pop), sy: pop,
-      });
+      let sx = 1, sy = 1, rot = 0, mood = 'joy', wing = 'burst';
+      if (k < 0.1) {
+        sy = 0.78;
+        sx = 1.18;
+        wing = 'folded';
+      } else if (k < 0.35) {
+        const p = (k - 0.1) / 0.25;
+        sy = 1 + Math.sin(p * Math.PI) * 0.35;
+        sx = 1 / Math.sqrt(sy);
+      } else if (k < 0.95) {
+        const p = (k - 0.35) / 0.6;
+        rot = Math.sin(p * Math.PI * 5) * 0.2 * (1 - p);
+        mood = 'happy';
+      } else {
+        wing = flapPose(k * 3.2);
+      }
+      drawEmber(ctx, this.ex, this.ey, { mood, wing, glow: k < 0.1 ? 1 : 2, sx, sy, rot });
       glow(ctx, this.ex - 10, this.ey - 10, 44, PAL.teal, 0.25 * (1 - clamp(k / 1.8)) + 0.12);
       return;
     }
@@ -291,7 +312,7 @@ export class FindEmber {
     const air = this.ey < this.restY(this.ex) - 3;
     drawEmber(ctx, this.ex + shake, this.ey, {
       mood, wing: air ? flapPose(t * 4) : 'folded', glow: glowLvl, look,
-      blink: t % 1.7 > 1.55, sx: 1 + duck * 0.6, sy: 1 - duck + perk,
+      life: t, sx: 1 + duck * 0.6, sy: 1 - duck + perk,
     });
     if (h > 0.05) glow(ctx, this.ex - 4, this.ey - 6, 20 + h * 20, PAL.teal, h * 0.35);
   }

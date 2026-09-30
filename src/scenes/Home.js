@@ -1,7 +1,7 @@
 import { VIEW, DUR, PAL } from '../config.js';
 import { clamp, lerp, ease, invLerp, glow } from '../core/util.js';
 import { drawText, drawTextPop, textWidth } from '../art/font.js';
-import { drawEmber, flapPose, FLOCK_COLORS } from '../art/ember.js';
+import { drawEmber, FLOCK_COLORS } from '../art/ember.js';
 import { drawSky, SKY, makeStars, drawStars, drawSea, drawStone, makeCliff, drawCliff } from '../art/world.js';
 import { drawBaseAurora, drawRibbon, ribbonSkyPoints, RIBBON_COLORS } from '../art/aurora.js';
 import { drawSparkle, drawActBanner } from '../art/icons.js';
@@ -100,7 +100,7 @@ export class Home {
     FLOCK_COLORS.forEach((c, i) => {
       const a = t * 0.9 + (i / 5) * Math.PI * 2;
       const p = orbit(a);
-      drawers.push({ z: Math.sin(a), f: () => drawEmber(ctx, p.x, p.y, { mood: 'joy', wing: flapPose(t * 2.4 + i * 0.2), glow: 2, colors: c, ci: i, scale: 0.8, flip: Math.sin(a) > 0 }) });
+      drawers.push({ z: Math.sin(a), f: () => drawEmber(ctx, p.x, p.y, { mood: 'joy', flap: t * 2.4 + i * 0.2, life: t, glow: 2, colors: c, ci: i, scale: 0.8, flip: Math.sin(a) > 0 }) });
     });
     const arrive = ease.outCubic(clamp(t / 1.6));
     const ea = t * 0.9 + (4 / 5) * Math.PI * 2;
@@ -110,7 +110,7 @@ export class Home {
     const bounce = t > 1.6 && t < 2.1 ? Math.sin(((t - 1.6) / 0.5) * Math.PI) * 0.2 : 0;
     drawers.push({ z: Math.sin(ea) + 0.01, f: () => {
       glow(ctx, ex - 4, ey - 6, 30, PAL.teal, 0.35);
-      drawEmber(ctx, ex, ey, { mood: t > 1.6 ? 'happy' : 'joy', wing: flapPose(t * 2.4), glow: 2, flip: arrive >= 1 && Math.sin(ea) > 0, sx: 1 + bounce, sy: 1 - bounce * 0.8 });
+      drawEmber(ctx, ex, ey, { mood: t > 1.6 ? 'happy' : 'joy', flap: t * 2.4, life: t, glow: 2, flip: arrive >= 1 && Math.sin(ea) > 0, sx: 1 + bounce, sy: 1 - bounce * 0.8 });
     } });
     // sort by orbit depth so dragons on the far side go behind
     drawers.sort((a, b) => a.z - b.z).forEach((d) => d.f());

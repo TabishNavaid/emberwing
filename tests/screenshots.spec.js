@@ -9,6 +9,7 @@ const SHOTS = [
   ['find', 0.8, { x: 240, y: 90 }], // story beat
   ['find', 2, { x: 240, y: 90 }],
   ['find', 1.4, 'target'],
+  ['find', 2.6, 'target'], // found: happy wiggle
   ['flight', 6, 'follow'],
   ['flight', 9, { x: 400, y: 60 }], // tether when ember lags behind the light
   ['flight', 13.4, 'follow'],

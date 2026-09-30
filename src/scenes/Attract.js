@@ -3,7 +3,7 @@ import { makeCanvas, glow, clamp, ease, lerp } from '../core/util.js';
 import { Dwell } from '../input/Dwell.js';
 import { drawText } from '../art/font.js';
 import { drawKnotRing, drawKnotFrame, drawKnotBand } from '../art/knotwork.js';
-import { drawEmber, flapPose, FLOCK_COLORS, eyeOffset } from '../art/ember.js';
+import { drawEmber, FLOCK_COLORS, eyeOffset } from '../art/ember.js';
 import { drawSky, SKY, makeStars, drawStars, drawSea, drawLighthouse, drawStone, drawCloud, drawWind, drawFlyingGull, drawFog } from '../art/world.js';
 import { drawLantern, drawFeet, drawHorn, drawSoundLines, drawCursorLight, drawSparkle, drawArrowUp } from '../art/icons.js';
 import { drawBaseAurora } from '../art/aurora.js';
@@ -202,7 +202,7 @@ export class Attract {
     }
     const ex = 150 + Math.sin(t * 1.3) * 30 + t * 8;
     const ey = 64 + Math.sin(t * 2.1) * 14;
-    drawEmber(pg, ex, ey, { mood: 'scared', wing: flapPose(t * 3), glow: 0, rot: Math.sin(t * 2.5) * 0.6, scale: 0.8 });
+    drawEmber(pg, ex, ey, { mood: 'scared', flap: t * 3, glow: 0, rot: Math.sin(t * 2.5) * 0.6, scale: 0.8 });
   }
 
   page_lost(pg, t) {
@@ -216,8 +216,7 @@ export class Attract {
     drawStone(pg, 205, 116, 26, 10, 4, 0);
     drawTree(pg, 'bare', 30, 114, '#0e1622');
     const shake = Math.sin(t * 30) * 0.6;
-    const blink = t % 2.2 > 2.05;
-    drawEmber(pg, 140 + shake, 100, { mood: 'scared', wing: 'folded', glow: 0, blink, look: -1 });
+    drawEmber(pg, 140 + shake, 100, { mood: 'scared', wing: 'folded', glow: 0, life: t, look: -1 });
     const lx = lerp(20, 95, ease.outCubic(clamp(t / 3.5)));
     glow(pg, lx, 88, 40, PAL.gold, 0.35);
     drawLantern(pg, lx, 86, 1, 1, t);
@@ -239,7 +238,7 @@ export class Attract {
       const eo = eyeOffset(0.85);
       eyes.x = ex + eo.x;
       eyes.y = ey + eo.y;
-      drawEmber(pg, ex, ey, { mood: t > 1.8 ? 'curious' : 'scared', wing: 'folded', glow: 0, look: -1, scale: 0.85, blink: t % 1.3 > 1.2 });
+      drawEmber(pg, ex, ey, { mood: t > 1.8 ? 'curious' : 'scared', wing: 'folded', glow: 0, look: -1, scale: 0.85, life: t });
       const k = ease.inOutSine(clamp(t / 1.3));
       ghost = { x: lerp(30, eyes.x, k) + Math.sin(t * 5) * 18 * (1 - k), y: lerp(50, eyes.y, k) };
       // same dark fog + warm beam as the real scene so the demo looks like the game
@@ -266,7 +265,7 @@ export class Attract {
       this.demoEmberY = this.demoEmberY === undefined ? ghost.y : lerp(this.demoEmberY, ghost.y, 0.08);
       pg.fillStyle = 'rgba(255,201,74,0.5)';
       for (let i = 1; i < 18; i++) pg.fillRect(96 - i * 4, Math.round(this.demoEmberY + Math.sin(ft * 3 - i * 0.4) * 3), 3, 1);
-      drawEmber(pg, 96, this.demoEmberY, { mood: 'fly', wing: flapPose(ft * 3), glow: 2, scale: 0.9 });
+      drawEmber(pg, 96, this.demoEmberY, { mood: 'fly', flap: ft * 3, life: ft, glow: 2, scale: 0.9 });
     }
     if (t < 0.2) this.demoEmberY = undefined;
     pg.globalAlpha = 0.85;
@@ -285,9 +284,9 @@ export class Attract {
       const a = t * 0.7 + (i / 4) * Math.PI * 2;
       const x = 125 + Math.cos(a) * 92;
       const y = 78 + Math.sin(a) * 30;
-      drawEmber(pg, x, y, { mood: 'joy', wing: flapPose(t * 2.5 + i * 0.3), glow: 2, colors: FLOCK_COLORS[i], ci: i, scale: 0.7, flip: Math.sin(a) > 0 });
+      drawEmber(pg, x, y, { mood: 'joy', flap: t * 2.5 + i * 0.3, life: t, glow: 2, colors: FLOCK_COLORS[i], ci: i, scale: 0.7, flip: Math.sin(a) > 0 });
     }
-    drawEmber(pg, 125, 92 + Math.sin(t * 3) * 3, { mood: 'happy', wing: flapPose(t * 2.5), glow: 2 });
+    drawEmber(pg, 125, 92 + Math.sin(t * 3) * 3, { mood: 'happy', flap: t * 2.5, glow: 2 });
   }
 
   page_music(pg, t, g) {

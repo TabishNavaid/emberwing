@@ -243,14 +243,42 @@ export function flapPose(phase) {
   return 'mid';
 }
 
-// x/y is the middle of the body. sx/sy = squash and stretch
+// blinks at random-ish gaps (roughly 1-5s), sometimes a double blink. a metronome blink looked
+// robotic. O(1) so the attract screen can run all night. seed keeps the flock out of sync
+const hash = (a, b) => {
+  const v = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
+  return v - Math.floor(v);
+};
+export function blinkAt(t, seed = 0) {
+  const tt = t + seed * 1.37;
+  const slot = Math.floor(tt / 3.2);
+  const local = tt - slot * 3.2;
+  const at = hash(slot, seed) * 2.4;
+  if (local >= at && local < at + 0.12) return true;
+  return hash(slot + 0.5, seed) > 0.7 && local >= at + 0.22 && local < at + 0.34;
+}
+
+// x/y is the middle of the body. sx/sy = squash and stretch.
+// flap: wingbeat phase, picks the wing pose and stretches the body on the downstroke.
+// life: a clock for automatic blinking
 export function drawEmber(ctx, x, y, o = {}) {
-  const frame = emberFrame(o);
+  let sx = o.sx ?? 1;
+  let sy = o.sy ?? 1;
+  if (o.flap !== undefined) {
+    const f = -Math.cos(o.flap * TAU);
+    sy *= 1 + f * 0.06;
+    sx *= 1 - f * 0.05;
+  }
+  const frame = emberFrame({
+    ...o,
+    wing: o.flap !== undefined ? flapPose(o.flap) : o.wing,
+    blink: o.blink ?? (o.life !== undefined && blinkAt(o.life, (o.ci ?? -1) + 1)),
+  });
   const s = o.scale ?? 1;
   ctx.save();
   ctx.translate(Math.round(x), Math.round(y));
   if (o.rot) ctx.rotate(o.rot);
-  ctx.scale((o.flip ? -1 : 1) * s * (o.sx ?? 1), s * (o.sy ?? 1));
+  ctx.scale((o.flip ? -1 : 1) * s * sx, s * sy);
   ctx.drawImage(frame, -ANCHOR_X, -ANCHOR_Y);
   ctx.restore();
 }

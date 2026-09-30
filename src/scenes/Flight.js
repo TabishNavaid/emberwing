@@ -258,7 +258,7 @@ export class Flight {
     for (const ring of this.rings) this.drawRing(g, ctx, ring);
     for (const f of this.flock) {
       if (f.x < -50) continue;
-      drawEmber(ctx, f.x, f.y, { mood: 'fly', wing: flapPose(t * 2.6 + f.i * 0.21), glow: 2, colors: f.c, ci: f.i, scale: 0.78, rot: Math.sin(t * 2 + f.i) * 0.06 });
+      drawEmber(ctx, f.x, f.y, { mood: 'fly', flap: t * 2.6 + f.i * 0.21, life: t, glow: 2, colors: f.c, ci: f.i, scale: 0.78, rot: Math.sin(t * 2 + f.i) * 0.06 });
     }
     this.drawEmberFlying(g, ctx, t, conf);
     g.particles.draw(ctx, 0);
