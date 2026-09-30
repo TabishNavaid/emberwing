@@ -32,7 +32,7 @@ export class Home {
   }
 
   skip(g) {
-    g.scenes.go('end', {}, { fade: 0.3 });
+    g.scenes.go('end');
   }
 
   update(g, dt) {
@@ -42,7 +42,7 @@ export class Home {
       g.cam.shake(1.5);
       g.particles.burst(W / 2, 214, 40, { speed: 110, colors: [PAL.gold, PAL.gold2, this.color, '#ffffff'], kind: 'spark', size: 2, drag: 2.4, life: 1.1 }, g.rng);
     }
-    if (this.t >= DUR.HOME) g.scenes.go('end', {}, { fade: 0.5, color: '#070a18' });
+    if (this.t >= DUR.HOME) g.scenes.go('end', {}, { color: '#070a18' });
   }
 
   draw(g, ctx) {

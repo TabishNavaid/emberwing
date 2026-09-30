@@ -55,7 +55,7 @@ export class FindEmber {
 
   skip(g) {
     if (!this.found) this.burst(g);
-    else g.scenes.go('flight', {}, { fade: 0.3, color: '#e8fff8' });
+    else g.scenes.go('flight', {}, { color: '#e8fff8' });
   }
 
   burst(g) {
@@ -76,7 +76,7 @@ export class FindEmber {
       this.burstT += dt;
       this.fogA = approach(this.fogA, 0, 3.5, dt);
       if (this.burstT > 0.8) this.ey -= dt * 40 * ease.inCubic(clamp((this.burstT - 0.8) / 1));
-      if (this.burstT > DUR.FIND_BURST) g.scenes.go('flight', { fromY: this.ey }, { fade: 0.35, color: '#e8fff8' });
+      if (this.burstT > DUR.FIND_BURST) g.scenes.go('flight', { fromY: this.ey }, { color: '#e8fff8' });
       return;
     }
 
@@ -97,7 +97,7 @@ export class FindEmber {
       this.hold = Math.max(0, this.hold - dt * 0.3);
     }
     this.flinch = approach(this.flinch, 0, 3, dt);
-    if (this.activeT > DUR.FIND_AUTO_COMPLETE) this.hold += dt / 0.6;
+    if (this.activeT > DUR.FIND_AUTO_COMPLETE) this.hold += dt / DUR.FIND_AUTO_FILL;
     if (this.hold >= 1) return this.burst(g);
 
     // assist: ember hops toward the light, and flutters up if the beam is in the sky

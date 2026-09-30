@@ -94,7 +94,7 @@ export class Flight {
   finish(g) {
     if (this.done) return;
     this.done = true;
-    g.scenes.go('home', { path: this.path }, { fade: 0.6, color: '#0a1024' });
+    g.scenes.go('home', { path: this.path }, { color: '#0a1024' });
   }
 
   update(g, dt) {

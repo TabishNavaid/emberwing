@@ -14,17 +14,20 @@ export const DUR = {
 
   FIND_HOLD: 2.0, // steady light on the eyes this long fills the ring
   // the assist clock only runs while someone is pointing, so a walked-away game idles out instead
-  FIND_ASSIST_GLOW: 4.0, // sparks start leading to the eyes
-  FIND_ASSIST_HOP: 6.5, // ember hops toward the beam on its own
-  FIND_AUTO_COMPLETE: 9.5, // hard cap so nobody gets stuck (keeps the worst run under 45s)
+  // these were 4 / 6.5 / 9.5 and the worst run hit 44.3s, right at the 45s ceiling.
+  // most people find ember in ~5s so pulling them in only changes things for people who are stuck
+  FIND_ASSIST_GLOW: 3.0, // sparks start leading to the eyes
+  FIND_ASSIST_HOP: 4.5, // ember hops toward the beam on its own
+  FIND_AUTO_COMPLETE: 7.0, // hard cap so nobody gets stuck
+  FIND_AUTO_FILL: 0.4, // once the cap hits, the ring fills in this long
   FIND_BURST: 1.5, // wing-glow celebration before takeoff
 
   FLIGHT: 20.0, // fixed, doesn't depend on how well you fly
-  HOME: 7.0,
+  HOME: 6.5,
   END: 3.0,
   END_SKIP_DWELL: 1.0,
 
-  FADE: 0.45,
+  FADE: 0.4, // every scene change. was up to 0.6, that's dead air nobody enjoys
 };
 
 // fractions of DUR.FLIGHT

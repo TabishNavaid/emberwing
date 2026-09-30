@@ -32,7 +32,7 @@ export class EndCard {
   leave(g) {
     if (this.leaving) return;
     this.leaving = true;
-    g.scenes.go('attract', { reason: 'done' }, { fade: 0.6 });
+    g.scenes.go('attract', { reason: 'done' });
   }
 
   update(g, dt) {

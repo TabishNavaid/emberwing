@@ -3,6 +3,8 @@ import { boot, state, startRun, findEmber, fly, watch, waitScene, hover } from '
 
 const MIN = 35;
 const MAX = 45;
+// worst case (guest never finds ember) should stay well clear of the 45s ceiling
+const ASSISTED_MAX = 41;
 
 test('a guest who finds Ember plays a full run in 35-45s and returns to attract', async ({ page }) => {
   const errors = [];
@@ -35,7 +37,7 @@ test('a guest who finds Ember plays a full run in 35-45s and returns to attract'
   expect((await state(page)).count).toBe(1);
 });
 
-test('a guest who never finds Ember is helped and still finishes within 45s', async ({ page }) => {
+test('a guest who never finds Ember is helped and still finishes in about 40s', async ({ page }) => {
   await boot(page);
   await startRun(page);
   await findEmber(page, { neverFind: true });
@@ -44,7 +46,7 @@ test('a guest who never finds Ember is helped and still finishes within 45s', as
   await watch(page, 'attract');
   const s = await state(page);
   console.log(`assisted run (game clock): ${s.runs[0]}s`);
-  expect(s.runs[0]).toBeLessThanOrEqual(MAX);
+  expect(s.runs[0]).toBeLessThanOrEqual(ASSISTED_MAX);
 });
 
 test('holding the lantern skips the end card', async ({ page }) => {
