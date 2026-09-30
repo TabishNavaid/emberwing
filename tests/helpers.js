@@ -1,5 +1,4 @@
-// Shared helpers for driving the game with a scripted pointer, the way a
-// guest (or a motion-capture rig) would: pointer moves only, no clicks.
+// a scripted "guest". only ever moves the pointer, never clicks, same as the mocap rig
 export async function boot(page, query = '') {
   await page.goto('./?seed=5' + query);
   await page.waitForFunction(() => document.body.classList.contains('ready'));
@@ -16,7 +15,7 @@ export async function waitScene(page, name, timeout = 30_000) {
   await page.waitForFunction((n) => window.__emberwing.state().scene === n, name, { timeout, polling: 100 });
 }
 
-// Hold the light near a point with a tiny human tremble (below the steady threshold).
+// tiny tremble like a real hand, still under the steady threshold
 export async function hover(page, x, y, seconds) {
   const end = Date.now() + seconds * 1000;
   let i = 0;
@@ -27,7 +26,6 @@ export async function hover(page, x, y, seconds) {
   }
 }
 
-// Start a run from attract: raise the light onto the lantern and hold it.
 export async function startRun(page) {
   await moveTo(page, 250, 200, 10);
   await page.waitForTimeout(300);
@@ -37,7 +35,6 @@ export async function startRun(page) {
   while ((await state(page)).scene !== 'find' && Date.now() < deadline) await hover(page, 372, 152, 0.3);
 }
 
-// Sweep the beam around like a guest searching, then settle on the eyes.
 export async function findEmber(page, { searchSeconds = 2.5, neverFind = false } = {}) {
   const t0 = Date.now();
   let i = 0;
@@ -45,7 +42,7 @@ export async function findEmber(page, { searchSeconds = 2.5, neverFind = false }
     const s = await state(page);
     const el = (Date.now() - t0) / 1000;
     if (neverFind || el < searchSeconds) {
-      // wide sweeping search (kept away from Ember when neverFind)
+      // neverFind stays up in the top-left corner so it can't stumble onto ember by accident
       const x = neverFind ? 60 + ((i * 7) % 60) : 60 + ((Math.sin(i * 0.15) + 1) / 2) * 360;
       const y = neverFind ? 40 + Math.sin(i * 0.3) * 20 : 90 + Math.sin(i * 0.23) * 60;
       await moveTo(page, x, y, 2);
@@ -57,7 +54,7 @@ export async function findEmber(page, { searchSeconds = 2.5, neverFind = false }
   }
 }
 
-// Steer toward the next ring, with a bit of lag like a real hand.
+// lags behind the target a bit like a real hand would
 export async function fly(page) {
   let cx = 240;
   let cy = 150;
@@ -72,7 +69,7 @@ export async function fly(page) {
   }
 }
 
-// Keep the pointer gently alive while watching Home / End (off the skip lantern).
+// keeps wiggling so nothing idles out, and stays away from the end card's skip lantern
 export async function watch(page, until) {
   let i = 0;
   while ((await state(page)).scene !== until) {

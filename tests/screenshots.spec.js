@@ -1,7 +1,6 @@
 import { test } from '@playwright/test';
 
-// Regenerates tests/screens/*.png for every scene at projector and phone sizes.
-//   npm run shots
+// npm run shots -> tests/screens/, every scene at projector and phone size
 const SHOTS = [
   ['attract', 2, null],
   ['attract', 10.4, null],
@@ -25,8 +24,8 @@ for (const [label, viewport, dpr] of SIZES) {
     test(`${scene} @${t}s ${label}`, async ({ browser }) => {
       const ctx = await browser.newContext({ viewport, deviceScaleFactor: dpr });
       const page = await ctx.newPage();
-      // make shots repeatable so before/after diffs mean something:
-      // seed Math.random (camera shake, audio) and never run the real-time loop, we step by hand
+      // seeded Math.random + no real-time loop so the same code always gives the same pixels,
+      // that's how we checked the cleanup didn't change anything
       await page.addInitScript(() => {
         let s = 12345;
         Math.random = () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648;

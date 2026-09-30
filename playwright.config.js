@@ -1,6 +1,6 @@
 import { defineConfig } from '@playwright/test';
 
-// Tests run against the production build (same files GitHub Pages serves).
+// tests hit the production build, same files github pages serves
 export default defineConfig({
   testDir: 'tests',
   timeout: 150_000,

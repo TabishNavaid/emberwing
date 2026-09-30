@@ -29,7 +29,7 @@ test('a guest who finds Ember plays a full run in 35-45s and returns to attract'
   expect(s.count).toBe(1);
   expect(errors).toEqual([]);
 
-  // The aurora ribbon survives a page refresh.
+  // ribbon has to survive a refresh
   await page.reload();
   await page.waitForFunction(() => document.body.classList.contains('ready'));
   expect((await state(page)).count).toBe(1);

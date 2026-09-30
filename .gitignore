@@ -1,7 +1,6 @@
 node_modules/
 dist/
-# Licensed asset packs: allowed in our game, NOT allowed to be redistributed.
-# Only the cropped sprites in public/sprites/ are committed (see CREDITS.md).
+# the asset packs can be used in the game but not redistributed, so only our crops in public/sprites get committed
 assets/
 test-results/
 playwright-report/

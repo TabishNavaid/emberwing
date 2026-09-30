@@ -1,6 +1,5 @@
-// Quick screenshot helper for art iteration:
-//   node tools/shoot.mjs <scene> <seconds> [name] [--phone] [--x=240 --y=150]
-// Needs `npm run dev` running on :5173.
+// quick one-off screenshot while tweaking art (needs npm run dev on :5173)
+//   node tools/shoot.mjs <scene> <seconds> [name] [--phone] [--x=240 --y=150] [--setup="js"]
 import { chromium } from '@playwright/test';
 const [scene = 'attract', t = '2', name = `${scene}-${t}`] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const flags = Object.fromEntries(process.argv.filter((a) => a.startsWith('--')).map((a) => { const i = a.indexOf('='); const k = i < 0 ? a.slice(2) : a.slice(2, i); const v = i < 0 ? undefined : a.slice(i + 1); return [k, v ?? true]; }));

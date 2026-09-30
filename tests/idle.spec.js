@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { boot, state, startRun, findEmber, waitScene, moveTo } from './helpers.js';
 
-// No input for 10 seconds during play -> back to attract.
 test('idle during Find Ember resets to attract after ~10s', async ({ page }) => {
   await boot(page);
   await startRun(page);

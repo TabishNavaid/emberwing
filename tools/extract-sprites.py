@@ -1,8 +1,5 @@
-"""Crop the few pack sprites Emberwing uses into public/sprites/.
-The full packs in ./assets are licensed for use but NOT redistribution,
-so ./assets is git-ignored and only these crops ship. Re-run with:
-    python3 tools/extract-sprites.py
-"""
+# crops the few sprites we use out of the packs in ./assets into public/sprites.
+# the packs can't be redistributed so only these crops get committed. npm run sprites
 from PIL import Image, ImageSequence
 import os
 A = 'assets'

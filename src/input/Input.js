@@ -64,7 +64,7 @@ export class Input {
     }
   }
 
-  // on scene change, so a pointer that's just sitting there doesn't count as a new guest
+  // every scene starts with a fresh idle clock
   resetIdle() {
     this.idle = 0;
     this.anchorX = this.rawX;
