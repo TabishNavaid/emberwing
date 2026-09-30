@@ -1,9 +1,7 @@
 import { VIEW, INPUT } from '../config.js';
 
-// ---------------------------------------------------------------------------
-// Mouse, touch and pen all arrive as Pointer Events. Clicks are never needed:
-// the pointer position is the whole interaction. Pressing only sets `holding`,
-// which is an optional shortcut.
+// mouse, touch and pen all come in as pointer events. pressing only sets `holding`,
+// nothing actually needs a click
 export function attachPointer(input, target, toView) {
   const onMove = (e) => {
     const p = toView(e.clientX, e.clientY);
@@ -16,20 +14,14 @@ export function attachPointer(input, target, toView) {
   });
   window.addEventListener('pointerup', () => input.setHolding(false));
   window.addEventListener('pointercancel', () => input.setHolding(false));
-  // Stop the page from scrolling / zooming under a finger.
+  // otherwise phones scroll/zoom the page instead of moving the light
   target.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
 }
 
-// ---------------------------------------------------------------------------
-// Motion capture. Three ways in, all taking normalized coordinates (0..1
-// across the game image, origin top-left):
-//   1. WebSocket: add ?mocap=wss://host:port (or ws://localhost:port) to the
-//      URL. Messages: {"x":0.5,"y":0.4,"hold":false}  or  "0.5,0.4"
-//   2. postMessage from a parent frame or extension:
-//      window.postMessage({ type: 'emberwing-pointer', x, y, hold }, '*')
-//   3. A script on the same page: window.emberwingPointer(x, y, hold)
-// A rig that drives the OS mouse cursor needs none of this; it just works.
-// ?mocapFlipX=1 mirrors x (for a camera that faces the guest).
+// mocap, all in 0..1 across the game image (top-left origin). see README for the formats.
+// ?mocap=wss://... for a websocket, or postMessage / window.emberwingPointer(x, y).
+// a rig that just moves the OS cursor doesn't need any of this.
+// TODO: test with the real mocap rig at cordiner
 export function attachMocap(input, params) {
   const flipX = params.get('mocapFlipX') === '1';
   const flipY = params.get('mocapFlipY') === '1';
@@ -70,7 +62,7 @@ export function attachMocap(input, params) {
           const d = JSON.parse(s);
           push(+d.x, +d.y, d.hold);
         } catch {
-          /* ignore malformed frame */
+          // one bad frame from the rig shouldn't kill the socket
         }
       } else {
         const [x, y] = s.split(/[ ,;]+/).map(Number);
@@ -86,23 +78,20 @@ export function attachMocap(input, params) {
   connect();
 }
 
-// Pages served over HTTPS (GitHub Pages) may not open plain ws:// sockets to
-// other hosts: browsers block it as mixed content. ws://localhost and
-// ws://127.0.0.1 are allowed. So on HTTPS we upgrade remote ws:// to wss://.
-export function secureSocketUrl(url, input) {
+// ws:// gets blocked on https (github pages) so we force wss unless it's localhost
+function secureSocketUrl(url, input) {
   const local = /^ws:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(url);
   if (location.protocol === 'https:' && url.startsWith('ws://') && !local) {
     const upgraded = 'wss://' + url.slice(5);
     const msg = `https page: ${url} would be blocked, using ${upgraded}`;
     console.warn('[emberwing] ' + msg);
-    if (input) input.status = msg;
+    input.status = msg;
     return upgraded;
   }
   return url;
 }
 
-// ---------------------------------------------------------------------------
-// Arrow keys + Space: for testing at a desk only.
+// arrow keys + space, desk testing only
 export function attachKeys(input) {
   const down = new Set();
   window.addEventListener('keydown', (e) => {

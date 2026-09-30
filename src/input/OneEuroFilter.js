@@ -1,23 +1,17 @@
-// One-Euro filter (Casiez et al. 2012): smooths jitter when the pointer is
-// slow, stays responsive when it's fast. Ideal for motion-capture cursors.
-function alpha(cutoff, dt) {
-  const tau = 1 / (2 * Math.PI * cutoff);
-  return 1 / (1 + tau / dt);
-}
+// one-euro filter (casiez et al. 2012). smooths a lot when the pointer is slow
+// (kills mocap jitter) and barely at all when it's fast (so it doesn't feel laggy)
+const alpha = (cutoff, dt) => 1 / (1 + 1 / (2 * Math.PI * cutoff) / dt);
 
 export class OneEuroFilter {
-  constructor({ minCutoff = 1.0, beta = 0.0, dCutoff = 1.0 } = {}) {
-    this.set({ minCutoff, beta, dCutoff });
-    this.reset();
+  constructor(opts) {
+    this.set(opts);
+    this.x = null;
+    this.dx = 0;
   }
   set({ minCutoff, beta, dCutoff = 1.0 }) {
     this.minCutoff = minCutoff;
     this.beta = beta;
     this.dCutoff = dCutoff;
-  }
-  reset(v = null) {
-    this.x = v;
-    this.dx = 0;
   }
   filter(v, dt) {
     if (this.x === null || dt <= 0) {

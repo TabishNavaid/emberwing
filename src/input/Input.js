@@ -1,33 +1,27 @@
 import { VIEW, INPUT } from '../config.js';
 import { OneEuroFilter } from './OneEuroFilter.js';
 
-// The one pointer the whole game listens to. Any adapter (mouse, touch,
-// motion-capture, test keys) calls feed(); scenes only ever read
-//   { x, y, speed, holding, present, idle, source }
-// x/y are in internal view pixels (0..480, 0..270).
-// speed is in screen-widths per second, so it means the same on a phone
-// and on a 10-foot projection.
+// the one pointer the whole game reads. every adapter (mouse, touch, mocap, keys)
+// just calls feed(). x/y are internal pixels (0..480, 0..270)
 export class Input {
   constructor() {
     this.x = VIEW.W * 0.5;
     this.y = VIEW.H * 0.62;
     this.rawX = this.x;
     this.rawY = this.y;
+    // screen-widths/sec so "steady" means the same thing on a phone and on the 10ft screen
     this.speed = 0;
     this.holding = false;
     this.source = 'none';
-    this.idle = 999; // seconds since meaningful movement
+    this.idle = 999;
     this.seen = false;
     this.fx = new OneEuroFilter(INPUT.FILTER.mouse);
     this.fy = new OneEuroFilter(INPUT.FILTER.mouse);
     this.anchorX = this.x;
     this.anchorY = this.y;
-    this.prevX = this.x;
-    this.prevY = this.y;
-    this.status = ''; // adapter status line for the debug overlay
+    this.status = ''; // mocap connection line for the debug overlay
   }
 
-  // x, y in view pixels
   feed(x, y, source = 'mouse') {
     if (source !== this.source) {
       const f = INPUT.FILTER[source] || INPUT.FILTER.mouse;
@@ -45,22 +39,21 @@ export class Input {
     if (v) this.idle = 0;
   }
 
-  // Someone is actively pointing right now.
   get present() {
     return this.seen && this.idle < 1.5;
   }
 
   update(dt) {
     if (dt <= 0) return;
-    this.prevX = this.x;
-    this.prevY = this.y;
+    const px = this.x;
+    const py = this.y;
     this.x = this.fx.filter(this.rawX, dt);
     this.y = this.fy.filter(this.rawY, dt);
 
-    const v = Math.hypot(this.x - this.prevX, this.y - this.prevY) / dt / VIEW.W;
-    const k = 1 - Math.exp(-dt / 0.12);
-    this.speed += (v - this.speed) * k;
+    const v = Math.hypot(this.x - px, this.y - py) / dt / VIEW.W;
+    this.speed += (v - this.speed) * (1 - Math.exp(-dt / 0.12));
 
+    // idle only resets when the pointer really moves, a trembling hand or noisy rig doesn't count
     const moved = Math.hypot(this.rawX - this.anchorX, this.rawY - this.anchorY);
     if (moved > INPUT.IDLE_MOVE_EPS) {
       this.idle = 0;
@@ -71,9 +64,9 @@ export class Input {
     }
   }
 
-  // Used on scene reset so an old pointer position doesn't count as input.
-  resetIdle(value = 0) {
-    this.idle = value;
+  // on scene change, so a pointer that's just sitting there doesn't count as a new guest
+  resetIdle() {
+    this.idle = 0;
     this.anchorX = this.rawX;
     this.anchorY = this.rawY;
   }

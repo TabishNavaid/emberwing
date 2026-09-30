@@ -28,7 +28,7 @@ export class SceneManager {
     this.current = this.scenes[name];
     this.name = name;
     this.current.t = 0;
-    g.input.resetIdle(0);
+    g.input.resetIdle();
     this.current.enter(g, data);
   }
   go(name, data = {}, { fade = DUR.FADE, color = '#05070d' } = {}) {
