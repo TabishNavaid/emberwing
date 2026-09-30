@@ -63,12 +63,13 @@ The aurora (every guest's ribbon, plus the "N dragons home tonight" count) is sa
 | Scene | Target | Notes |
 |---|---|---|
 | Attract | loop | 1 s hold on the lantern starts a run |
-| Find Ember | ~6-10 s | 2 s steady hold on the eyes. Assists at 4 s (sparks lead the way), 6.5 s (Ember hops to the light) and 9.5 s (auto-complete) |
-| Flight | 20 s fixed | Rings on the beat (120 BPM). Brass swell at 62%, climb at 90% |
-| Home | 7 s | Ribbon joins the aurora, counter ticks up |
-| End card | 3 s | Hold the small lantern to skip |
+| Find Ember | ~5-8 s | Opens with "EMBER IS LOST!", then a 2 s steady hold on the eyes. Assists at 3 s (sparks lead the way), 4.5 s (Ember hops to the light) and 7 s (auto-complete) |
+| Flight | 20 s fixed | Rings on the beat (120 BPM), a lighthouse-to-home track across the top. Brass swell at 62% (with a ~0.7 s wind-up), climb at 90% |
+| Home | 6.5 s | Ribbon lifts into the aurora, a shimmer runs across the sky, the counter rolls up, then "HEAR IT LIVE IN ACT II" |
+| End card | 3 s | "ACT II", the title, "LISTEN FOR THE BRASS!". Hold the small lantern to skip |
+| Scene fades | 0.4 s | `DUR.FADE` |
 
-Measured by the Playwright suite: **~39 s** for a typical guest, **~44 s** for a guest who never finds Ember on their own. **Idle reset:** 10 s without input during Find Ember or Flight returns to attract. The assists only count time while someone is actually pointing, so an abandoned game resets instead of playing itself.
+Measured by the Playwright suite: **~38 s** for a typical guest, **~40.5 s** for a guest who never finds Ember on their own (the test fails above 41 s). **Idle reset:** 10 s without input during Find Ember or Flight returns to attract. The assists only count time while someone is actually pointing, so an abandoned game resets instead of playing itself.
 
 ## Connecting a motion-capture cursor
 
@@ -139,6 +140,7 @@ This builds the site, serves it, and runs Playwright:
 - **`tests/fullrun.spec.js`**: a scripted guest plays a whole run by pointer only. It asserts 35-45 s, that the ribbon persists across a refresh, that a guest who never finds Ember still finishes in time, and that the end card can be skipped.
 - **`tests/idle.spec.js`**: walking away during Find Ember or Flight resets to attract after about 10 s.
 - **`tests/input.spec.js`**: the mocap pointer path, the clear confirmation, and the portrait "rotate your phone" hint.
+- **`tests/story.spec.js`**: the story beats show up when they should: "EMBER IS LOST!" first, the Act II line during Home, and the brass swell's wind-up, firing and flock join.
 - **`tests/screenshots.spec.js`**: `npm run shots` writes every scene at 1920×1080 and phone landscape to `tests/screens/`.
 
 ## Code map
