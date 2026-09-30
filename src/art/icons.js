@@ -1,5 +1,7 @@
 import { PAL } from '../config.js';
 import { makeCanvas, glow, disc } from '../core/util.js';
+import { drawText, textWidth } from './font.js';
+import { drawKnotFrame } from './knotwork.js';
 
 const lanternCache = new Map();
 // s = pixel scale
@@ -97,4 +99,21 @@ export function drawCursorLight(ctx, x, y, t, size = 1) {
   ctx.fillStyle = '#fff6d8';
   const r = Math.round(2 + Math.sin(t * 4) * 0.5);
   disc(ctx, x, y, r * size);
+}
+
+// "HEAR IT LIVE IN ACT II" plaque. home shows it after the counter so the key line is up for
+// ~5s total instead of only the 3s end card (people couldn't read the old card in time)
+export function drawActBanner(ctx, cx, y, t, pulse, alpha = 1) {
+  const label = 'HEAR IT LIVE IN ACT II';
+  const w = textWidth(label, 2) + 44;
+  const x = Math.round(cx - w / 2);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = 'rgba(8,10,24,0.85)';
+  ctx.fillRect(x, y, w, 30);
+  drawKnotFrame(ctx, x, y, w, 30, { color: PAL.gold });
+  glow(ctx, x + 18, y + 15, 16, PAL.gold, 0.3 + pulse * 0.2);
+  drawHorn(ctx, x + 20, y + 15, 1);
+  drawText(ctx, label, x + 36, y + 9, { scale: 2, color: PAL.gold2 });
+  ctx.restore();
 }

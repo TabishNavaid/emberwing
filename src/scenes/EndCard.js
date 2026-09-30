@@ -1,7 +1,7 @@
 import { VIEW, DUR, PAL } from '../config.js';
 import { clamp, glow } from '../core/util.js';
 import { Dwell } from '../input/Dwell.js';
-import { drawText } from '../art/font.js';
+import { drawText, textWidth } from '../art/font.js';
 import { drawKnotFrame, drawKnotRing } from '../art/knotwork.js';
 import { drawSky, SKY, makeStars, drawStars } from '../art/world.js';
 import { drawBaseAurora } from '../art/aurora.js';
@@ -47,22 +47,22 @@ export class EndCard {
     drawBaseAurora(ctx, t, 0.8, 10);
     g.wall.draw(ctx, t, 0.6);
 
-    const x = 50, y = 16, w = W - 100, h = 200;
+    const x = 60, y = 16, w = W - 120, h = 196;
     ctx.fillStyle = 'rgba(8,10,24,0.82)';
     ctx.fillRect(x, y, w, h);
     drawKnotFrame(ctx, x, y, w, h, { color: PAL.gold });
 
-    drawText(ctx, 'HEAR THIS FLIGHT IN ACT II', W / 2, y + 16, { scale: 2, align: 'center', color: PAL.cream });
-    drawText(ctx, 'FROM', W / 2, y + 44, { scale: 1, align: 'center', color: '#bff8ee' });
-    drawText(ctx, 'HOW TO TRAIN YOUR DRAGON', W / 2, y + 56, { scale: 2, align: 'center', color: PAL.gold });
-    drawText(ctx, 'WALLA WALLA SYMPHONY', W / 2, y + 84, { scale: 2, align: 'center', color: PAL.cream });
-    drawText(ctx, 'YOUTH ORCHESTRA', W / 2, y + 102, { scale: 2, align: 'center', color: PAL.cream });
+    // 3 big lines. the old card had 5 and nobody could read it in 3s
+    glow(ctx, W / 2, y + 50, 70, PAL.gold, 0.2 + g.beat.pulse * 0.15);
+    drawText(ctx, 'ACT II', W / 2, y + 22, { scale: 7, align: 'center', color: PAL.gold });
+    drawText(ctx, 'HOW TO TRAIN YOUR DRAGON', W / 2, y + 92, { scale: 2, align: 'center', color: PAL.cream });
 
-    glow(ctx, W / 2 - 60, y + 150, 34, PAL.gold, 0.3 + g.beat.pulse * 0.2);
-    drawHorn(ctx, W / 2 - 66, y + 150, 2);
-    drawSoundLines(ctx, W / 2 - 42, y + 150, 1, t);
-    drawText(ctx, 'LISTEN FOR', W / 2 - 16, y + 136, { scale: 2, align: 'left', color: PAL.gold2 });
-    drawText(ctx, 'THE BRASS!', W / 2 - 16, y + 154, { scale: 2, align: 'left', color: PAL.gold2 });
+    const lw = textWidth('LISTEN FOR THE BRASS!', 2);
+    const lx = Math.round(W / 2 - (lw + 52) / 2);
+    glow(ctx, lx + 12, y + 140, 26, PAL.gold, 0.3 + g.beat.pulse * 0.2);
+    drawHorn(ctx, lx + 14, y + 140, 2);
+    drawSoundLines(ctx, lx + 36, y + 140, 1, t);
+    drawText(ctx, 'LISTEN FOR THE BRASS!', lx + 54, y + 133, { scale: 2, color: PAL.gold2 });
 
     // shrinking bar = time left, no numbers needed
     const left = clamp(1 - t / DUR.END);
@@ -72,7 +72,7 @@ export class EndCard {
     // hold the light on the little lantern to skip
     drawKnotRing(ctx, SKIP.x, SKIP.y, SKIP.r, this.dwell.progress, { lobes: 6, amp: 2, width: 1, on: PAL.gold, off: 'rgba(255,226,138,0.35)' });
     drawLantern(ctx, SKIP.x, SKIP.y, 1, 0.5 + this.dwell.progress * 0.5, t);
-    drawText(ctx, 'NEXT', SKIP.x - SKIP.r - 6, SKIP.y - 3, { scale: 1, align: 'right', color: PAL.cream, alpha: 0.8 });
+    drawText(ctx, 'NEXT', SKIP.x - SKIP.r - 6, SKIP.y - 6, { scale: 2, align: 'right', color: PAL.cream, alpha: 0.85 });
 
     if (g.input.seen) drawCursorLight(ctx, g.input.x, g.input.y, t, 0.8);
   }

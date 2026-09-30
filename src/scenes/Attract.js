@@ -290,11 +290,13 @@ export class Attract {
   page_music(pg, t, g) {
     pg.fillStyle = '#1a1430';
     pg.fillRect(0, 0, BOOK.w, BOOK.h);
-    glow(pg, BOOK.w / 2, 60, 90, PAL.gold, 0.25 + g.beat.pulse * 0.1);
-    drawHorn(pg, BOOK.w / 2 - 6, 50, 3);
-    drawSoundLines(pg, BOOK.w / 2 + 30, 50, 2, t);
-    drawText(pg, 'HOW TO TRAIN', BOOK.w / 2, 94, { scale: 2, align: 'center', color: PAL.gold });
-    drawText(pg, 'YOUR DRAGON', BOOK.w / 2, 112, { scale: 2, align: 'center', color: PAL.gold });
-    drawText(pg, 'YOUTH ORCHESTRA', BOOK.w / 2, 136, { scale: 1, align: 'center', color: PAL.cream });
+    // the full credit lives here now, the end card got cut down to 3 lines
+    glow(pg, BOOK.w / 2, 34, 70, PAL.gold, 0.25 + g.beat.pulse * 0.1);
+    drawHorn(pg, BOOK.w / 2 - 6, 32, 3);
+    drawSoundLines(pg, BOOK.w / 2 + 30, 32, 2, t);
+    drawText(pg, 'HOW TO TRAIN', BOOK.w / 2, 58, { scale: 2, align: 'center', color: PAL.gold });
+    drawText(pg, 'YOUR DRAGON', BOOK.w / 2, 76, { scale: 2, align: 'center', color: PAL.gold });
+    drawText(pg, 'WALLA WALLA SYMPHONY', BOOK.w / 2, 102, { scale: 2, align: 'center', color: PAL.cream });
+    drawText(pg, 'YOUTH ORCHESTRA', BOOK.w / 2, 120, { scale: 2, align: 'center', color: PAL.cream });
   }
 }

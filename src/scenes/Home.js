@@ -4,7 +4,7 @@ import { drawText, drawTextPop, textWidth } from '../art/font.js';
 import { drawEmber, flapPose, FLOCK_COLORS } from '../art/ember.js';
 import { drawSky, SKY, makeStars, drawStars, drawSea, drawStone, makeCliff, drawCliff } from '../art/world.js';
 import { drawBaseAurora, drawRibbon, ribbonSkyPoints, RIBBON_COLORS } from '../art/aurora.js';
-import { drawSparkle } from '../art/icons.js';
+import { drawSparkle, drawActBanner } from '../art/icons.js';
 
 const { W, H } = VIEW;
 const ORBIT = { x: 240, y: 118, rx: 118, ry: 24 };
@@ -42,6 +42,7 @@ export class Home {
       g.cam.shake(1.5);
       g.particles.burst(W / 2, 214, 40, { speed: 110, colors: [PAL.gold, PAL.gold2, this.color, '#ffffff'], kind: 'spark', size: 2, drag: 2.4, life: 1.1 }, g.rng);
     }
+    this.showingAct = this.t > 3.9; // the tests check this
     if (this.t >= DUR.HOME) g.scenes.go('end', {}, { color: '#070a18' });
   }
 
@@ -133,6 +134,10 @@ export class Home {
       const pop = this.ticked ? clamp((t - 3.4) * 1.5) : 1;
       drawTextPop(ctx, num, x0 + wNum / 2, 248, pop, { scale: 4, color: PAL.gold, alpha: a });
       drawText(ctx, label, x0 + wNum + 10, 244, { scale: 2, color: '#bff8ee', alpha: a });
+    }
+    if (t > 3.9) {
+      const k = ease.outCubic(clamp((t - 3.9) / 0.4));
+      drawActBanner(ctx, W / 2, Math.round(-30 + k * 42), t, g.beat.pulse, k);
     }
   }
 }

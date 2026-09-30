@@ -5,6 +5,7 @@ const SHOTS = [
   ['attract', 2, null],
   ['attract', 10.4, null],
   ['attract', 13.5, null],
+  ['attract', 22, null], // music page
   ['find', 2, { x: 240, y: 90 }],
   ['find', 1.4, 'target'],
   ['flight', 6, 'follow'],
@@ -12,6 +13,7 @@ const SHOTS = [
   ['flight', 19.2, 'follow'],
   ['home', 1.4, null],
   ['home', 4.2, null],
+  ['home', 5, null], // act II banner
   ['end', 1.2, null],
 ];
 const SIZES = [
