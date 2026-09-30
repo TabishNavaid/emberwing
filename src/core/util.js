@@ -2,19 +2,15 @@ export const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
 export const lerp = (a, b, t) => a + (b - a) * t;
 export const invLerp = (a, b, v) => clamp((v - a) / (b - a));
 export const dist = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1);
-export const smooth = (t) => t * t * (3 - 2 * t);
 export const TAU = Math.PI * 2;
 
 export const ease = {
   outCubic: (t) => 1 - Math.pow(1 - t, 3),
   inCubic: (t) => t * t * t,
   inOutSine: (t) => -(Math.cos(Math.PI * t) - 1) / 2,
-  outBack: (t, s = 1.70158) => 1 + (s + 1) * Math.pow(t - 1, 3) + s * Math.pow(t - 1, 2),
-  outElastic: (t) =>
-    t === 0 || t === 1 ? t : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * ((2 * Math.PI) / 3)) + 1,
 };
 
-// Frame-rate independent exponential approach.
+// exponential ease toward a target, same feel at 30 or 144 fps
 export const approach = (cur, target, rate, dt) => cur + (target - cur) * (1 - Math.exp(-rate * dt));
 
 export function mulberry32(seed) {
@@ -28,12 +24,11 @@ export function mulberry32(seed) {
   };
   rng.range = (a, b) => a + rng() * (b - a);
   rng.int = (a, b) => Math.floor(rng.range(a, b + 1));
-  rng.pick = (arr) => arr[Math.floor(rng() * arr.length)];
   return rng;
 }
 
 const rgbCache = new Map();
-export function hexToRgb(hex) {
+function hexToRgb(hex) {
   let c = rgbCache.get(hex);
   if (!c) {
     const n = parseInt(hex.slice(1), 16);
@@ -65,7 +60,7 @@ export function makeCanvas(w, h) {
   return [c, ctx];
 }
 
-// Stamp-based pixel "brush": crisp lines on the low-res buffer.
+// canvas lines anti-alias on the tiny buffer, so we stamp squares instead
 export function stampLine(ctx, x1, y1, x2, y2, w = 1) {
   const n = Math.max(1, Math.ceil(Math.hypot(x2 - x1, y2 - y1)));
   const o = Math.floor(w / 2);
@@ -75,7 +70,6 @@ export function stampLine(ctx, x1, y1, x2, y2, w = 1) {
   }
 }
 
-// Filled pixel circle (crisp).
 export function disc(ctx, cx, cy, r) {
   cx = Math.round(cx);
   cy = Math.round(cy);
@@ -86,9 +80,9 @@ export function disc(ctx, cx, cy, r) {
   }
 }
 
-// Soft radial glow (additive-friendly).
+// glow() runs hundreds of times a frame (every spark), so gradients get cached per color+size
 const glowCache = new Map();
-export function glowSprite(color, r) {
+function glowSprite(color, r) {
   const key = color + r;
   let c = glowCache.get(key);
   if (!c) {
