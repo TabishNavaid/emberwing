@@ -72,7 +72,6 @@ export class FindEmber {
 
   update(g, dt) {
     const inp = g.input;
-    const t = this.t;
     if (this.found) {
       this.burstT += dt;
       this.fogA = approach(this.fogA, 0, 3.5, dt);

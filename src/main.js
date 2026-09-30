@@ -20,7 +20,7 @@ import { EndCard } from './scenes/EndCard.js';
 const { W, H } = VIEW;
 const params = new URLSearchParams(location.search);
 
-// --- canvases: a tiny 480x270 buffer, scaled up crisp to the display canvas
+// everything draws into a tiny 480x270 buffer, then it's scaled up with no smoothing
 const display = document.getElementById('screen');
 const dctx = display.getContext('2d');
 const buffer = document.createElement('canvas');
@@ -39,7 +39,8 @@ function resize() {
   display.style.width = cw + 'px';
   display.style.height = ch + 'px';
   let s = Math.min(display.width / W, display.height / H);
-  if (s >= 2 && s - Math.floor(s) < 0.2) s = Math.floor(s); // prefer whole-pixel scaling
+  // snap to a whole number when we're close, uneven pixel sizes look wobbly on the projector
+  if (s >= 2 && s - Math.floor(s) < 0.2) s = Math.floor(s);
   const w = Math.round(W * s);
   const h = Math.round(H * s);
   fit = { x: Math.round((display.width - w) / 2), y: Math.round((display.height - h) / 2), w, h, dpr };
@@ -53,7 +54,6 @@ const toView = (cx, cy) => ({
   y: ((cy * fit.dpr - fit.y) / fit.h) * H,
 });
 
-// --- game services shared by every scene
 const input = new Input();
 attachPointer(input, window, toView);
 attachMocap(input, params);
@@ -69,19 +69,19 @@ const game = {
   store: new AuroraStore(),
   rng: mulberry32(seed),
   time: 0,
-  runStart: 0, // set when a guest starts (for timing)
-  runs: [], // completed run durations (for tests / debug)
+  runStart: 0,
+  runs: [], // finished run lengths, the tests read these
 };
 game.audio = new Audio(beat);
 game.wall = new AuroraWall(game.store);
-game.scenes = new SceneManager(game);
+game.scenes = new SceneManager(game, {
+  attract: new Attract(),
+  find: new FindEmber(),
+  flight: new Flight(),
+  home: new Home(),
+  end: new EndCard(),
+});
 game.op = new Operator(game);
-
-game.scenes.register('attract', new Attract());
-game.scenes.register('find', new FindEmber());
-game.scenes.register('flight', new Flight());
-game.scenes.register('home', new Home());
-game.scenes.register('end', new EndCard());
 
 function step(dt) {
   game.time += dt;
@@ -110,7 +110,7 @@ function render() {
   dctx.drawImage(buffer, fit.x + Math.round(game.cam.ox * k), fit.y + Math.round(game.cam.oy * k), fit.w, fit.h);
 }
 
-// --- main loop (dt capped so a hiccup never teleports anything)
+// dt capped at 50ms so a laptop hiccup doesn't teleport ember across the screen
 let last = performance.now();
 let paused = false;
 function frame(now) {
@@ -121,12 +121,11 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-// --- test / tooling hooks (used by Playwright; harmless for guests)
+// hooks for the playwright tests, guests never touch these
 window.__emberwing = {
   game,
   goto: (name, data) => game.scenes.enter(name, data || {}),
   pause: (p = true) => (paused = p),
-  // internal view px -> CSS px (for scripted pointer tests)
   toScreen: (x, y) => ({ x: (fit.x + (x / W) * fit.w) / fit.dpr, y: (fit.y + (y / H) * fit.h) / fit.dpr }),
   step: (seconds, fps = 60) => {
     const n = Math.round(seconds * fps);

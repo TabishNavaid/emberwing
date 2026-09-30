@@ -1,14 +1,12 @@
 import { VIEW, PAL } from '../config.js';
 import { drawText } from '../art/font.js';
 
-// Operator hotkeys (hidden from guests; nothing on screen mentions them):
-//   F fullscreen   R reset to attract   S skip scene   D debug overlay
-//   C clear tonight's aurora (asks Y/N on screen)   M audio on/off
+// hidden operator keys: F fullscreen, R reset, S skip, D debug, C clear sky (asks first), M audio
 export class Operator {
   constructor(game) {
     this.game = game;
     this.debug = new URLSearchParams(location.search).has('debug');
-    this.confirm = 0; // seconds left on the clear-confirm dialog
+    this.confirm = 0; // seconds left on the "clear sky?" dialog, it times out so it can't get stuck open
     this.toast = '';
     this.toastT = 0;
     this.fps = 60;
@@ -19,7 +17,7 @@ export class Operator {
     this.toastT = 1.8;
   }
   key(e) {
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return; // don't eat cmd+r etc
     const k = e.key.toLowerCase();
     const g = this.game;
     if (this.confirm > 0) {
@@ -70,7 +68,7 @@ export class Operator {
       ctx.fillStyle = 'rgba(0,0,0,0.7)';
       ctx.fillRect(2, 2, 170, lines.length * 9 + 4);
       lines.forEach((l, i) => drawText(ctx, l, 5, 5 + i * 9, { color: '#9fffe0', outline: null }));
-      // pointer crosshair
+      // raw (unfiltered) pointer, handy for seeing how jittery the mocap is
       ctx.fillStyle = '#ff3fd0';
       ctx.fillRect(Math.round(g.input.rawX) - 3, Math.round(g.input.rawY), 7, 1);
       ctx.fillRect(Math.round(g.input.rawX), Math.round(g.input.rawY) - 3, 1, 7);

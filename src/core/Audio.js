@@ -1,8 +1,6 @@
-// Optional ambience only. OFF by default (the lobby is loud and nothing in
-// the game depends on sound). Operator presses M to toggle.
-// Everything is generated live: a soft drone on D and A, sea-wind noise, and
-// sparse random notes from a D pentatonic scale on the beat. It is not, and
-// never tries to be, any melody from the film score.
+// off by default, the lobby is too loud and the professor said not to rely on sound.
+// all generated: a drone, wind noise, and random pentatonic notes. random on purpose so it
+// can never turn into anything from the film score
 const PENTA = [0, 2, 4, 7, 9]; // D E F# A B
 
 export class Audio {
@@ -35,7 +33,6 @@ export class Audio {
     this.master = ctx.createGain();
     this.master.gain.value = 0;
     this.master.connect(ctx.destination);
-    // drone
     const lp = ctx.createBiquadFilter();
     lp.type = 'lowpass';
     lp.frequency.value = 420;
@@ -56,7 +53,6 @@ export class Audio {
     lg.gain.value = 160;
     lfo.connect(lg).connect(lp.frequency);
     lfo.start();
-    // wind
     const buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const d = buf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -87,7 +83,6 @@ export class Audio {
     o.start(t);
     o.stop(t + dur + 0.05);
   }
-  // Called every frame; plays a sparse random pentatonic pluck on some beats.
   update() {
     if (!this.on || !this.beat.hit) return;
     if (Math.random() < 0.45) {
@@ -95,7 +90,7 @@ export class Audio {
       this.note(deg + 12 * (Math.random() < 0.3 ? 1 : 0), 0, 1.4, 0.06);
     }
   }
-  // Little one-shot cues (never required to understand anything)
+  // one-shot cues, nothing in the game depends on hearing them
   cue(name) {
     if (!this.on) return;
     if (name === 'ring') this.note(PENTA[Math.floor(Math.random() * 5)] + 12, 0, 0.6, 0.07, 'sine');

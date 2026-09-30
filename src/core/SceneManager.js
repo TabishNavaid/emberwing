@@ -1,25 +1,21 @@
 import { DUR, INPUT, VIEW } from '../config.js';
 import { clamp } from './util.js';
 
-// One scene at a time, with fade transitions and the idle watchdog:
-// interactive scenes return to attract after INPUT.IDLE_RESET seconds of no input.
+// one scene at a time with fades between them. also the idle watchdog: interactive
+// scenes bail back to attract after INPUT.IDLE_RESET seconds of nobody pointing
 export class SceneManager {
-  constructor(game) {
+  constructor(game, scenes) {
     this.game = game;
-    this.scenes = {};
+    this.scenes = scenes;
     this.current = null;
     this.name = '';
-    this.fade = 0; // 0 = clear, 1 = fully covered
+    this.fade = 0; // 0 clear, 1 fully covered
     this.fadeDir = 0;
     this.fadeColor = '#000';
     this.fadeTime = DUR.FADE;
     this.pending = null;
   }
-  register(name, scene) {
-    this.scenes[name] = scene;
-    scene.name = name;
-  }
-  // Immediately switch (no fade).
+  // instant switch, no fade
   enter(name, data = {}) {
     const g = this.game;
     this.current?.exit?.(g);
@@ -31,6 +27,7 @@ export class SceneManager {
     g.input.resetIdle();
     this.current.enter(g, data);
   }
+  // fades out, swaps at full black, then the new scene fades in while it's already running
   go(name, data = {}, { fade = DUR.FADE, color = '#05070d' } = {}) {
     if (this.pending) return;
     if (fade <= 0) return this.enter(name, data);
@@ -40,7 +37,7 @@ export class SceneManager {
     this.fadeTime = fade;
   }
   skip() {
-    if (this.current?.skip) this.current.skip(this.game);
+    this.current?.skip?.(this.game);
   }
   update(dt) {
     const g = this.game;
