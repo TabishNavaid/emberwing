@@ -6,9 +6,11 @@ const SHOTS = [
   ['attract', 10.4, null],
   ['attract', 13.5, null],
   ['attract', 22, null], // music page
+  ['find', 0.8, { x: 240, y: 90 }], // story beat
   ['find', 2, { x: 240, y: 90 }],
   ['find', 1.4, 'target'],
   ['flight', 6, 'follow'],
+  ['flight', 9, { x: 400, y: 60 }], // tether when ember lags behind the light
   ['flight', 13.4, 'follow'],
   ['flight', 19.2, 'follow'],
   ['home', 1.4, null],

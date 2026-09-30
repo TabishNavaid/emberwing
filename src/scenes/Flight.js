@@ -1,7 +1,7 @@
 import { VIEW, DUR, FLIGHT, PAL, MUSIC } from '../config.js';
 import { clamp, lerp, approach, glow, ease, mix, invLerp, mulberry32 } from '../core/util.js';
 import { drawText, drawTextPop } from '../art/font.js';
-import { drawKnotRing } from '../art/knotwork.js';
+import { drawKnotRing, drawKnotBand } from '../art/knotwork.js';
 import { drawEmber, flapPose, FLOCK_COLORS } from '../art/ember.js';
 import { drawSky, SKY, makeStars, drawStars, drawSea, drawStone, drawStack, drawCloud, drawWind, drawRays, drawRune, makeCliff } from '../art/world.js';
 import { drawHorn, drawSoundLines, drawCursorLight } from '../art/icons.js';
@@ -265,7 +265,8 @@ export class Flight {
     ctx.restore();
     g.particles.draw(ctx, 1);
 
-    if (t < 1.8) drawTextPop(ctx, 'FLY!', W / 2, 40, t * 1.4, { scale: 5, color: PAL.cream });
+    this.drawJourney(ctx, p, t);
+    if (t < 1.8) drawTextPop(ctx, 'FLY!', W / 2, 44, t * 1.4, { scale: 5, color: PAL.cream });
     if (this.swellFired && this.swellT < 2.2) {
       const a = clamp((2.2 - this.swellT) * 2);
       drawTextPop(ctx, 'SOAR!', W / 2 + 14, 40, this.swellT * 1.4, { scale: 5, color: PAL.gold2, alpha: a });
@@ -276,7 +277,60 @@ export class Flight {
     }
     if (rise > 0.1) drawText(ctx, 'HOME IS UP THERE', W / 2, 236, { scale: 2, align: 'center', color: '#bff8ee', alpha: clamp(rise * 3) });
 
+    this.drawTether(ctx, g.input.x, g.input.y, t);
     drawCursorLight(ctx, g.input.x, g.input.y, t, 0.8);
+  }
+
+  // lighthouse -> home track across the top. someone who glances over mid-flight gets
+  // "it's flying home" without reading anything
+  drawJourney(ctx, p, t) {
+    const x0 = 150, x1 = 330, y = 13;
+    const px = Math.round(lerp(x0, x1, p));
+    drawKnotBand(ctx, x0, y, x1 - x0, { color: 'rgba(255,243,214,0.35)', period: 10, amp: 2 });
+    if (px > x0) drawKnotBand(ctx, x0, y, px - x0, { color: PAL.gold, period: 10, amp: 2 });
+    // tiny lighthouse
+    ctx.fillStyle = '#e8e0cc';
+    ctx.fillRect(x0 - 16, y - 6, 5, 12);
+    ctx.fillStyle = '#46546e';
+    ctx.fillRect(x0 - 16, y - 2, 5, 3);
+    ctx.fillStyle = PAL.gold2;
+    ctx.fillRect(x0 - 16, y - 9, 5, 3);
+    glow(ctx, x0 - 14, y - 8, 7, PAL.gold, 0.7);
+    // home: three stones under an aurora arc
+    const hx = x1 + 14;
+    glow(ctx, hx, y - 4, 12, PAL.teal, 0.35 + 0.25 * Math.sin(t * 2));
+    ctx.fillStyle = PAL.teal;
+    for (let i = -6; i <= 6; i++) ctx.fillRect(hx + i, y - 7 + Math.round((i * i) / 12), 1, 2);
+    ctx.fillStyle = '#56698a';
+    for (const [dx, h] of [[-5, 6], [0, 8], [5, 6]]) ctx.fillRect(hx + dx - 1, y + 5 - h, 3, h);
+    // ember marker: orange body, teal wing, one eye
+    const bob = Math.round(Math.sin(t * 6) * 1);
+    ctx.fillStyle = PAL.teal;
+    ctx.fillRect(px - 4, y - 6 + bob, 4, 3);
+    ctx.fillStyle = PAL.ember;
+    ctx.fillRect(px - 3, y - 3 + bob, 7, 6);
+    ctx.fillRect(px + 3, y - 4 + bob, 3, 4);
+    ctx.fillStyle = '#1b1030';
+    ctx.fillRect(px + 4, y - 3 + bob, 1, 1);
+  }
+
+  // dotted light from the guest's light to ember when they drift apart, so it's obvious
+  // ember is following YOU
+  drawTether(ctx, x, y, t) {
+    const z = this.zoom;
+    const ex = (this.ex - W / 2) * z + W / 2;
+    const ey = (this.ey - H / 2) * z + H / 2;
+    const d = Math.hypot(ex - x, ey - y);
+    if (d < 28 || this.p > FLIGHT.RISE_AT) return;
+    const a = clamp((d - 28) / 40) * 0.6;
+    ctx.fillStyle = PAL.gold2;
+    const off = (t * 40) % 7;
+    for (let s = off; s < d - 14; s += 7) {
+      const k = s / d;
+      ctx.globalAlpha = a * (1 - k * 0.5);
+      ctx.fillRect(Math.round(x + (ex - x) * k), Math.round(y + (ey - y) * k), 2, 2);
+    }
+    ctx.globalAlpha = 1;
   }
 
   drawRing(g, ctx, ring) {

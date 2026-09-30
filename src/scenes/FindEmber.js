@@ -24,6 +24,7 @@ export class FindEmber {
     this.found = false;
     this.burstT = -1;
     this.flinch = 0;
+    this.prompt = 'EMBER IS LOST!';
     this.fogA = 1;
     this.hopT = 0;
     this.gull = { x: this.ex > 300 ? 170 : 380, perched: true, fx: 0, fy: 0, t: 0 };
@@ -97,6 +98,13 @@ export class FindEmber {
       this.hold = Math.max(0, this.hold - dt * 0.3);
     }
     this.flinch = approach(this.flinch, 0, 3, dt);
+
+    // one short prompt at a time. starts with the story beat so someone glancing over from
+    // the line gets "lost dragon" before the instructions
+    if (d < INPUT.LOCK_RADIUS * 1.2) this.prompt = this.flinch > 0.4 ? 'GENTLY...' : 'HOLD STEADY';
+    else if (this.t < 1.8) this.prompt = 'EMBER IS LOST!';
+    else if (this.activeT > DUR.FIND_ASSIST_GLOW) this.prompt = 'FOLLOW THE SPARKS';
+    else this.prompt = 'FIND THE EYES';
     if (this.activeT > DUR.FIND_AUTO_COMPLETE) this.hold += dt / DUR.FIND_AUTO_FILL;
     if (this.hold >= 1) return this.burst(g);
 
@@ -210,10 +218,9 @@ export class FindEmber {
     g.particles.draw(ctx);
 
     if (!this.found) {
-      let msg = 'FIND THE EYES';
-      if (d < INPUT.LOCK_RADIUS * 1.2) msg = this.flinch > 0.4 ? 'GENTLY...' : 'HOLD STEADY';
-      else if (this.activeT > DUR.FIND_ASSIST_GLOW) msg = 'FOLLOW THE SPARKS';
-      drawText(ctx, msg, W / 2, 12, { scale: 3, align: 'center', color: msg === 'HOLD STEADY' ? PAL.gold2 : PAL.cream });
+      const msg = this.prompt;
+      if (msg === 'EMBER IS LOST!') drawTextPop(ctx, msg, W / 2, 23, this.t * 1.5, { scale: 3, color: PAL.ember3 });
+      else drawText(ctx, msg, W / 2, 12, { scale: 3, align: 'center', color: msg === 'HOLD STEADY' ? PAL.gold2 : PAL.cream });
     } else {
       // one soft flash only (photosensitivity), never repeated
       if (this.burstT < 0.4) {
