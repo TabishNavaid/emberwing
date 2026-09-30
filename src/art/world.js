@@ -297,6 +297,7 @@ export function drawWind(ctx, t, beat, o = {}) {
   const alpha = o.alpha ?? 0.35;
   const lanes = o.lanes ?? [0.22, 0.4, 0.58];
   const speed = o.speed ?? 40;
+  const rows = o.thick ? 2 : 1;
   for (let i = 0; i < lanes.length; i++) {
     const yb = lanes[i] * H;
     const len = 90 + i * 20;
@@ -308,7 +309,7 @@ export function drawWind(ctx, t, beat, o = {}) {
       const y = yb + Math.sin(x * 0.03 + t * 1.2 + i) * 7 + Math.sin(x * 0.011 + i * 2) * 5;
       ctx.globalAlpha = alpha * k * pulse;
       ctx.fillStyle = color;
-      ctx.fillRect(Math.round(x), Math.round(y), 2, 1);
+      ctx.fillRect(Math.round(x), Math.round(y), 2, rows);
     }
   }
   ctx.globalAlpha = 1;

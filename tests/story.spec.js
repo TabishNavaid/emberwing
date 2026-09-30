@@ -18,3 +18,24 @@ test('find ember opens with the story beat, then the instruction', async ({ page
   expect(await at(0.5)).toBe('EMBER IS LOST!');
   expect(await at(1.5)).toBe('FIND THE EYES');
 });
+
+test('brass swell: wind-up, then it fires on time and the flock joins', async ({ page }) => {
+  await boot(page, '&scene=flight');
+  await page.evaluate(() => window.__emberwing.pause(true));
+  // keep the light moving or the 10s idle reset sends us back to attract
+  const at = (t) => page.evaluate((t) => {
+    const w = window.__emberwing;
+    for (let i = 0; i < t * 10; i++) {
+      w.game.input.feed(200 + Math.sin(w.game.time) * 60, 135, 'mouse');
+      w.step(0.1);
+    }
+    const f = w.game.scenes.current;
+    return { windup: f.windup, fired: f.swellFired, flockX: f.flock[0].x };
+  }, t);
+  const before = await at(12.1); // swell is at 0.62 * 20s = 12.4s
+  expect(before.windup).toBeGreaterThan(0);
+  expect(before.fired).toBe(false);
+  const after = await at(1.6);
+  expect(after.fired).toBe(true);
+  expect(after.flockX).toBeGreaterThan(0);
+});

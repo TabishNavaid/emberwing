@@ -13,6 +13,8 @@ const SHOTS = [
   ['flight', 6, 'follow'],
   ['flight', 5.35, 'follow'], // barrel roll after 3 in a row
   ['flight', 9, { x: 400, y: 60 }], // tether when ember lags behind the light
+  ['flight', 12.2, 'follow'], // swell wind-up
+  ['flight', 12.6, 'follow'], // swell fires
   ['flight', 13.4, 'follow'],
   ['flight', 19.2, 'follow'],
   ['home', 1.4, null],

@@ -33,7 +33,7 @@ export class Flight {
     this.swellFired = false;
     this.riseY = 0;
     this.stars = makeStars(13, 80, 160);
-    this.flock = FLOCK_COLORS.map((c, i) => ({ c, i, x: -60 - i * 30, y: 60 + i * 40, ox: [-38, -52, -84, -98][i], oy: [-34, 30, -8, 42][i] }));
+    this.flock = FLOCK_COLORS.map((c, i) => ({ c, i, x: -60 - i * 30, y: 60 + i * 40, ox: [-38, -52, -84, -98][i], oy: [-34, 30, -8, 42][i], trail: [] }));
 
     // rings are scheduled up front so each one crosses REF_X exactly on a beat
     const beat = 60 / MUSIC.BPM;
@@ -67,8 +67,16 @@ export class Flight {
   get conf() {
     return ease.inOutSine(clamp(this.p / FLIGHT.SWELL_AT));
   }
+  // 0..1 during the wind-up right before the swell
+  get windup() {
+    return this.swellFired ? 0 : invLerp(FLIGHT.SWELL_AT - FLIGHT.SWELL_WINDUP, FLIGHT.SWELL_AT, this.p);
+  }
   get zoom() {
-    return lerp(FLIGHT.ZOOM_START, FLIGHT.ZOOM_END, ease.inOutSine(invLerp(0.05, FLIGHT.SWELL_AT + 0.08, this.p)));
+    const base = lerp(FLIGHT.ZOOM_START, FLIGHT.ZOOM_END, ease.inOutSine(invLerp(0.05, FLIGHT.SWELL_AT + 0.08, this.p)));
+    // lean in during the wind-up, then punch out past normal and settle back
+    const st = this.swellT ?? 0;
+    const punch = this.swellFired ? ease.outCubic(clamp(st / 0.25)) * Math.exp(-st * 1.6) : 0;
+    return base * (1 + 0.06 * this.windup - 0.07 * punch);
   }
   ringX(ring) {
     return REF_X + (ring.at - this.t) * FLIGHT.SCROLL;
@@ -185,8 +193,15 @@ export class Flight {
     if (!this.swellFired && p >= FLIGHT.SWELL_AT) {
       this.swellFired = true;
       this.swellT = 0;
-      g.cam.shake(3);
+      this.swellX = this.ex;
+      this.swellY = this.ey;
+      g.cam.shake(4);
       g.audio.cue('burst');
+      // gold confetti over the whole screen
+      for (let i = 0; i < 70; i++) {
+        const r = g.rng;
+        g.particles.add({ x: r() * W, y: -10 - r() * 50, vx: (r() - 0.5) * 30, vy: 40 + r() * 60, grav: 30, drag: 0.5, life: 2.4, color: [PAL.gold, PAL.gold2, PAL.cream, PAL.teal][Math.floor(r() * 4)], kind: r() < 0.3 ? 'spark' : 'px', size: 2, layer: 1 });
+      }
     }
     if (this.swellFired) this.swellT += dt;
     for (const f of this.flock) {
@@ -195,6 +210,11 @@ export class Flight {
       const ty2 = on ? this.ey + f.oy + Math.sin(this.t * 2 + f.i) * 5 : f.y;
       f.x = approach(f.x, tx2, on ? 2.2 - f.i * 0.25 : 1, dt);
       f.y = approach(f.y, ty2, 2.4 - f.i * 0.3, dt);
+      // light trails so the swoop-in reads from across the room
+      if (on) {
+        f.trail.push({ x: this.camX + f.x, y: f.y });
+        if (f.trail.length > 40) f.trail.shift();
+      }
     }
 
     this.trail.push({ x: this.camX + this.ex, y: this.ey });
@@ -226,11 +246,17 @@ export class Flight {
     drawSky(ctx, SKY.aurora, 0, H, rise);
     drawStars(ctx, this.stars, t, clamp(1 - p * 3) + rise);
     if (rise > 0) drawBaseAurora(ctx, t, rise * 1.2, 10);
+    const windup = this.windup;
+    if (windup > 0) {
+      // sky dims a little so the swell has somewhere to go
+      ctx.fillStyle = `rgba(5,7,13,${0.3 * windup})`;
+      ctx.fillRect(0, 0, W, H);
+    }
 
     const sunX = W * 0.72;
     const sunY = SEA_Y - 4 + this.riseY;
     glow(ctx, sunX, sunY, 90 + conf * 40, PAL.amber, 0.25 + conf * 0.35 * (1 - rise));
-    if (this.swellFired) drawRays(ctx, sunX, sunY, t, PAL.gold2, 0.16 * swell * (1 - rise) * (0.8 + 0.2 * g.beat.pulse), 11, 520);
+    if (this.swellFired) drawRays(ctx, sunX, sunY, t, PAL.gold2, 0.22 * swell * (1 - rise) * (0.8 + 0.2 * g.beat.pulse), 13, 560);
 
     for (const c of this.clouds) {
       const x = ((c.x - this.camX * 0.2) % (W + 200) + W + 200) % (W + 200) - 100;
@@ -246,7 +272,7 @@ export class Flight {
     drawSea(ctx, SEA_Y, t, { c1: mix('#10202e', '#3a3a6a', conf), c2: mix('#1b3242', '#6a5a8a', conf), foam: mix('#9fc0cc', '#ffd8a0', conf), scroll: this.camX, glint: conf > 0.2 ? { x: sunX, color: PAL.gold2 } : null });
     ctx.restore();
 
-    drawWind(ctx, t, g.beat, { lanes: [0.2, 0.46, 0.7], alpha: 0.25 + conf * 0.2, color: conf > 0.5 ? '#ffe8b0' : '#bfe8ff', speed: 160 });
+    drawWind(ctx, t, g.beat, { lanes: [0.2, 0.46, 0.7], alpha: 0.25 + conf * 0.2 + swell * 0.2, color: conf > 0.5 ? '#ffe8b0' : '#bfe8ff', speed: 160, thick: this.swellFired });
 
     // camera starts close and pulls back as ember gets confident. sky and sea stay unzoomed
     // because they're full-width cached images and would show their edges
@@ -277,6 +303,25 @@ export class Flight {
     this.drawTrail(ctx, conf);
     for (const ring of this.rings) this.drawRing(g, ctx, ring);
     for (const f of this.flock) {
+      for (let i = 1; i < f.trail.length; i++) {
+        const k = i / f.trail.length;
+        ctx.globalAlpha = k * 0.6;
+        ctx.fillStyle = f.c.wingLit;
+        ctx.fillRect(Math.round(f.trail[i].x - this.camX - 10), Math.round(f.trail[i].y + 3), 2, 1 + Math.round(k * 2));
+      }
+      ctx.globalAlpha = 1;
+    }
+    if (this.swellFired && this.swellT < 1.2) {
+      // shockwave rings, gold then teal
+      for (const [delay, color] of [[0, PAL.gold], [0.15, PAL.teal]]) {
+        const k = clamp((this.swellT - delay) / 0.9);
+        if (k <= 0 || k >= 1) continue;
+        ctx.globalAlpha = 1 - k;
+        drawKnotRing(ctx, this.swellX, this.swellY, 20 + ease.outCubic(k) * 300, 1, { lobes: 16, amp: 5, width: 2, on: color });
+        ctx.globalAlpha = 1;
+      }
+    }
+    for (const f of this.flock) {
       if (f.x < -50) continue;
       drawEmber(ctx, f.x, f.y, { mood: 'fly', flap: t * 2.6 + f.i * 0.21, life: t, glow: 2, colors: f.c, ci: f.i, scale: 0.78, rot: Math.sin(t * 2 + f.i) * 0.06 });
     }
@@ -287,6 +332,11 @@ export class Flight {
 
     this.drawJourney(ctx, p, t);
     if (t < 1.8) drawTextPop(ctx, 'FLY!', W / 2, 44, t * 1.4, { scale: 5, color: PAL.cream });
+    if (this.swellFired && this.swellT < 0.4) {
+      // one soft flash, only once (photosensitivity)
+      ctx.fillStyle = `rgba(255,226,138,${0.3 * (1 - this.swellT / 0.4)})`;
+      ctx.fillRect(0, 0, W, H);
+    }
     if (this.swellFired && this.swellT < 2.2) {
       const a = clamp((2.2 - this.swellT) * 2);
       drawTextPop(ctx, 'SOAR!', W / 2 + 14, 40, this.swellT * 1.4, { scale: 5, color: PAL.gold2, alpha: a });
@@ -403,6 +453,11 @@ export class Flight {
     }
     const s = this.squash;
     let sy = 1 - s * 0.2;
+    let sxw = 1 + s * 0.25;
+    // "breath in" before the swell
+    const w = this.windup;
+    sy *= 1 - 0.1 * w;
+    sxw *= 1 + 0.08 * w;
     if (this.cheerT > 0) y -= Math.sin((this.cheerT / 0.4) * Math.PI) * 5; // little hop
     // barrel roll: squash the body through zero and out upside down, reads as a roll in 2d
     if (this.rollT > 0) sy *= Math.cos((1 - this.rollT / 0.7) * Math.PI * 2);
@@ -412,7 +467,7 @@ export class Flight {
     const glide = this.vy > 60 && conf > 0.4;
     glow(ctx, x - 6, y - 6, 26, PAL.teal, 0.3 + conf * 0.2);
     drawEmber(ctx, x, y, {
-      mood, glow: 2, rot, sx: 1 + s * 0.25, sy, life: t,
+      mood, glow: 2, rot, sx: sxw, sy, life: t,
       ...(glide ? { wing: 'mid' } : { flap: this.flapPh }),
     });
   }

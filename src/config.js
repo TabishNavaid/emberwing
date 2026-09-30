@@ -34,6 +34,7 @@ export const DUR = {
 export const FLIGHT = {
   WOBBLY_UNTIL: 0.3, // shaky wings, small silver rings
   SWELL_AT: 0.62, // brass swell: rays, camera pulls back, flock joins
+  SWELL_WINDUP: 0.035, // the "breath in" before the swell (~0.7s)
   RISE_AT: 0.9, // climb toward the aurora, no more rings
   RING_BEATS_EARLY: 3, // wobbly part gets more time between rings
   RING_BEATS_LATE: 2,
