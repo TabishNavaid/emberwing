@@ -3,20 +3,14 @@ import { clamp, lerp, approach, glow, ease, mix, invLerp, mulberry32 } from '../
 import { drawText, drawTextPop } from '../art/font.js';
 import { drawKnotRing } from '../art/knotwork.js';
 import { drawEmber, flapPose, FLOCK_COLORS } from '../art/ember.js';
-import { drawSky, SKY, makeStars, drawStars, drawSea, drawStone, drawStack, drawCloud, drawWind, drawRays, drawRune, drawFlyingGull, makeCliff, drawCliff } from '../art/world.js';
-import { drawHorn, drawSoundLines, drawCursorLight, drawSparkle } from '../art/icons.js';
+import { drawSky, SKY, makeStars, drawStars, drawSea, drawStone, drawStack, drawCloud, drawWind, drawRays, drawRune, makeCliff } from '../art/world.js';
+import { drawHorn, drawSoundLines, drawCursorLight } from '../art/icons.js';
 import { drawBaseAurora } from '../art/aurora.js';
 
 const { W, H } = VIEW;
-const REF_X = 150; // rings reach this x exactly on the beat
+const REF_X = 150; // rings reach this x exactly on a beat
 const SEA_Y = 222;
 
-// Scene 2: FIRST FLIGHT. One visual idea: wobbly, then soaring.
-// Ember follows the guest's light. Rune rings arrive on the beat; they grow
-// bigger and more golden as Ember gains confidence, the camera pulls back,
-// and at the brass swell golden rays fan out and the flock joins in.
-// Missing a ring is never a failure: Ember loops playfully and the ring's
-// sparkles find it anyway.
 export class Flight {
   interactive = true;
 
@@ -25,12 +19,9 @@ export class Flight {
     this.ex = 110;
     this.ey = data.fromY ? clamp(data.fromY, 80, 200) : 150;
     this.vy = 0;
-    this.px = this.ex;
-    this.py = this.ey;
     this.camX = 0;
     this.loopT = 0;
     this.squash = 0;
-    this.hits = 0;
     this.path = [];
     this.pathT = 0;
     this.trail = [];
@@ -39,7 +30,7 @@ export class Flight {
     this.stars = makeStars(13, 80, 160);
     this.flock = FLOCK_COLORS.map((c, i) => ({ c, i, x: -60 - i * 30, y: 60 + i * 40, ox: [-38, -52, -84, -98][i], oy: [-34, 30, -8, 42][i] }));
 
-    // --- rings on the beat
+    // rings are scheduled up front so each one crosses REF_X exactly on a beat
     const beat = 60 / MUSIC.BPM;
     const end = DUR.FLIGHT * FLIGHT.RISE_AT - 0.6;
     this.rings = [];
@@ -50,13 +41,13 @@ export class Flight {
       const p = tt / DUR.FLIGHT;
       const amp = lerp(40, 70, clamp(p / FLIGHT.SWELL_AT));
       const ny = 140 + Math.sin(i * 1.15 + r() * 0.6) * amp + Math.sin(i * 0.43) * 18;
+      // lerp from the last ring so consecutive rings are always reachable
       y = clamp(lerp(y, ny, 0.8), 55, 200);
       this.rings.push({ at: tt, y, p, rune: i, state: 'coming', fx: 0 });
       tt += beat * (p < FLIGHT.WOBBLY_UNTIL ? FLIGHT.RING_BEATS_EARLY : FLIGHT.RING_BEATS_LATE);
       i++;
     }
 
-    // --- scenery in world space
     this.far = makeCliff({ seed: 31, x0: 0, x1: W, top: 196, bottom: SEA_Y + 2, rough: 14, periodic: true, colors: { rock: '#1b2638', rock2: '#223048', rock3: '#2a3a55', grass: '#24403c', grass2: '#2c4c46' } });
     this.stacks = [];
     for (let x = 200; x < 3200; x += 150 + r() * 160) this.stacks.push({ x, w: 16 + Math.floor(r() * 12), h: 60 + Math.floor(r() * 70), seed: Math.floor(r() * 99) });
@@ -65,7 +56,6 @@ export class Flight {
     this.clouds = Array.from({ length: 7 }, (_, k) => ({ x: k * 110 + r() * 60, y: 40 + r() * 70, w: 70 + r() * 70, seed: k + 40 }));
   }
 
-  // progress through the flight 0..1
   get p() {
     return clamp(this.t / DUR.FLIGHT);
   }
@@ -81,7 +71,7 @@ export class Flight {
   ringR(ring) {
     return lerp(FLIGHT.RING_R_START, FLIGHT.RING_R_END, ease.inOutSine(clamp(ring.p / FLIGHT.RISE_AT)));
   }
-  // screen -> zoomed world coordinates
+  // the pointer is in screen space but ember lives in the zoomed world
   toWorld(x, y) {
     const z = this.zoom;
     return { x: (x - W / 2) / z + W / 2, y: (y - H / 2) / z + H / 2 };
@@ -92,7 +82,7 @@ export class Flight {
   target(g) {
     const r = this.nextRing();
     if (!r) return { x: W * 0.4, y: H * 0.3 };
-    // report in screen coordinates (for scripted test players)
+    // screen coords, the playwright "guest" steers toward this
     const z = this.zoom;
     const x = (REF_X - W / 2) * z + W / 2;
     return { x, y: (r.y - H / 2) * z + H / 2 };
@@ -104,7 +94,7 @@ export class Flight {
   finish(g) {
     if (this.done) return;
     this.done = true;
-    g.scenes.go('home', { path: this.path, hits: this.hits, rings: this.rings.length }, { fade: 0.6, color: '#0a1024' });
+    g.scenes.go('home', { path: this.path }, { fade: 0.6, color: '#0a1024' });
   }
 
   update(g, dt) {
@@ -113,7 +103,7 @@ export class Flight {
     const conf = this.conf;
     this.camX += FLIGHT.SCROLL * dt;
 
-    // --- where Ember wants to go: the guest's light (or the next ring if nobody's pointing)
+    // follow the light. if nobody's pointing, autopilot to the next ring so it still looks good
     const w = this.toWorld(inp.x, inp.y);
     let tx = clamp(w.x, 70, 320);
     let ty = clamp(w.y, 34, 212);
@@ -128,25 +118,21 @@ export class Flight {
       }
     }
     if (p > FLIGHT.RISE_AT) {
-      // climb toward the aurora
       ty = 20;
       tx = W * 0.45;
       this.riseY += dt * 150 * ease.inCubic(invLerp(FLIGHT.RISE_AT, 1, p) + 0.2);
     }
 
+    // sluggish at first, snappier as ember gets confident
     const follow = FLIGHT.FOLLOW * lerp(0.55, 1, conf);
     const ny = approach(this.ey, ty, follow, dt);
     this.vy = (ny - this.ey) / dt;
-    this.px = this.ex;
-    this.py = this.ey;
     this.ex = approach(this.ex, tx, follow * 0.6, dt);
     this.ey = ny;
 
-    // playful loop-the-loop (after a missed ring)
     if (this.loopT > 0) this.loopT = Math.max(0, this.loopT - dt);
     this.squash = approach(this.squash, 0, 6, dt);
 
-    // --- rings
     for (const ring of this.rings) {
       if (ring.state !== 'coming') {
         ring.fx += dt;
@@ -155,19 +141,18 @@ export class Flight {
       const rx = this.ringX(ring);
       if (rx <= this.ex) {
         const r = this.ringR(ring);
-        const hit = Math.abs(this.ey - ring.y) < r + 4;
+        const hit = Math.abs(this.ey - ring.y) < r + 4; // +4 slack so grazing the edge still counts
         ring.state = hit ? 'hit' : 'miss';
         ring.hitX = rx;
         ring.hitY = ring.y;
         const gold = ring.p > FLIGHT.WOBBLY_UNTIL;
         if (hit) {
-          this.hits++;
           this.squash = 1;
           g.audio.cue('ring');
           g.cam.shake(1 + ring.p * 2);
           g.particles.burst(rx, ring.y, 26 + Math.round(ring.p * 20), { speed: 80 + ring.p * 60, colors: gold ? [PAL.gold, PAL.gold2, '#fff6d8'] : ['#bff8ee', PAL.teal, '#ffffff'], kind: 'spark', size: 2, drag: 2.5, life: 0.8 }, g.rng);
         } else {
-          // no penalty: a happy loop, and the ring's light streams into Ember anyway
+          // a miss is never a fail: ember does a loop and the ring's sparkles fly into it anyway
           this.loopT = 0.75;
           for (let k = 0; k < 14; k++) {
             const a = (k / 14) * Math.PI * 2;
@@ -177,7 +162,6 @@ export class Flight {
       }
     }
 
-    // --- the brass swell
     if (!this.swellFired && p >= FLIGHT.SWELL_AT) {
       this.swellFired = true;
       this.swellT = 0;
@@ -193,16 +177,14 @@ export class Flight {
       f.y = approach(f.y, ty2, 2.4 - f.i * 0.3, dt);
     }
 
-    // --- trail (becomes the aurora ribbon)
     this.trail.push({ x: this.camX + this.ex, y: this.ey });
     if (this.trail.length > 90) this.trail.shift();
     this.pathT -= dt;
     if (this.pathT <= 0) {
-      this.pathT = DUR.FLIGHT / 48;
+      this.pathT = DUR.FLIGHT / 48; // ~48 points is plenty for a ribbon and keeps localStorage small
       this.path.push([p, clamp(this.ey / H)]);
     }
 
-    // ambient sparkle dust on the wind
     if (g.rng() < dt * (4 + conf * 10)) {
       g.particles.add({ x: W / 2 + (g.rng() - 0.5) * W * 1.2, y: g.rng() * H * 0.8, vx: -FLIGHT.SCROLL * 0.6, vy: 0, life: 1.4, color: conf > 0.5 ? PAL.gold2 : '#bfe8ff', kind: 'px', size: 1, layer: 1 });
     }
@@ -210,7 +192,6 @@ export class Flight {
     if (this.t >= DUR.FLIGHT) this.finish(g);
   }
 
-  // ------------------------------------------------------------------ drawing
   draw(g, ctx) {
     const t = this.t;
     const p = this.p;
@@ -218,7 +199,7 @@ export class Flight {
     const rise = invLerp(FLIGHT.RISE_AT, 1, p);
     const swell = this.swellFired ? clamp(this.swellT / 1.2) : 0;
 
-    // --- sky: storm -> dusk -> gold -> aurora night (the color arc tells the story)
+    // storm -> dusk -> gold -> aurora night
     drawSky(ctx, SKY.storm, 0, H);
     drawSky(ctx, SKY.dusk, 0, H, invLerp(0, 0.35, p));
     drawSky(ctx, SKY.gold, 0, H, invLerp(0.4, FLIGHT.SWELL_AT + 0.05, p) * (1 - rise));
@@ -226,19 +207,17 @@ export class Flight {
     drawStars(ctx, this.stars, t, clamp(1 - p * 3) + rise);
     if (rise > 0) drawBaseAurora(ctx, t, rise * 1.2, 10);
 
-    // low sun glow on the horizon + brass-swell rays
     const sunX = W * 0.72;
     const sunY = SEA_Y - 4 + this.riseY;
     glow(ctx, sunX, sunY, 90 + conf * 40, PAL.amber, 0.25 + conf * 0.35 * (1 - rise));
     if (this.swellFired) drawRays(ctx, sunX, sunY, t, PAL.gold2, 0.16 * swell * (1 - rise) * (0.8 + 0.2 * g.beat.pulse), 11, 520);
 
-    // clouds (slow parallax)
     for (const c of this.clouds) {
       const x = ((c.x - this.camX * 0.2) % (W + 200) + W + 200) % (W + 200) - 100;
       drawCloud(ctx, x, c.y + this.riseY * 0.5, c.w, mix(mix('#2a3a52', '#f0a890', conf), '#1a2440', rise), c.seed, 0.45 + conf * 0.2);
     }
 
-    // --- sea + far islands (drop away as Ember climbs)
+    // sea and islands drop away during the climb
     ctx.save();
     ctx.translate(0, Math.round(this.riseY));
     const farOff = (this.camX * 0.15) % W;
@@ -249,7 +228,8 @@ export class Flight {
 
     drawWind(ctx, t, g.beat, { lanes: [0.2, 0.46, 0.7], alpha: 0.25 + conf * 0.2, color: conf > 0.5 ? '#ffe8b0' : '#bfe8ff', speed: 160 });
 
-    // --- zoomed world layer: stacks, stones, rings, dragons
+    // camera starts close and pulls back as ember gets confident. sky and sea stay unzoomed
+    // because they're full-width cached images and would show their edges
     const z = this.zoom;
     ctx.save();
     ctx.translate(W / 2, H / 2);
@@ -264,7 +244,6 @@ export class Flight {
     for (const s of this.stones) {
       const x = s.x - this.camX;
       if (x < -60 || x > W + 60) continue;
-      // islet
       ctx.fillStyle = mix('#1a2433', '#3a2e48', conf);
       for (let i = -18; i <= 18; i++) ctx.fillRect(Math.round(x + i), SEA_Y + 2 - Math.round(Math.sqrt(324 - i * i) * 0.35), 1, 8);
       drawStone(ctx, x, SEA_Y - 2, s.h, s.w, s.rune, clamp(0.3 + g.beat.pulse * 0.7));
@@ -286,7 +265,6 @@ export class Flight {
     ctx.restore();
     g.particles.draw(ctx, 1);
 
-    // --- one short message at a time
     if (t < 1.8) drawTextPop(ctx, 'FLY!', W / 2, 40, t * 1.4, { scale: 5, color: PAL.cream });
     if (this.swellFired && this.swellT < 2.2) {
       const a = clamp((2.2 - this.swellT) * 2);
@@ -298,7 +276,6 @@ export class Flight {
     }
     if (rise > 0.1) drawText(ctx, 'HOME IS UP THERE', W / 2, 236, { scale: 2, align: 'center', color: '#bff8ee', alpha: clamp(rise * 3) });
 
-    // the guest's light
     drawCursorLight(ctx, g.input.x, g.input.y, t, 0.8);
   }
 
@@ -314,7 +291,6 @@ export class Flight {
       drawKnotRing(ctx, x, ring.y, r * pulse, 1, { lobes: 6 + Math.round(gold * 4), amp: 2 + r * 0.08, width: 2, on: color });
       drawRune(ctx, x, ring.y, Math.max(8, r * 0.55), ring.rune, mix('#e8fffb', PAL.gold2, gold), 1);
     } else if (ring.fx < 0.5) {
-      // hit: ring expands and fades; miss: shrinks away
       const k = ring.fx / 0.5;
       ctx.globalAlpha = 1 - k;
       const rr = ring.state === 'hit' ? r * (1 + ease.outCubic(k) * 1.2) : r * (1 - k);
@@ -324,7 +300,7 @@ export class Flight {
   }
 
   drawTrail(ctx, conf) {
-    // A bold ribbon of light behind Ember: this is what joins the aurora.
+    // this trail is what becomes the aurora ribbon at home, so it should look like one
     const tr = this.trail;
     for (let i = 1; i < tr.length; i++) {
       const k = i / tr.length;

@@ -1,5 +1,5 @@
 import { VIEW, DUR, INPUT, PAL } from '../config.js';
-import { clamp, dist, lerp, approach, glow, ease, mulberry32 } from '../core/util.js';
+import { clamp, dist, lerp, approach, glow, ease } from '../core/util.js';
 import { drawText, drawTextPop } from '../art/font.js';
 import { drawKnotRing } from '../art/knotwork.js';
 import { drawEmber, eyeOffset, flapPose } from '../art/ember.js';
@@ -9,9 +9,6 @@ import { drawGull, drawTree } from '../art/sprites.js';
 
 const { W, H } = VIEW;
 
-// Scene 1: FIND EMBER. One visual idea: your light cuts through the fog.
-// Sweep the beam, find the two blinking eyes, hold the light steady on them.
-// The knotwork ring fills and Ember's wing-glow bursts back to life.
 export class FindEmber {
   interactive = true;
 
@@ -19,28 +16,28 @@ export class FindEmber {
     const r = g.rng;
     this.lighthouseCliff = makeCliff({ seed: 5, x0: 0, x1: 126, top: 128, rough: 4, taperR: 30 });
     this.cliff = makeCliff({ seed: 11 + Math.floor(r() * 50), x0: 84, x1: W, top: 196, rough: 12 });
-    // Ember hides in a different place each run (never right under the start point)
+    // different hiding spot each run so the line can't just memorize it
     const spots = [196, 262, 332, 410];
-    this.homeX = spots[Math.floor(r() * spots.length)];
-    this.ex = this.homeX;
+    this.ex = spots[Math.floor(r() * spots.length)];
     this.ey = this.restY(this.ex);
     this.hold = 0; // 0..1 knotwork fill
     this.found = false;
     this.burstT = -1;
-    this.seenNear = false;
     this.flinch = 0;
     this.fogA = 1;
     this.hopT = 0;
-    this.gull = { x: this.homeX > 300 ? 170 : 380, perched: true, fx: 0, fy: 0, t: 0 };
+    this.gull = { x: this.ex > 300 ? 170 : 380, perched: true, fx: 0, fy: 0, t: 0 };
     this.gull.y = this.cliff.top(this.gull.x) - 2;
     this.stones = [
       { x: 130, h: 34, w: 12, rune: 1 },
       { x: 300, h: 26, w: 10, rune: 3 },
       { x: 455, h: 38, w: 13, rune: 5 },
     ].map((s) => ({ ...s, y: this.cliff.top(s.x) + 3 }));
-    this.drops = Array.from({ length: 150 }, (_, i) => ({ x: r() * W, y: r() * H, s: 0.8 + r() * 0.6 }));
+    this.drops = Array.from({ length: 150 }, () => ({ x: r() * W, y: r() * H, s: 0.8 + r() * 0.6 }));
     this.sparkT = 0;
-    this.activeT = 0; // assist clock: only runs while someone is pointing
+    // assist clock. only ticks while someone is pointing, otherwise an empty station
+    // would auto-complete at 9.5s before the 10s idle reset could kick in
+    this.activeT = 0;
   }
 
   restY(x) {
@@ -79,7 +76,6 @@ export class FindEmber {
     if (this.found) {
       this.burstT += dt;
       this.fogA = approach(this.fogA, 0, 3.5, dt);
-      // Ember hops up, flaps, and rises, ready for flight
       if (this.burstT > 0.8) this.ey -= dt * 40 * ease.inCubic(clamp((this.burstT - 0.8) / 1));
       if (this.burstT > DUR.FIND_BURST) g.scenes.go('flight', { fromY: this.ey }, { fade: 0.35, color: '#e8fff8' });
       return;
@@ -89,13 +85,12 @@ export class FindEmber {
     const e = this.eyes();
     const d = dist(inp.x, inp.y, e.x, e.y);
     const near = d < INPUT.LOCK_RADIUS;
-    if (d < INPUT.LOCK_RADIUS * 2) this.seenNear = true;
     const steady = inp.speed < INPUT.STEADY_SPEED;
     const hopping = this.activeT > DUR.FIND_ASSIST_HOP;
 
     if (near) {
-      // Steady light earns trust quickly. Jerky light still helps, just slowly,
-      // and makes Ember flinch; nothing is ever lost.
+      // jerky light still counts (just 4x slower) and makes ember flinch. no progress is ever taken away
+      // for moving fast, only for leaving
       const rate = steady || hopping ? 1 : 0.25;
       this.hold += (dt / DUR.FIND_HOLD) * rate;
       if (!steady && !hopping) this.flinch = Math.min(1, this.flinch + dt * 4);
@@ -103,11 +98,10 @@ export class FindEmber {
       this.hold = Math.max(0, this.hold - dt * 0.3);
     }
     this.flinch = approach(this.flinch, 0, 3, dt);
-    if (this.activeT > DUR.FIND_AUTO_COMPLETE) this.hold += dt / 0.6; // hard cap: never stuck
+    if (this.activeT > DUR.FIND_AUTO_COMPLETE) this.hold += dt / 0.6;
     if (this.hold >= 1) return this.burst(g);
 
-    // Assist 2: Ember comes to the light by itself (hops along the cliff,
-    // then flutters up toward the beam if it's in the sky)
+    // assist: ember hops toward the light, and flutters up if the beam is in the sky
     if (hopping && !near) {
       this.hopT += dt;
       const tx = clamp(inp.x, 100, W - 20);
@@ -119,7 +113,7 @@ export class FindEmber {
       this.ey = Math.min(this.ey, ground);
     }
 
-    // Assist 1: sparkles drift from the beam toward the eyes
+    // assist: sparks drift from the beam toward the eyes
     if (this.activeT > DUR.FIND_ASSIST_GLOW && !near) {
       this.sparkT -= dt;
       if (this.sparkT <= 0) {
@@ -132,7 +126,7 @@ export class FindEmber {
       }
     }
 
-    // Gull takes off when the light finds it
+    // little reward for sweeping around: the gull takes off
     const gl = this.gull;
     if (gl.perched && dist(inp.x, inp.y, gl.x, gl.y - 8) < 30) {
       gl.perched = false;
@@ -146,7 +140,6 @@ export class FindEmber {
     }
   }
 
-  // ------------------------------------------------------------------ drawing
   draw(g, ctx) {
     const t = this.t;
     const inp = g.input;
@@ -159,7 +152,7 @@ export class FindEmber {
     drawSea(ctx, 176, t, { c1: '#0f1f2c', c2: '#1b3242', foam: '#9fc0cc' });
 
     drawCliff(ctx, this.lighthouseCliff);
-    const lamp = drawLighthouse(ctx, 46, Math.round(this.lighthouseCliff.top(46)) + 2, t, 1);
+    const lamp = drawLighthouse(ctx, 46, Math.round(this.lighthouseCliff.top(46)) + 2, t);
     drawTree(ctx, 'pine', 88, this.lighthouseCliff.top(88) + 1, '#0e1824');
     drawCliff(ctx, this.cliff);
     drawTree(ctx, 'bare', 238, this.cliff.top(238) + 2, '#0f1a28');
@@ -173,13 +166,12 @@ export class FindEmber {
 
     this.drawEmber(g, ctx, t);
 
-    // ---- warm light where the beam lands (drawn under the fog)
     if (!this.found) {
       glow(ctx, inp.x, inp.y, 50, PAL.gold, 0.45);
       glow(ctx, inp.x, inp.y, 22, '#fff6d8', 0.25);
     }
 
-    // ---- fog, cut by the beam (darker than the world, so light reads as light)
+    // fog has to be darker than the world under it, when it was lighter the beam looked like a shadow
     if (this.fogA > 0.01) {
       const holes = [{ x: inp.x, y: inp.y, r: 50 }, { x: 46, y: 96, r: 46, a: 0.55 }];
       if (this.found) holes.push({ x: this.ex, y: this.ey, r: 60 + this.burstT * 200 });
@@ -187,10 +179,9 @@ export class FindEmber {
     }
     if (!gl.perched && gl.fy > -10) drawFlyingGull(ctx, gl.fx, gl.fy, gl.t, '#e8eef4');
 
-    // ---- the keeper's beam: a cone from the lighthouse (nod to the bat-signal proof of concept)
+    // beam comes out of the lighthouse, nod to the bat-signal proof of concept
     if (!this.found) this.drawBeam(ctx, lamp.lx, lamp.ly, inp.x, inp.y);
 
-    // ---- rain (eases off after the burst)
     const rainA = 0.55 * this.fogA + 0.05;
     ctx.fillStyle = '#b4d2f0';
     for (const d of this.drops) {
@@ -203,10 +194,8 @@ export class FindEmber {
     }
     ctx.globalAlpha = 1;
 
-    // ---- the two eyes glint through the fog, blinking
     if (!this.found) this.drawEyeGlints(g, ctx, e, t);
 
-    // ---- knotwork trust ring
     const d = dist(inp.x, inp.y, e.x, e.y);
     const showRing = this.hold > 0.01 || d < INPUT.LOCK_RADIUS * 1.8;
     if (showRing && !this.found) {
@@ -221,14 +210,13 @@ export class FindEmber {
 
     g.particles.draw(ctx);
 
-    // ---- one short prompt at a time
     if (!this.found) {
       let msg = 'FIND THE EYES';
       if (d < INPUT.LOCK_RADIUS * 1.2) msg = this.flinch > 0.4 ? 'GENTLY...' : 'HOLD STEADY';
       else if (this.activeT > DUR.FIND_ASSIST_GLOW) msg = 'FOLLOW THE SPARKS';
       drawText(ctx, msg, W / 2, 12, { scale: 3, align: 'center', color: msg === 'HOLD STEADY' ? PAL.gold2 : PAL.cream });
     } else {
-      // single soft flash, then the name
+      // one soft flash only (photosensitivity), never repeated
       if (this.burstT < 0.4) {
         ctx.globalAlpha = 0.35 * (1 - this.burstT / 0.4);
         ctx.fillStyle = '#fff6d8';
@@ -262,19 +250,15 @@ export class FindEmber {
     const d = dist(inp.x, inp.y, e.x, e.y);
     const warm = clamp(1 - d / 160);
     const assist = this.activeT > DUR.FIND_ASSIST_GLOW ? 0.6 + 0.4 * g.beat.pulse : 0;
-    const blink = t % 1.7 > 1.55; // brief blink, ~0.6 per second
-    if (d < 40) return; // inside the beam you can see the real eyes
+    const blink = t % 1.7 > 1.55;
+    if (d < 40) return; // inside the beam you see the real eyes on the sprite
     const amt = clamp(0.45 + warm * 0.4 + assist * 0.5);
     glow(ctx, e.x, e.y, 10 + assist * 10 + warm * 6, PAL.gold, amt * 0.8);
-    if (!blink) {
-      ctx.fillStyle = '#fff6d8';
-      ctx.fillRect(Math.round(e.x + 1), Math.round(e.y - 1), 3, 3);
-      ctx.fillRect(Math.round(e.x - 7), Math.round(e.y - 1), 2, 3);
-    } else {
-      ctx.fillStyle = '#fff6d8';
-      ctx.fillRect(Math.round(e.x + 1), Math.round(e.y + 1), 3, 1);
-      ctx.fillRect(Math.round(e.x - 7), Math.round(e.y + 1), 2, 1);
-    }
+    const ey = Math.round(blink ? e.y + 1 : e.y - 1);
+    const h = blink ? 1 : 3;
+    ctx.fillStyle = '#fff6d8';
+    ctx.fillRect(Math.round(e.x + 1), ey, 3, h);
+    ctx.fillRect(Math.round(e.x - 7), ey, 2, h);
     if (assist) drawSparkle(ctx, e.x + 10, e.y - 10, 2 + Math.round(g.beat.pulse * 2), PAL.gold2);
   }
 
@@ -294,7 +278,7 @@ export class FindEmber {
     const h = this.hold;
     const mood = h < 0.3 ? 'scared' : h < 0.75 ? 'curious' : 'happy';
     const shake = mood === 'scared' ? Math.sin(t * 38) * 0.7 : 0;
-    const duck = this.flinch * 0.18; // flinch: squash down
+    const duck = this.flinch * 0.18;
     const perk = h * 0.08;
     const glowLvl = h > 0.6 ? 1 : 0;
     const air = this.ey < this.restY(this.ex) - 3;

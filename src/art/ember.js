@@ -198,7 +198,7 @@ function render(o) {
   }
   g.stroke();
 
-  // 110 not 128, otherwise the thin wing bones break up
+  // 110 instead of 128 keeps more of the thin 1px wing bones
   const img = g.getImageData(0, 0, SPRITE_W, SPRITE_H);
   const d = img.data;
   for (let i = 3; i < d.length; i += 4) d[i] = d[i] >= 110 ? 255 : 0;

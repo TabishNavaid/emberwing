@@ -10,8 +10,6 @@ import { drawHorn, drawSoundLines, drawLantern, drawCursorLight } from '../art/i
 const { W, H } = VIEW;
 const SKIP = { x: 446, y: 244, r: 18 };
 
-// Scene 4: END CARD. Point people to the real thing: the orchestra in Act II.
-// Guests in a hurry can hold their light on the lantern to skip.
 export class EndCard {
   interactive = false;
 
@@ -66,12 +64,12 @@ export class EndCard {
     drawText(ctx, 'LISTEN FOR', W / 2 - 16, y + 136, { scale: 2, align: 'left', color: PAL.gold2 });
     drawText(ctx, 'THE BRASS!', W / 2 - 16, y + 154, { scale: 2, align: 'left', color: PAL.gold2 });
 
-    // the time left, as a thin woven band shrinking (no numbers needed)
+    // shrinking bar = time left, no numbers needed
     const left = clamp(1 - t / DUR.END);
     ctx.fillStyle = 'rgba(255,201,74,0.5)';
     ctx.fillRect(x + 20, y + h - 12, Math.round((w - 40) * left), 2);
 
-    // skip lantern (hold to skip)
+    // hold the light on the little lantern to skip
     drawKnotRing(ctx, SKIP.x, SKIP.y, SKIP.r, this.dwell.progress, { lobes: 6, amp: 2, width: 1, on: PAL.gold, off: 'rgba(255,226,138,0.35)' });
     drawLantern(ctx, SKIP.x, SKIP.y, 1, 0.5 + this.dwell.progress * 0.5, t);
     drawText(ctx, 'NEXT', SKIP.x - SKIP.r - 6, SKIP.y - 3, { scale: 1, align: 'right', color: PAL.cream, alpha: 0.8 });

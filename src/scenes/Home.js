@@ -1,5 +1,5 @@
 import { VIEW, DUR, PAL } from '../config.js';
-import { clamp, lerp, ease, invLerp, glow, mulberry32 } from '../core/util.js';
+import { clamp, lerp, ease, invLerp, glow } from '../core/util.js';
 import { drawText, drawTextPop, textWidth } from '../art/font.js';
 import { drawEmber, flapPose, FLOCK_COLORS } from '../art/ember.js';
 import { drawSky, SKY, makeStars, drawStars, drawSea, drawStone, makeCliff, drawCliff } from '../art/world.js';
@@ -9,28 +9,24 @@ import { drawSparkle } from '../art/icons.js';
 const { W, H } = VIEW;
 const ORBIT = { x: 240, y: 118, rx: 118, ry: 24 };
 
-// Scene 3: HOME. One visual idea: your path becomes the sky.
-// Ember joins its flock circling under the aurora. The line the guest flew is
-// drawn across the sky, then lifts and becomes a new aurora ribbon that stays
-// for the rest of the evening. The counter ticks up for everyone to see.
 export class Home {
-  interactive = false; // guests can just watch; no idle cut-off here
+  interactive = false; // people just watch this part, so no idle reset
 
   enter(g, data = {}) {
     let path = data.path;
     if (!path || path.length < 4) {
-      // (skip / test entry) a gentle made-up wave
+      // came in via skip or ?scene=home, fake a wave
       path = Array.from({ length: 40 }, (_, i) => [i / 39, 0.5 + Math.sin(i * 0.4) * 0.2]);
     }
     this.path = path;
     this.hue = g.store.count % RIBBON_COLORS.length;
+    // saved on enter, not at the end, so leaving early still counts the dragon
     this.rib = g.store.add(path, this.hue);
     this.color = RIBBON_COLORS[this.hue];
     this.count = g.store.count;
     this.stars = makeStars(21, 110, 170);
     this.hill = makeCliff({ seed: 8, x0: 120, x1: 360, top: 206, bottom: 226, rough: 8, taperR: 60, colors: { rock: '#10182a', rock2: '#18223a', rock3: '#202c48', grass: '#1c3a3a', grass2: '#285048' } });
     this.skyPts = ribbonSkyPoints(this.rib, g.wall.top, g.wall.height);
-    // flight path as drawn across the screen
     this.flightPts = path.map(([x, y]) => [20 + x * (W - 40), clamp(y, 0.12, 0.85) * H]);
     this.ticked = false;
   }
@@ -57,9 +53,9 @@ export class Home {
     const revealed = t > 3.4;
     g.wall.draw(ctx, t, 1, revealed ? 0 : 1);
 
-    // --- your path: drawn across the sky, then lifted into the aurora
-    const draw = invLerp(0.6, 1.9, t); // line draws in left to right
-    const lift = ease.inOutSine(invLerp(1.9, 3.4, t)); // then rises and becomes a curtain
+    // the flight path draws in across the sky, then lifts up and turns into a curtain
+    const draw = invLerp(0.6, 1.9, t);
+    const lift = ease.inOutSine(invLerp(1.9, 3.4, t));
     if (!revealed) {
       const n = this.flightPts.length;
       const pts = [];
@@ -71,7 +67,6 @@ export class Home {
       }
       const shown = Math.max(2, Math.ceil(n * draw));
       const vis = pts.slice(0, shown);
-      // bright core line
       for (let i = 1; i < vis.length; i++) {
         const [x1, y1] = vis[i - 1];
         const [x2, y2] = vis[i];
@@ -91,17 +86,14 @@ export class Home {
         drawSparkle(ctx, head[0], head[1], 3);
       }
     } else {
-      // the new ribbon glows extra-bright for a moment
       const k = clamp(1 - (t - 3.4) / 2.5);
       if (k > 0) drawRibbon(ctx, this.skyPts, this.color, 0.5 * k, t, 34);
     }
 
-    // --- home island with a standing-stone circle
     drawSea(ctx, 222, t, { c1: '#0a1426', c2: '#122440', foam: '#5fb8c8', glint: { x: W / 2, color: PAL.teal } });
     drawCliff(ctx, this.hill);
     for (const [x, h, r] of [[196, 22, 0], [222, 28, 2], [258, 28, 4], [284, 22, 1]]) drawStone(ctx, x, this.hill.top(x) + 3, h, 9, r, 0.4 + 0.6 * g.beat.pulse);
 
-    // --- flock circling, Ember arriving to join them
     const orbit = (a, s = 1) => ({ x: ORBIT.x + Math.cos(a) * ORBIT.rx * s, y: ORBIT.y + Math.sin(a) * ORBIT.ry * s });
     const drawers = [];
     FLOCK_COLORS.forEach((c, i) => {
@@ -119,15 +111,15 @@ export class Home {
       glow(ctx, ex - 4, ey - 6, 30, PAL.teal, 0.35);
       drawEmber(ctx, ex, ey, { mood: t > 1.6 ? 'happy' : 'joy', wing: flapPose(t * 2.4), glow: 2, flip: arrive >= 1 && Math.sin(ea) > 0, sx: 1 + bounce, sy: 1 - bounce * 0.8 });
     } });
+    // sort by orbit depth so dragons on the far side go behind
     drawers.sort((a, b) => a.z - b.z).forEach((d) => d.f());
 
     g.particles.draw(ctx);
 
-    // --- words: HOME! then the counter
     if (t > 0.4 && t < 3.2) drawTextPop(ctx, 'HOME!', W / 2, 38, (t - 0.4) * 1.4, { scale: 5, color: PAL.cream, alpha: clamp((3.2 - t) * 3) });
     const n = this.ticked ? this.count : this.count - 1;
     if (t > 2.6) {
-      // "37 DRAGONS HOME TONIGHT" on a dark band over the sea
+      // on the sea strip, it covered the standing stones when it was higher up
       const a = clamp((t - 2.6) * 3);
       const num = String(n);
       const label = n === 1 ? 'DRAGON HOME TONIGHT' : 'DRAGONS HOME TONIGHT';
