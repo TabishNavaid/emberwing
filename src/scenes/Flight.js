@@ -220,15 +220,9 @@ export class Flight {
 
     // --- sky: storm -> dusk -> gold -> aurora night (the color arc tells the story)
     drawSky(ctx, SKY.storm, 0, H);
-    const layer = (stops, a) => {
-      if (a <= 0.01) return;
-      ctx.globalAlpha = clamp(a);
-      drawSky(ctx, stops, 0, H);
-      ctx.globalAlpha = 1;
-    };
-    layer(SKY.dusk, invLerp(0, 0.35, p));
-    layer(SKY.gold, invLerp(0.4, FLIGHT.SWELL_AT + 0.05, p) * (1 - rise));
-    layer(SKY.aurora, rise);
+    drawSky(ctx, SKY.dusk, 0, H, invLerp(0, 0.35, p));
+    drawSky(ctx, SKY.gold, 0, H, invLerp(0.4, FLIGHT.SWELL_AT + 0.05, p) * (1 - rise));
+    drawSky(ctx, SKY.aurora, 0, H, rise);
     drawStars(ctx, this.stars, t, clamp(1 - p * 3) + rise);
     if (rise > 0) drawBaseAurora(ctx, t, rise * 1.2, 10);
 

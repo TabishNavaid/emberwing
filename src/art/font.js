@@ -1,8 +1,7 @@
 import { makeCanvas } from '../core/util.js';
 
-// A chunky hand-made 5x7 pixel font, drawn in code so the game needs no
-// font download (the lobby Wi-Fi can't be trusted). Scale 2 = 14 internal px
-// tall = 56 screen px at 1080p, readable from across a lobby.
+// hand-made 5x7 pixel font so there's no font download (can't trust lobby wifi).
+// scale 2 = 56px tall on a 1080p projector, which reads fine from 15ft
 const G = {
   A: ['.###.', '#...#', '#...#', '#####', '#...#', '#...#', '#...#'],
   B: ['####.', '#...#', '#...#', '####.', '#...#', '#...#', '####.'],
@@ -64,7 +63,7 @@ export function textWidth(str, scale = 1) {
   for (const ch of String(str)) w += (glyph(ch)[0].length + GAP) * scale;
   return Math.max(0, w - GAP * scale);
 }
-export const textHeight = (scale = 1) => 7 * scale;
+const textHeight = (scale = 1) => 7 * scale;
 
 function paint(ctx, str, x, y, scale, color) {
   ctx.fillStyle = color;
@@ -81,7 +80,7 @@ function paint(ctx, str, x, y, scale, color) {
 }
 
 const cache = new Map();
-// Rendered text with a dark outline (legible over any background).
+// dark outline so text reads over fog, sky or aurora. rendered once and cached
 function textSprite(str, scale, color, outline) {
   const key = `${str}|${scale}|${color}|${outline}`;
   let c = cache.get(key);
@@ -96,12 +95,12 @@ function textSprite(str, scale, color, outline) {
       for (let dx = -1; dx <= 1; dx++) paint(g, str, o + dx * scale, o + dy * scale, scale, outline);
   }
   paint(g, str, o, o, scale, color);
-  if (cache.size > 400) cache.clear();
+  if (cache.size > 400) cache.clear(); // debug overlay makes a new string every frame
   cache.set(key, c);
   return c;
 }
 
-// align: 'left' | 'center' | 'right'. y is the top of the letters.
+// y is the top of the letters
 export function drawText(ctx, str, x, y, { scale = 1, color = '#fff', outline = '#0b0f1a', align = 'left', alpha = 1 } = {}) {
   const s = textSprite(str, scale, color, outline);
   const o = outline ? scale : 0;
@@ -114,7 +113,7 @@ export function drawText(ctx, str, x, y, { scale = 1, color = '#fff', outline = 
   ctx.globalAlpha = pa;
 }
 
-// Text that pops in with a springy scale (juice for big one-word moments).
+// springy pop-in for the big one-word moments (EMBER!, FLY!, HOME!)
 export function drawTextPop(ctx, str, x, y, t, opts = {}) {
   const scale = opts.scale ?? 3;
   const s = textSprite(str, scale, opts.color ?? '#fff', opts.outline ?? '#0b0f1a');

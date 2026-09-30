@@ -84,7 +84,7 @@ export class Home {
         }
       }
       ctx.globalAlpha = 1;
-      drawRibbon(ctx, vis, this.color, 0.25 + lift * 0.5, t, 1, 8 + Math.round(lift * 30));
+      drawRibbon(ctx, vis, this.color, 0.25 + lift * 0.5, t, 8 + Math.round(lift * 30));
       const head = vis[vis.length - 1];
       if (draw < 1) {
         glow(ctx, head[0], head[1], 14, PAL.gold2, 0.9);
@@ -93,7 +93,7 @@ export class Home {
     } else {
       // the new ribbon glows extra-bright for a moment
       const k = clamp(1 - (t - 3.4) / 2.5);
-      if (k > 0) drawRibbon(ctx, this.skyPts, this.color, 0.5 * k, t, 1, 34);
+      if (k > 0) drawRibbon(ctx, this.skyPts, this.color, 0.5 * k, t, 34);
     }
 
     // --- home island with a standing-stone circle

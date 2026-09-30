@@ -1,5 +1,4 @@
-// Cropped sprites from licensed packs (see CREDITS.md). Loaded from public/
-// with the Vite base URL so it works under /<repo-name>/ on GitHub Pages.
+// the few crops from the licensed packs (see CREDITS.md). BASE_URL so it works under /<repo>/ on pages
 const BASE = import.meta.env.BASE_URL;
 const files = {
   gull: 'sprites/gull.png', // 4 frames 18x18: idle a, idle b, peck a, peck b
@@ -7,7 +6,7 @@ const files = {
   oak: 'sprites/oak_dead.png',
   bare: 'sprites/tree_bare.png',
 };
-export const SPR = {};
+const SPR = {};
 export function loadSprites() {
   return Promise.all(
     Object.entries(files).map(
@@ -18,7 +17,7 @@ export function loadSprites() {
             SPR[k] = img;
             res();
           };
-          img.onerror = () => res(); // a missing sprite never blocks the game
+          img.onerror = () => res(); // a missing tree shouldn't stop the whole game from loading
           img.src = BASE + f;
         }),
     ),
@@ -33,9 +32,9 @@ export function drawGull(ctx, x, y, frame = 0, flip = false) {
   ctx.drawImage(img, (frame % 4) * 18, 0, 18, 18, -9, -17, 18, 18);
   ctx.restore();
 }
-// Silhouette tint cache (trees become dark island shapes)
+// trees get flattened to one dark color so they read as island silhouettes
 const tintCache = new Map();
-export function tinted(name, color) {
+function tinted(name, color) {
   const key = name + color;
   let c = tintCache.get(key);
   if (!c && SPR[name]) {
@@ -52,10 +51,8 @@ export function tinted(name, color) {
   }
   return c;
 }
-export function drawTree(ctx, name, x, baseY, color = null, alpha = 1) {
+export function drawTree(ctx, name, x, baseY, color = null) {
   const img = color ? tinted(name, color) : SPR[name];
   if (!img) return;
-  ctx.globalAlpha = alpha;
   ctx.drawImage(img, Math.round(x - img.width / 2), Math.round(baseY - img.height));
-  ctx.globalAlpha = 1;
 }

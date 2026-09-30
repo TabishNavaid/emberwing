@@ -154,11 +154,7 @@ export class FindEmber {
     const clear = 1 - this.fogA; // 0 storm .. 1 after the burst
 
     drawSky(ctx, SKY.storm, 0, 190);
-    if (clear > 0.01) {
-      ctx.globalAlpha = clear * 0.7;
-      drawSky(ctx, SKY.dusk, 0, 190);
-      ctx.globalAlpha = 1;
-    }
+    drawSky(ctx, SKY.dusk, 0, 190, clear * 0.7);
     for (let i = 0; i < 5; i++) drawCloud(ctx, ((t * (8 + i * 3) + i * 120) % 620) - 70, 40 + (i % 3) * 22, 110 + (i % 2) * 40, i % 2 ? '#1c2a40' : '#24344c', 21 + i, 0.95);
     drawSea(ctx, 176, t, { c1: '#0f1f2c', c2: '#1b3242', foam: '#9fc0cc' });
 

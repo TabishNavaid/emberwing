@@ -3,10 +3,11 @@ import { makeCanvas, mix, mulberry32, clamp, TAU, glow, stampLine, disc, rgba } 
 
 const { W, H } = VIEW;
 
-// ---------------------------------------------------------------------------
-// Posterized, dithered sky (pixel-art gradient). stops: [[t, color], ...]
+// banded + dithered gradient so it looks like pixel art instead of a smooth css gradient.
+// stops: [[t, color], ...]. alpha is for cross-fading one sky into the next
 const skyCache = new Map();
-export function drawSky(ctx, stops, y0 = 0, y1 = H) {
+export function drawSky(ctx, stops, y0 = 0, y1 = H, alpha = 1) {
+  if (alpha <= 0.01) return;
   const key = JSON.stringify(stops) + y0 + '|' + y1;
   let c = skyCache.get(key);
   if (!c) {
@@ -28,7 +29,7 @@ export function drawSky(ctx, stops, y0 = 0, y1 = H) {
       const frac = t * bands - bi;
       const ca = colorAt(bi / bands);
       const cb = colorAt((bi + 1) / bands);
-      // Bayer-ish dither in the last third of each band
+      // checker dither in the last third of each band
       for (let x = 0; x < W; x += 2) {
         const d = frac > 0.66 && ((x >> 1) + y) % 2 === 0;
         g.fillStyle = d ? cb : ca;
@@ -38,7 +39,9 @@ export function drawSky(ctx, stops, y0 = 0, y1 = H) {
     if (skyCache.size > 40) skyCache.clear();
     skyCache.set(key, c);
   }
+  ctx.globalAlpha = clamp(alpha);
   ctx.drawImage(c, 0, y0);
+  ctx.globalAlpha = 1;
 }
 
 export const SKY = {
@@ -48,14 +51,13 @@ export const SKY = {
   aurora: [[0, '#050818'], [0.5, '#0e1a3a'], [1, '#1d3450']],
 };
 
-// ---------------------------------------------------------------------------
 export function makeStars(seed, n = 70, maxY = H * 0.6) {
   const r = mulberry32(seed);
   return Array.from({ length: n }, () => ({ x: r() * W, y: r() * maxY, p: r() * TAU, b: r() }));
 }
 export function drawStars(ctx, stars, t, alpha = 1) {
   for (const s of stars) {
-    // slow twinkle (well under 3 Hz)
+    // keep the twinkle slow, well under the 3 flashes/sec limit
     const a = alpha * (0.45 + 0.55 * (0.5 + 0.5 * Math.sin(t * 0.9 + s.p)));
     ctx.globalAlpha = a;
     ctx.fillStyle = s.b > 0.8 ? '#fff6d8' : '#cfe0ff';
@@ -68,7 +70,6 @@ export function drawStars(ctx, stars, t, alpha = 1) {
   ctx.globalAlpha = 1;
 }
 
-// ---------------------------------------------------------------------------
 export function drawSea(ctx, y, t, o = {}) {
   const c1 = o.c1 ?? PAL.sea;
   const c2 = o.c2 ?? PAL.sea2;
@@ -96,7 +97,7 @@ export function drawSea(ctx, y, t, o = {}) {
   }
   ctx.globalAlpha = 1;
   if (glint) {
-    // light path on the water (from sun / aurora)
+    // sun / aurora reflection
     for (let yy = y + 2; yy < H; yy += 3) {
       const k = (yy - y) / (H - y);
       const w = 6 + k * 50;
@@ -109,14 +110,13 @@ export function drawSea(ctx, y, t, o = {}) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Cliffs: pre-rendered layered rock with grass lip. Returns { canvas, top(x) }.
+// pre-rendered once per scene. returns { canvas, top(x) } so things can sit on the cliff edge
 export function makeCliff({ seed = 1, x0 = 0, x1 = W, top = 180, bottom = H, rough = 10, colors, taperR = 0, periodic = false } = {}) {
   const r = mulberry32(seed);
   const C = { rock: PAL.rock, rock2: PAL.rock2, rock3: PAL.rock3, grass: PAL.grass, grass2: '#4f7d5f', ...(colors || {}) };
   const w = x1 - x0;
   const ph = [r() * TAU, r() * TAU, r() * TAU];
-  // periodic cliffs tile seamlessly (whole number of waves across the width)
+  // periodic = whole number of waves across the width, so flight can tile it with no seam
   const fr = periodic ? [(TAU * 3) / (x1 - x0), (TAU * 8) / (x1 - x0), (TAU * 19) / (x1 - x0)] : [0.021, 0.057, 0.13];
   const topAt = (x) => {
     const u = x - x0;
@@ -133,10 +133,8 @@ export function makeCliff({ seed = 1, x0 = 0, x1 = W, top = 180, bottom = H, rou
     const ty = Math.round(topAt(x + x0));
     g.fillStyle = C.rock;
     g.fillRect(x, ty, 1, bottom - ty);
-    // lit face near the top
     g.fillStyle = C.rock2;
     g.fillRect(x, ty, 1, 10 + Math.round(Math.sin(x * 0.3) * 2));
-    // grass lip
     g.fillStyle = C.grass;
     g.fillRect(x, ty - 1, 1, 3);
     if (x % 3 === 0 && r() < 0.5) {
@@ -144,7 +142,6 @@ export function makeCliff({ seed = 1, x0 = 0, x1 = W, top = 180, bottom = H, rou
       g.fillRect(x, ty - 2 - Math.floor(r() * 2), 1, 2);
     }
   }
-  // strata cracks
   g.fillStyle = C.rock3;
   for (let i = 0; i < w / 9; i++) {
     const x = Math.floor(r() * w);
@@ -154,7 +151,6 @@ export function makeCliff({ seed = 1, x0 = 0, x1 = W, top = 180, bottom = H, rou
     g.fillRect(x, y, len, 1);
   }
   g.globalAlpha = 1;
-  // boulders
   for (let i = 0; i < w / 60; i++) {
     const x = Math.floor(r() * w);
     const y = Math.round(topAt(x + x0));
@@ -166,13 +162,12 @@ export function makeCliff({ seed = 1, x0 = 0, x1 = W, top = 180, bottom = H, rou
   }
   return { canvas: c, x0, top: topAt };
 }
-export function drawCliff(ctx, cliff, ox = 0) {
-  ctx.drawImage(cliff.canvas, Math.round(cliff.x0 - ox), 0);
+export function drawCliff(ctx, cliff) {
+  ctx.drawImage(cliff.canvas, Math.round(cliff.x0), 0);
 }
 
-// ---------------------------------------------------------------------------
-// The keeper's lighthouse (the guest's station). lamp: 0..1 brightness.
-export function drawLighthouse(ctx, x, y, t, lamp = 1) {
+// returns where the lamp is so the beam can come out of it
+export function drawLighthouse(ctx, x, y, t) {
   const h = 62;
   for (let i = 0; i < h; i++) {
     const w = Math.round(14 - (i / h) * 5);
@@ -182,31 +177,26 @@ export function drawLighthouse(ctx, x, y, t, lamp = 1) {
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
     ctx.fillRect(Math.round(x + w / 2) - 3, y - i, 3, 1);
   }
-  // door
   ctx.fillStyle = '#2a1c14';
   ctx.fillRect(x - 2, y - 7, 4, 7);
-  // gallery
   ctx.fillStyle = '#1a2433';
   ctx.fillRect(x - 8, y - h - 1, 16, 2);
-  // lamp room
-  ctx.fillStyle = mix('#3a3a30', '#ffe28a', lamp);
+  ctx.fillStyle = '#ffe28a';
   ctx.fillRect(x - 5, y - h - 9, 10, 8);
   ctx.fillStyle = '#1a2433';
   ctx.fillRect(x - 5, y - h - 9, 1, 8);
   ctx.fillRect(x + 4, y - h - 9, 1, 8);
   ctx.fillRect(x - 1, y - h - 9, 1, 8);
-  // roof
   for (let i = 0; i < 6; i++) {
     ctx.fillStyle = '#2b3a4f';
     ctx.fillRect(x - 6 + i, y - h - 10 - i, 12 - i * 2, 1);
   }
   ctx.fillRect(x, y - h - 17, 1, 2);
-  if (lamp > 0) glow(ctx, x, y - h - 5, 18 + Math.sin(t * 3) * 1.5, PAL.gold, 0.8 * lamp);
+  glow(ctx, x, y - h - 5, 18 + Math.sin(t * 3) * 1.5, PAL.gold, 0.8);
   return { lx: x, ly: y - h - 5 };
 }
 
-// ---------------------------------------------------------------------------
-// Invented rune-like glyphs (not a real alphabet), as line segments on a 4x6 grid.
+// made-up rune shapes on a 4x6 grid. deliberately not a real alphabet
 const RUNES = [
   [[0, 0, 0, 6], [0, 1, 3, 3], [0, 3, 3, 5]],
   [[2, 0, 2, 6], [0, 2, 2, 0], [4, 2, 2, 0], [0, 4, 2, 6], [4, 4, 2, 6]],
@@ -222,11 +212,10 @@ export function drawRune(ctx, cx, cy, size, idx, color, width = 1) {
   for (const [a, b, c, d] of R) stampLine(ctx, cx + (a - 2) * s, cy + (b - 3) * s, cx + (c - 2) * s, cy + (d - 3) * s, width);
 }
 
-// Standing stone with a carved rune. glowAmt 0..1 lights the rune.
-export function drawStone(ctx, x, y, h, w, rune, glowAmt = 0, colors = {}) {
-  const c1 = colors.c1 ?? '#3a4a60';
-  const c2 = colors.c2 ?? '#56698a';
-  const c3 = colors.c3 ?? '#242f40';
+export function drawStone(ctx, x, y, h, w, rune, glowAmt = 0) {
+  const c1 = '#3a4a60';
+  const c2 = '#56698a';
+  const c3 = '#242f40';
   x = Math.round(x);
   y = Math.round(y);
   for (let i = 0; i < h; i++) {
@@ -244,7 +233,6 @@ export function drawStone(ctx, x, y, h, w, rune, glowAmt = 0, colors = {}) {
   if (glowAmt > 0.05) glow(ctx, x, y - h * 0.5, 10 + h * 0.2, PAL.teal, glowAmt * 0.6);
 }
 
-// Sea stack: tall rock pillar standing in the sea.
 const stackCache = new Map();
 export function drawStack(ctx, x, baseY, w, h, seed = 1, colors = {}) {
   const key = `${w}|${h}|${seed}|${colors.c1}`;
@@ -266,7 +254,6 @@ export function drawStack(ctx, x, baseY, w, h, seed = 1, colors = {}) {
       g.fillStyle = c2;
       g.fillRect(x0, h + 6 - i, Math.max(1, Math.round(ww * 0.28)), 1);
     }
-    // grassy cap
     g.fillStyle = cg;
     const topW = Math.round(w * 0.65);
     g.fillRect(Math.round((w + 8 - topW) / 2), 5, topW, 3);
@@ -274,12 +261,10 @@ export function drawStack(ctx, x, baseY, w, h, seed = 1, colors = {}) {
     stackCache.set(key, c);
   }
   ctx.drawImage(c, Math.round(x - c.width / 2), Math.round(baseY - c.height));
-  // foam at the base
   ctx.fillStyle = rgba(PAL.foam, 0.6);
   ctx.fillRect(Math.round(x - w / 2 - 3), Math.round(baseY - 1), w + 6, 1);
 }
 
-// Puffy pixel cloud
 const cloudCache = new Map();
 export function drawCloud(ctx, x, y, w, color, seed = 1, alpha = 1) {
   const key = `${w}|${color}|${seed}`;
@@ -304,9 +289,7 @@ export function drawCloud(ctx, x, y, w, color, seed = 1, alpha = 1) {
   ctx.globalAlpha = 1;
 }
 
-// ---------------------------------------------------------------------------
-// Wind currents: sinuous ribbons that brighten on every beat, so the world
-// visibly breathes at 120 BPM.
+// wind ribbons brighten on every beat. it's the main way the tempo shows up with the sound off
 export function drawWind(ctx, t, beat, o = {}) {
   const color = o.color ?? '#bfe8ff';
   const alpha = o.alpha ?? 0.35;
@@ -329,9 +312,9 @@ export function drawWind(ctx, t, beat, o = {}) {
   ctx.globalAlpha = 1;
 }
 
-// God rays fanning from a point (brass swell).
+// brass swell rays
 export function drawRays(ctx, cx, cy, t, color, alpha = 0.3, n = 9, len = 420) {
-  const pc = ctx.globalCompositeOperation;
+  ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   for (let i = 0; i < n; i++) {
     const a = -Math.PI / 2 + ((i - (n - 1) / 2) / n) * 2.6 + Math.sin(t * 0.4 + i) * 0.03;
@@ -345,11 +328,10 @@ export function drawRays(ctx, cx, cy, t, color, alpha = 0.3, n = 9, len = 420) {
     ctx.closePath();
     ctx.fill();
   }
-  ctx.globalAlpha = 1;
-  ctx.globalCompositeOperation = pc;
+  ctx.restore();
 }
 
-// Tiny silhouette gull in flight (the packs only have perched gulls).
+// the asset packs only have perched gulls, so flying ones are drawn by hand
 export function drawFlyingGull(ctx, x, y, t, color = '#dfe6ee') {
   const up = Math.sin(t * 9) > 0;
   ctx.fillStyle = color;
@@ -367,10 +349,7 @@ export function drawFlyingGull(ctx, x, y, t, color = '#dfe6ee') {
   }
 }
 
-export { clamp };
-
-// ---------------------------------------------------------------------------
-// Fog with soft holes cut by light. holes: [{x, y, r, a}] (a = 0..1 strength)
+// fog with soft holes where the light is. holes: [{ x, y, r, a }], a = how much it clears
 const fogCanvases = new Map();
 export function drawFog(ctx, w, h, t, holes = [], o = {}) {
   const key = w + 'x' + h;
@@ -387,7 +366,7 @@ export function drawFog(ctx, w, h, t, holes = [], o = {}) {
   g.clearRect(0, 0, w, h);
   g.fillStyle = rgba(color, alpha);
   g.fillRect(0, 0, w, h);
-  // drifting fog banks (texture)
+  // flat drifting banks, round blobs looked like bokeh
   for (let i = 0; i < 16; i++) {
     const sp = 6 + (i % 4) * 4;
     const x = ((i * 67 + t * sp) % (w + 100)) - 50;
