@@ -76,13 +76,15 @@ export function drawSea(ctx, y, t, o = {}) {
   const foam = o.foam ?? PAL.foam;
   const scroll = o.scroll ?? 0;
   const glint = o.glint ?? null;
+  // runs a bit past the bottom so a camera nudge never shows a gap under the sea
+  const bottom = H + 16;
   ctx.fillStyle = c1;
-  ctx.fillRect(0, y, W, H - y);
+  ctx.fillRect(0, y, W, bottom - y);
   ctx.fillStyle = c2;
   ctx.fillRect(0, y, W, 2);
   let row = 0;
-  for (let yy = y + 3; yy < H; yy += 3 + row) {
-    const depth = (yy - y) / (H - y);
+  for (let yy = y + 3; yy < bottom; yy += 3 + row) {
+    const depth = Math.min(1, (yy - y) / (H - y));
     const speed = 6 + depth * 18;
     const len = 3 + Math.floor(depth * 9);
     const gap = 26 + row * 7;

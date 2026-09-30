@@ -46,6 +46,7 @@ export const FLIGHT = {
   MAGNET: 0.35, // gentle pull toward the next ring, 0 turns it off
   ZOOM_START: 1.18,
   ZOOM_END: 0.86,
+  CAM_FOLLOW: 0.12, // how much the camera drifts toward ember vertically, 0 = locked
 };
 
 export const MUSIC = {

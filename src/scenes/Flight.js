@@ -25,6 +25,7 @@ export class Flight {
     this.rollT = 0;
     this.streak = 0;
     this.flapPh = 0;
+    this.camY = 0; // gentle vertical follow, in world px
     this.squash = 0;
     this.path = [];
     this.pathT = 0;
@@ -78,7 +79,7 @@ export class Flight {
   // the pointer is in screen space but ember lives in the zoomed world
   toWorld(x, y) {
     const z = this.zoom;
-    return { x: (x - W / 2) / z + W / 2, y: (y - H / 2) / z + H / 2 };
+    return { x: (x - W / 2) / z + W / 2, y: (y - H / 2) / z + H / 2 + this.camY };
   }
   nextRing() {
     return this.rings.find((r) => r.state === 'coming' && this.ringX(r) > this.ex - 4);
@@ -89,7 +90,7 @@ export class Flight {
     // screen coords, the playwright "guest" steers toward this
     const z = this.zoom;
     const x = (REF_X - W / 2) * z + W / 2;
-    return { x, y: (r.y - H / 2) * z + H / 2 };
+    return { x, y: (r.y - this.camY - H / 2) * z + H / 2 };
   }
 
   skip(g) {
@@ -126,6 +127,9 @@ export class Flight {
       tx = W * 0.45;
       this.riseY += dt * 150 * ease.inCubic(invLerp(FLIGHT.RISE_AT, 1, p) + 0.2);
     }
+    // camera drifts a little toward ember so high and low flying both feel framed.
+    // ember still lands right under the light on screen because toWorld adds camY back
+    this.camY = approach(this.camY, (this.ey - H / 2) * FLIGHT.CAM_FOLLOW, 2, dt);
 
     // sluggish at first, snappier as ember gets confident
     const follow = FLIGHT.FOLLOW * lerp(0.55, 1, conf);
@@ -235,7 +239,7 @@ export class Flight {
 
     // sea and islands drop away during the climb
     ctx.save();
-    ctx.translate(0, Math.round(this.riseY));
+    ctx.translate(0, Math.round(this.riseY - this.camY * this.zoom));
     const farOff = (this.camX * 0.15) % W;
     ctx.drawImage(this.far.canvas, -Math.round(farOff), 0);
     ctx.drawImage(this.far.canvas, W - Math.round(farOff), 0);
@@ -250,7 +254,7 @@ export class Flight {
     ctx.save();
     ctx.translate(W / 2, H / 2);
     ctx.scale(z, z);
-    ctx.translate(-W / 2, -H / 2 + this.riseY);
+    ctx.translate(-W / 2, -H / 2 + this.riseY - this.camY);
 
     for (const s of this.stacks) {
       const x = s.x - this.camX * 0.7;
@@ -269,7 +273,7 @@ export class Flight {
     ctx.save();
     ctx.translate(W / 2, H / 2);
     ctx.scale(z, z);
-    ctx.translate(-W / 2, -H / 2);
+    ctx.translate(-W / 2, -H / 2 - this.camY);
     this.drawTrail(ctx, conf);
     for (const ring of this.rings) this.drawRing(g, ctx, ring);
     for (const f of this.flock) {
@@ -335,7 +339,7 @@ export class Flight {
   drawTether(ctx, x, y, t) {
     const z = this.zoom;
     const ex = (this.ex - W / 2) * z + W / 2;
-    const ey = (this.ey - H / 2) * z + H / 2;
+    const ey = (this.ey - this.camY - H / 2) * z + H / 2;
     const d = Math.hypot(ex - x, ey - y);
     if (d < 28 || this.p > FLIGHT.RISE_AT) return;
     const a = clamp((d - 28) / 40) * 0.6;
