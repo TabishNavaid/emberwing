@@ -18,6 +18,7 @@ const SHOTS = [
   ['flight', 13.4, 'follow'],
   ['flight', 19.2, 'follow'],
   ['home', 1.4, null],
+  ['home', 3.6, null], // shimmer + counter rolling
   ['home', 4.2, null],
   ['home', 5, null], // act II banner
   ['end', 1.2, null],

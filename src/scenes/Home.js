@@ -35,7 +35,27 @@ export class Home {
     g.scenes.go('end');
   }
 
+  // point i of the path, somewhere between where it was flown (lift 0) and its spot in the aurora (lift 1)
+  pathPoint(i, lift) {
+    const a = this.flightPts[i];
+    const b = this.skyPts[i] || this.skyPts[this.skyPts.length - 1];
+    return [lerp(a[0], b[0], lift), lerp(a[1], b[1], lift)];
+  }
+
   update(g, dt) {
+    const n = this.flightPts.length;
+    const draw = invLerp(0.6, 1.9, this.t);
+    const lift = ease.inOutSine(invLerp(1.9, 3.4, this.t));
+    if (draw > 0 && draw < 1 && g.rng() < dt * 50) {
+      // comet head sheds sparks while the path draws in
+      const [x, y] = this.pathPoint(Math.max(0, Math.ceil(n * draw) - 1), 0);
+      g.particles.add({ x, y, vx: (g.rng() - 0.5) * 30, vy: 10 + g.rng() * 20, life: 0.7, color: g.rng() < 0.5 ? PAL.gold2 : this.color, kind: 'spark', size: 1 });
+    }
+    if (lift > 0 && lift < 1 && g.rng() < dt * 40) {
+      // sparkles float up off the path as it rises
+      const [x, y] = this.pathPoint(Math.floor(g.rng() * n), lift);
+      g.particles.add({ x, y, vx: 0, vy: -30 - g.rng() * 30, life: 0.8, color: this.color, kind: 'spark', size: 1 });
+    }
     if (!this.ticked && this.t > 3.4) {
       this.ticked = true;
       g.audio.cue('home');
@@ -60,12 +80,7 @@ export class Home {
     if (!revealed) {
       const n = this.flightPts.length;
       const pts = [];
-      for (let i = 0; i < n; i++) {
-        const k = i / (n - 1);
-        const a = this.flightPts[i];
-        const b = this.skyPts[i] || this.skyPts[this.skyPts.length - 1];
-        pts.push([lerp(a[0], b[0], lift), lerp(a[1], b[1], lift)]);
-      }
+      for (let i = 0; i < n; i++) pts.push(this.pathPoint(i, lift));
       const shown = Math.max(2, Math.ceil(n * draw));
       const vis = pts.slice(0, shown);
       for (let i = 1; i < vis.length; i++) {
@@ -83,12 +98,13 @@ export class Home {
       drawRibbon(ctx, vis, this.color, 0.25 + lift * 0.5, t, 8 + Math.round(lift * 30));
       const head = vis[vis.length - 1];
       if (draw < 1) {
-        glow(ctx, head[0], head[1], 14, PAL.gold2, 0.9);
-        drawSparkle(ctx, head[0], head[1], 3);
+        glow(ctx, head[0], head[1], 20, PAL.gold2, 1);
+        drawSparkle(ctx, head[0], head[1], 4);
       }
     } else {
       const k = clamp(1 - (t - 3.4) / 2.5);
       if (k > 0) drawRibbon(ctx, this.skyPts, this.color, 0.5 * k, t, 34);
+      this.drawShimmer(g, ctx, (t - 3.4) / 1.3);
     }
 
     drawSea(ctx, 222, t, { c1: '#0a1426', c2: '#122440', foam: '#5fb8c8', glint: { x: W / 2, color: PAL.teal } });
@@ -131,13 +147,43 @@ export class Home {
       ctx.fillStyle = '#050814';
       ctx.fillRect(0, 230, W, 36);
       ctx.globalAlpha = 1;
-      const pop = this.ticked ? clamp((t - 3.4) * 1.5) : 1;
-      drawTextPop(ctx, num, x0 + wNum / 2, 248, pop, { scale: 4, color: PAL.gold, alpha: a });
+      // odometer: old number rolls up and out, new one rolls in from below
+      const roll = this.ticked ? ease.outCubic(clamp((t - 3.4) / 0.35)) : 0;
+      const nx = x0 + wNum / 2;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 231, W, 35);
+      ctx.clip();
+      if (roll < 1) drawText(ctx, String(n - (this.ticked ? 1 : 0)), nx, 234 - roll * 32, { scale: 4, align: 'center', color: PAL.gold, alpha: a * (1 - roll) });
+      if (this.ticked) drawText(ctx, num, nx, 234 + (1 - roll) * 32, { scale: 4, align: 'center', color: PAL.gold, alpha: a });
+      ctx.restore();
+      if (this.ticked && t < 4.2) glow(ctx, nx, 248, 26, PAL.gold, 0.6 * (1 - (t - 3.4) / 0.8));
       drawText(ctx, label, x0 + wNum + 10, 244, { scale: 2, color: '#bff8ee', alpha: a });
     }
     if (t > 3.9) {
       const k = ease.outCubic(clamp((t - 3.9) / 0.4));
       drawActBanner(ctx, W / 2, Math.round(-30 + k * 42), t, g.beat.pulse, k);
     }
+  }
+
+  // a band of light sweeps across the whole aurora once the new ribbon settles in.
+  // "your light joined everyone's"
+  drawShimmer(g, ctx, k) {
+    if (k <= 0 || k >= 1) return;
+    const wx = -40 + k * (W + 80);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (let dx = -36; dx <= 36; dx += 4) {
+      const x = Math.round(wx + dx);
+      if (x < 0 || x > W - 4) continue;
+      const a = 1 - Math.abs(dx) / 36;
+      ctx.globalAlpha = a;
+      ctx.drawImage(g.wall.canvas, x, 0, 4, H, x, 0, 4, H);
+      // plus a soft column so it shows even when the wall is nearly empty (first guest)
+      ctx.globalAlpha = a * 0.22;
+      ctx.fillStyle = PAL.teal;
+      ctx.fillRect(x, 10, 4, 130);
+    }
+    ctx.restore();
   }
 }
