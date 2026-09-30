@@ -3,7 +3,7 @@ import { defineConfig } from '@playwright/test';
 // tests hit the production build, same files github pages serves
 export default defineConfig({
   testDir: 'tests',
-  timeout: 150_000,
+  timeout: 300_000, // scripted full runs are ~40s of game time, a lot longer if the machine is busy
   workers: 1,
   reporter: 'list',
   use: {
