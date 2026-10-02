@@ -1,7 +1,8 @@
 // a scripted "guest". only ever moves the pointer, never clicks, same as the mocap rig
 export async function boot(page, query = '') {
   await page.goto('./?seed=5' + query);
-  await page.waitForFunction(() => document.body.classList.contains('ready'));
+  // interval polling, the default polls on requestAnimationFrame which some tests replace
+  await page.waitForFunction(() => document.body.classList.contains('ready'), null, { polling: 50 });
 }
 export const state = (page) => page.evaluate(() => window.__emberwing.state());
 export const toScreen = (page, x, y) => page.evaluate(([x, y]) => window.__emberwing.toScreen(x, y), [x, y]);

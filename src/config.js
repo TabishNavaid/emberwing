@@ -50,6 +50,14 @@ export const FLIGHT = {
   CAM_FOLLOW: 0.12, // how much the camera drifts toward ember vertically, 0 = locked
 };
 
+// the game clock follows real time even when frames drop. a slow frame gets split into
+// several small steps so nothing tunnels through a ring
+export const LOOP = {
+  MAX_STEP: 1 / 30, // biggest single simulation step
+  MAX_CATCHUP: 0.25, // most real time we'll catch up in one frame. past this (frozen or
+  // backgrounded tab) we just drop the rest instead of jumping the scene ahead
+};
+
 export const MUSIC = {
   BPM: 120,
 };

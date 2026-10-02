@@ -1,4 +1,4 @@
-import { VIEW } from './config.js';
+import { VIEW, LOOP } from './config.js';
 import { Input } from './input/Input.js';
 import { attachPointer, attachMocap, attachKeys } from './input/adapters.js';
 import { Beat } from './core/Beat.js';
@@ -110,13 +110,18 @@ function render() {
   dctx.drawImage(buffer, fit.x + Math.round(game.cam.ox * k), fit.y + Math.round(game.cam.oy * k), fit.w, fit.h);
 }
 
-// dt capped at 50ms so a laptop hiccup doesn't teleport ember across the screen
+// it used to cap dt at 50ms, so below 20fps the whole game ran in slow motion and a run on
+// a weak laptop took way longer. now we catch up in small steps instead
 let last = performance.now();
 let paused = false;
 function frame(now) {
-  const dt = Math.min(0.05, (now - last) / 1000);
+  let left = Math.min(Math.max(0, (now - last) / 1000), LOOP.MAX_CATCHUP);
   last = now;
-  if (!paused) step(dt);
+  while (!paused && left > 1e-6) {
+    const dt = Math.min(left, LOOP.MAX_STEP);
+    step(dt);
+    left -= dt;
+  }
   render();
   requestAnimationFrame(frame);
 }
