@@ -12,6 +12,7 @@ export class Camera {
     this.oy = 0;
   }
   shake(amount) {
+    if (this.motion?.reduced) return; // no shake at all in reduced motion
     this.shakeAmt = Math.max(this.shakeAmt, amount);
   }
   update(dt) {

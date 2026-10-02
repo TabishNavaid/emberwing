@@ -8,6 +8,7 @@ import { Camera } from './core/Camera.js';
 import { AuroraStore } from './core/AuroraStore.js';
 import { Audio } from './core/Audio.js';
 import { Operator } from './core/Operator.js';
+import { Motion } from './core/Motion.js';
 import { mulberry32 } from './core/util.js';
 import { loadSprites } from './art/sprites.js';
 import { AuroraWall } from './art/aurora.js';
@@ -72,6 +73,8 @@ const game = {
   runStart: 0,
   runs: [], // finished run lengths, the tests read these
 };
+game.motion = new Motion();
+game.cam.motion = game.motion;
 game.audio = new Audio(beat);
 game.wall = new AuroraWall(game.store);
 game.scenes = new SceneManager(game, {

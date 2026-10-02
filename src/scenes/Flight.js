@@ -1,4 +1,4 @@
-import { VIEW, DUR, FLIGHT, PAL, MUSIC } from '../config.js';
+import { VIEW, DUR, FLIGHT, PAL, MUSIC, MOTION } from '../config.js';
 import { clamp, lerp, approach, glow, ease, mix, invLerp, mulberry32 } from '../core/util.js';
 import { drawText, drawTextPop } from '../art/font.js';
 import { drawKnotRing, drawKnotBand } from '../art/knotwork.js';
@@ -15,6 +15,7 @@ export class Flight {
   interactive = true;
 
   enter(g, data = {}) {
+    this.gentle = g.motion.reduced;
     const r = mulberry32(g.rng.int(1, 1e6));
     this.ex = 110;
     this.ey = data.fromY ? clamp(data.fromY, 80, 200) : 150;
@@ -76,6 +77,8 @@ export class Flight {
     // lean in during the wind-up, then punch out past normal and settle back
     const st = this.swellT ?? 0;
     const punch = this.swellFired ? ease.outCubic(clamp(st / 0.25)) * Math.exp(-st * 1.6) : 0;
+    // reduced motion: half the zoom swing, no lean-in or punch
+    if (this.gentle) return 1 + (base - 1) * MOTION.ZOOM_SCALE;
     return base * (1 + 0.06 * this.windup - 0.07 * punch);
   }
   ringX(ring) {
@@ -137,7 +140,8 @@ export class Flight {
     }
     // camera drifts a little toward ember so high and low flying both feel framed.
     // ember still lands right under the light on screen because toWorld adds camY back
-    this.camY = approach(this.camY, (this.ey - H / 2) * FLIGHT.CAM_FOLLOW, 2, dt);
+    this.gentle = g.motion.reduced;
+    this.camY = approach(this.camY, this.gentle ? 0 : (this.ey - H / 2) * FLIGHT.CAM_FOLLOW, 2, dt);
 
     // sluggish at first, snappier as ember gets confident
     const follow = FLIGHT.FOLLOW * lerp(0.55, 1, conf);
@@ -334,7 +338,7 @@ export class Flight {
     if (t < 1.8) drawTextPop(ctx, 'FLY!', W / 2, 44, t * 1.4, { scale: 5, color: PAL.cream });
     if (this.swellFired && this.swellT < 0.4) {
       // one soft flash, only once (photosensitivity)
-      ctx.fillStyle = `rgba(255,226,138,${0.3 * (1 - this.swellT / 0.4)})`;
+      ctx.fillStyle = `rgba(255,226,138,${0.3 * g.motion.flash * (1 - this.swellT / 0.4)})`;
       ctx.fillRect(0, 0, W, H);
     }
     if (this.swellFired && this.swellT < 2.2) {

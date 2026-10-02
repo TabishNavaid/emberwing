@@ -232,7 +232,7 @@ export class FindEmber {
     } else {
       // one soft flash only (photosensitivity), never repeated
       if (this.popped && this.burstT < 0.5) {
-        ctx.globalAlpha = 0.35 * (1 - (this.burstT - 0.1) / 0.4);
+        ctx.globalAlpha = 0.35 * g.motion.flash * (1 - (this.burstT - 0.1) / 0.4);
         ctx.fillStyle = '#fff6d8';
         ctx.fillRect(0, 0, W, H);
         ctx.globalAlpha = 1;

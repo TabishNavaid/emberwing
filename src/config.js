@@ -58,6 +58,12 @@ export const LOOP = {
   // backgrounded tab) we just drop the rest instead of jumping the scene ahead
 };
 
+// reduced motion (OS setting or operator key G)
+export const MOTION = {
+  FLASH_SCALE: 0.35, // flashes get this much of their normal strength
+  ZOOM_SCALE: 0.5, // flight zooms half as far
+};
+
 export const MUSIC = {
   BPM: 120,
 };

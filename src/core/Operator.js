@@ -1,7 +1,8 @@
 import { VIEW, PAL } from '../config.js';
 import { drawText } from '../art/font.js';
 
-// hidden operator keys: F fullscreen, R reset, S skip, D debug, C clear sky (asks first), M audio
+// hidden operator keys: F fullscreen, R reset, S skip, D debug, C clear sky (asks first), M audio,
+// G reduced motion (auto / on / off)
 export class Operator {
   constructor(game) {
     this.game = game;
@@ -41,6 +42,9 @@ export class Operator {
       this.debug = !this.debug;
     } else if (k === 'c') {
       this.confirm = 8;
+    } else if (k === 'g') {
+      g.motion.cycle();
+      this.say(`MOTION ${g.motion.label()}`);
     } else if (k === 'm') {
       this.say(g.audio.toggle() ? 'AUDIO ON' : 'AUDIO OFF');
     }
@@ -63,6 +67,7 @@ export class Operator {
         `SPEED ${g.input.speed.toFixed(2)} IDLE ${g.input.idle.toFixed(1)}`,
         `HOLD ${g.input.holding ? 'Y' : 'N'} BEAT ${g.beat.count}`,
         `DRAGONS ${g.store.count}`,
+        `MOTION ${g.motion.label()}`,
       ];
       if (g.input.status) lines.push(g.input.status.toUpperCase().slice(0, 60));
       ctx.fillStyle = 'rgba(0,0,0,0.7)';
