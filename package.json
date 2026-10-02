@@ -10,7 +10,8 @@
     "preview": "vite preview --host",
     "test": "playwright test",
     "shots": "playwright test tests/screenshots.spec.js",
-    "sprites": "python3 tools/extract-sprites.py"
+    "sprites": "python3 tools/extract-sprites.py",
+    "smoke": "playwright test -c playwright.live.config.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

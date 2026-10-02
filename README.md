@@ -54,7 +54,11 @@ Hidden from guests. Nothing on screen mentions them.
 | **D** | Debug overlay (FPS, scene timer, pointer x/y, speed, idle time, mocap status) |
 | **C** | Clear tonight's aurora. Asks on screen first: **Y** clears, anything else keeps |
 | **M** | Ambient audio on/off (off by default) |
+| **K** | Calibrate the mocap rig: point at the 4 corner rings and hold still (see below). In the calibration screen **Space** grabs a corner, **Esc** cancels, **Delete** clears the saved calibration |
+| **G** | Reduced motion: AUTO (follows the OS setting), FORCED REDUCED, FORCED FULL. Reduced = no shake, softer flashes, calmer flight camera. Remembered across refreshes |
 | Arrows / Space | Move the pointer / "hold" (desk testing only) |
+
+Before a shift, run through [PLAYTEST.md](PLAYTEST.md) on the real projector.
 
 The aurora (every guest's ribbon, plus the "N dragons home tonight" count) is saved to `localStorage`, so a refresh or a crashed tab doesn't wipe the wall. It starts fresh automatically on a new calendar day. Use **C** to clear it by hand.
 
@@ -71,6 +75,8 @@ The aurora (every guest's ribbon, plus the "N dragons home tonight" count) is sa
 
 Measured by the Playwright suite: **~38 s** for a typical guest, **~40.5 s** for a guest who never finds Ember on their own (the test fails above 41 s). **Idle reset:** 10 s without input during Find Ember or Flight returns to attract. The assists only count time while someone is actually pointing, so an abandoned game resets instead of playing itself.
 
+**Slow laptops:** the game clock follows real time even when frames drop (it catches up in small steps, `LOOP` in `config.js`), so a choppy laptop doesn't make runs longer. Below about 4 fps it starts to slow down, and a frozen or backgrounded tab only moves the game forward a quarter second when it comes back. The YOURS! label after a run lasts `DUR.YOURS_LABEL` (15 s).
+
 ## Connecting a motion-capture cursor
 
 The game only needs one x/y point. Pick whichever is easiest for your rig:
@@ -85,6 +91,14 @@ The game only needs one x/y point. Pick whichever is easiest for your rig:
    `window.emberwingPointer(x, y)` or `window.postMessage({ type: 'emberwing-pointer', x, y }, '*')`.
 
 Motion-capture input goes through a One-Euro jitter filter tuned heavier than the mouse filter (`INPUT.FILTER.mocap` in `config.js`).
+
+### Calibration (K)
+
+If the light doesn't land where the prop points (offset, squashed, or a keystoned projector), press **K** with the rig connected. Point the prop at each corner ring and hold it still until the ring fills (about 1 s); the pink cross shows where the rig *thinks* it's pointing. After the 4th corner the mapping is saved to `localStorage` and shows up in the debug overlay (**D**) as `CAL MOCAP <date>`. It only applies to the input source you calibrated with, so a desk mouse keeps working normally. Press **K** then **Delete** to clear it.
+
+### Phones
+
+On touch screens the light sits about 40 px above your fingertip (`INPUT.TOUCH_LIFT`), so your finger doesn't cover it or Ember.
 
 ### HTTPS and WebSockets (important for GitHub Pages)
 
@@ -121,9 +135,17 @@ Replace the circle with your tracker's prop position mapped to 0..1.
 
 The repo includes `.github/workflows/pages.yml`, which builds and deploys `dist/` on every push to `main`.
 
-1. Push the repo to GitHub.
-2. In **Settings → Pages**, set **Source: GitHub Actions** (one time).
-3. Push to `main`. The site appears at `https://<user>.github.io/<repo-name>/`.
+1. Create an empty repo on GitHub (no README or license, so the first push is clean), or from the project folder: `gh repo create <repo-name> --public --source . --remote origin`
+2. Push: `git push -u origin main`
+3. In **Settings → Pages**, set **Build and deployment → Source** to **GitHub Actions** (one time). Or: `gh api -X POST repos/<user>/<repo-name>/pages -f build_type=workflow`
+4. If the first workflow run happened before step 3 and failed, re-run it from the **Actions** tab (or push again).
+5. The site appears at `https://<user>.github.io/<repo-name>/`. Check it plays:
+
+```bash
+LIVE_URL=https://<user>.github.io/<repo-name>/ npm run smoke
+```
+
+The smoke test (`tests-live/`) loads the live site, checks for errors and missing files, checks the sprites load from the repo's subpath, and plays one full scripted run.
 
 The workflow sets `BASE_PATH=/<repo-name>/` for Vite. Locally the default base is `./` (relative paths), so `dist/` also works from any other static host or subfolder, including Heroku static hosting.
 
@@ -139,8 +161,11 @@ This builds the site, serves it, and runs Playwright:
 
 - **`tests/fullrun.spec.js`**: a scripted guest plays a whole run by pointer only. It asserts 35-45 s, that the ribbon persists across a refresh, that a guest who never finds Ember still finishes in time, and that the end card can be skipped.
 - **`tests/idle.spec.js`**: walking away during Find Ember or Flight resets to attract after about 10 s.
-- **`tests/input.spec.js`**: the mocap pointer path, the clear confirmation, and the portrait "rotate your phone" hint.
-- **`tests/story.spec.js`**: the story beats show up when they should: "EMBER IS LOST!" first, the Act II line during Home, and the brass swell's wind-up, firing and flock join.
+- **`tests/input.spec.js`**: the mocap pointer path, the clear confirmation, the portrait "rotate your phone" hint, and the touch offset.
+- **`tests/story.spec.js`**: the story beats show up when they should: "EMBER IS LOST!" first, the Act II line during Home, the brass swell's wind-up, firing and flock join, and "YOURS!" on attract after a finished run (but not after an idle reset).
+- **`tests/framerate.spec.js`**: at 8 fps the game clock still keeps real time, a frozen tab only nudges the game forward, and a full run at ~8 fps lands within 2 s of a normal one.
+- **`tests/motion.spec.js`**: reduced motion follows the OS setting, **G** cycles and is remembered, no shake and a calmer camera when reduced.
+- **`tests/calibration.spec.js`**: a deliberately misaligned pretend rig is fixed by **K**, the calibration survives a refresh, Delete clears it, and a mouse isn't affected.
 - **`tests/screenshots.spec.js`**: `npm run shots` writes every scene at 1920×1080 and phone landscape to `tests/screens/`.
 
 ## Code map
