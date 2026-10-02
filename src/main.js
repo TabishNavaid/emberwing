@@ -9,6 +9,7 @@ import { AuroraStore } from './core/AuroraStore.js';
 import { Audio } from './core/Audio.js';
 import { Operator } from './core/Operator.js';
 import { Motion } from './core/Motion.js';
+import { Calibration } from './input/Calibration.js';
 import { mulberry32 } from './core/util.js';
 import { loadSprites } from './art/sprites.js';
 import { AuroraWall } from './art/aurora.js';
@@ -73,6 +74,8 @@ const game = {
   runStart: 0,
   runs: [], // finished run lengths, the tests read these
 };
+game.cal = new Calibration();
+input.cal = game.cal;
 game.motion = new Motion();
 game.cam.motion = game.motion;
 game.audio = new Audio(beat);
@@ -91,9 +94,12 @@ function step(dt) {
   keys(dt);
   input.update(dt);
   beat.update(dt);
-  game.scenes.update(dt);
-  game.particles.update(dt);
-  game.cam.update(dt);
+  // the game holds still while the operator calibrates, so aiming at corners can't start a run
+  if (!game.op.cal) {
+    game.scenes.update(dt);
+    game.particles.update(dt);
+    game.cam.update(dt);
+  }
   game.audio.update();
   game.op.update(dt);
 }

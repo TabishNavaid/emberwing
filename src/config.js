@@ -85,6 +85,10 @@ export const INPUT = {
   // on phones the light sits this far above your fingertip (internal px, ~40 css px on a phone)
   // otherwise your finger covers the light and ember
   TOUCH_LIFT: 26,
+  // mocap calibration (K)
+  CAL_INSET: 30, // corner targets sit this far in from the edges, nobody can aim at the very corner
+  CAL_HOLD: 1.2, // hold the prop still this long on each corner
+  CAL_STEADY: 4, // internal px of wobble that still counts as holding still
 };
 
 export const STORE = {

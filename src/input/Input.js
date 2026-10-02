@@ -9,6 +9,9 @@ export class Input {
     this.y = VIEW.H * 0.62;
     this.rawX = this.x;
     this.rawY = this.y;
+    this.srcX = this.x;
+    this.srcY = this.y;
+    this.cal = null; // Calibration, set in main
     // screen-widths/sec so "steady" means the same thing on a phone and on the 10ft screen
     this.speed = 0;
     this.holding = false;
@@ -29,6 +32,10 @@ export class Input {
       this.fy.set(f);
       this.source = source;
     }
+    // src = what the device reported, before calibration. the K screen needs that
+    this.srcX = x;
+    this.srcY = y;
+    if (this.cal) [x, y] = this.cal.map(x, y, source);
     this.rawX = Math.max(0, Math.min(VIEW.W, x));
     this.rawY = Math.max(0, Math.min(VIEW.H, y));
     this.seen = true;
