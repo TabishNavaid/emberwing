@@ -11,6 +11,7 @@ export const DUR = {
   START_DWELL: 1.0, // hold on the lantern to start
   ATTRACT_PAGE: 4.5, // per storybook page
   ATTRACT_DEMO_PAGE: 6.5, // ghost demo needs longer to play out
+  YOURS_LABEL: 15, // "YOURS!" points at the newest ribbon after a run, so you can show your friends
 
   FIND_HOLD: 2.0, // steady light on the eyes this long fills the ring
   // the assist clock only runs while someone is pointing, so a walked-away game idles out instead

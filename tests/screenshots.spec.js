@@ -6,6 +6,7 @@ const SHOTS = [
   ['attract', 10.4, null],
   ['attract', 13.5, null],
   ['attract', 22, null], // music page
+  ['attract', 3, 'yours'], // YOURS! label after a run
   ['find', 0.8, { x: 240, y: 90 }], // story beat
   ['find', 2, { x: 240, y: 90 }],
   ['find', 1.4, 'target'],
@@ -47,6 +48,10 @@ for (const [label, viewport, dpr] of SIZES) {
         const inp = w.game.input;
         w.pause(true);
         inp.feed(300, 250, 'mouse');
+        if (ptr === 'yours') {
+          for (let i = 0; i < 6; i++) w.game.store.add([[0, 0.5], [0.3, 0.3 + i * 0.05], [0.6, 0.6], [1, 0.4]], i);
+          w.goto('attract', { reason: 'done' });
+        }
         if (ptr && ptr.x) inp.feed(ptr.x, ptr.y, 'mouse');
         for (let i = 0; i < t * 20; i++) {
           const s = w.state();

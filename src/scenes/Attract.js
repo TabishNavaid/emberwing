@@ -6,7 +6,7 @@ import { drawKnotRing, drawKnotFrame, drawKnotBand } from '../art/knotwork.js';
 import { drawEmber, FLOCK_COLORS, eyeOffset } from '../art/ember.js';
 import { drawSky, SKY, makeStars, drawStars, drawSea, drawLighthouse, drawStone, drawCloud, drawWind, drawFlyingGull, drawFog } from '../art/world.js';
 import { drawLantern, drawFeet, drawHorn, drawSoundLines, drawCursorLight, drawSparkle, drawArrowUp } from '../art/icons.js';
-import { drawBaseAurora } from '../art/aurora.js';
+import { drawBaseAurora, drawRibbon, ribbonSkyPoints, RIBBON_COLORS } from '../art/aurora.js';
 import { drawTree } from '../art/sprites.js';
 
 const { W, H } = VIEW;
@@ -15,6 +15,7 @@ const { W, H } = VIEW;
 const BOOK = { x: 14, y: 54, w: 252, h: 172 };
 const PANEL_X = 372;
 const LANTERN = { x: PANEL_X, y: 152, r: 34 };
+const YOURS = { x: 242, y: 10 }; // the free strip of sky between the title and NEXT FLYER
 
 const PAGES = [
   { id: 'storm', caption: 'A STORM...' },
@@ -27,8 +28,18 @@ const PAGES = [
 export class Attract {
   interactive = false;
 
-  enter(g) {
+  enter(g, data = {}) {
     this.dwell = new Dwell(LANTERN.x, LANTERN.y, LANTERN.r + 6, DUR.START_DWELL);
+    // only after a finished run. an idle reset means nobody made it home this time
+    this.yoursT = 0;
+    const rs = g.store.ribbons;
+    if (data.reason === 'done' && rs.length) {
+      const rib = rs[rs.length - 1];
+      this.yoursT = DUR.YOURS_LABEL;
+      this.yoursColor = RIBBON_COLORS[rib.h % RIBBON_COLORS.length];
+      this.yoursPts = ribbonSkyPoints(rib, g.wall.top, g.wall.height);
+      this.yoursAt = pickVisiblePoint(this.yoursPts);
+    }
     this.page = 0;
     this.pageT = 0;
     this.flip = 1; // page turn, 0..1
@@ -59,6 +70,7 @@ export class Attract {
   }
 
   update(g, dt) {
+    this.yoursT = Math.max(0, this.yoursT - dt);
     this.pageT += dt;
     this.flip = Math.min(1, this.flip + dt / 0.55);
     if (this.pageT > this.pageDuration()) {
@@ -83,6 +95,8 @@ export class Attract {
     drawStars(ctx, this.stars, t);
     drawBaseAurora(ctx, t, 0.9);
     g.wall.draw(ctx, t);
+    // your ribbon glows a bit brighter than the rest while the label is up
+    if (this.yoursT > 0) drawRibbon(ctx, this.yoursPts, this.yoursColor, 0.45 * clamp(this.yoursT / 1.5), t, 34);
     for (let i = 0; i < 5; i++) {
       const a = t * 0.35 + (i / 5) * Math.PI * 2;
       drawFlyingGull(ctx, 380 + Math.cos(a) * 60, 95 + Math.sin(a) * 12, t + i, i % 2 ? '#ffd88a' : '#8ffff0');
@@ -103,8 +117,31 @@ export class Attract {
       drawText(ctx, s, BOOK.x + BOOK.w / 2, 246, { scale: 2, align: 'center', color: '#bff8ee' });
     }
 
+    if (this.yoursT > 0) this.drawYours(ctx, t, g.beat.pulse);
     g.particles.draw(ctx);
     if (g.input.seen) drawCursorLight(ctx, g.input.x, g.input.y, t, 1);
+  }
+
+  // the label lives in the open strip of sky between the title and NEXT FLYER (anywhere else it
+  // landed on STEP HERE or the book) and a dotted line of light leads to the ribbon itself
+  drawYours(ctx, t, pulse) {
+    const { x, y } = this.yoursAt;
+    const a = clamp(this.yoursT / 1.5); // fades out over the last 1.5s
+    const lx = YOURS.x;
+    const ly = YOURS.y + 18;
+    const d = Math.hypot(x - lx, y - ly);
+    ctx.fillStyle = PAL.gold2;
+    for (let s = (t * 30) % 5; s < d - 4; s += 5) {
+      ctx.globalAlpha = a * 0.8;
+      ctx.fillRect(Math.round(lx + ((x - lx) * s) / d), Math.round(ly + ((y - ly) * s) / d), 2, 2);
+    }
+    ctx.globalAlpha = 1;
+    glow(ctx, x, y, 14 + pulse * 6, this.yoursColor, 0.8 * a);
+    ctx.globalAlpha = a;
+    drawSparkle(ctx, x, y, 3 + Math.round(pulse * 2), PAL.gold2);
+    ctx.globalAlpha = 1;
+    const bob = Math.round(Math.sin(t * 4) * 1.5);
+    drawText(ctx, 'YOURS!', lx, YOURS.y + bob, { scale: 2, align: 'center', color: PAL.gold2, alpha: a });
   }
 
   drawPanel(g, ctx, t) {
@@ -301,4 +338,31 @@ export class Attract {
     drawText(pg, 'WALLA WALLA SYMPHONY', BOOK.w / 2, 102, { scale: 2, align: 'center', color: PAL.cream });
     drawText(pg, 'YOUTH ORCHESTRA', BOOK.w / 2, 120, { scale: 2, align: 'center', color: PAL.cream });
   }
+}
+
+// the aurora is mostly hidden behind the storybook. pick a bit of the ribbon you can see,
+// closest to the label first, then the gap between STEP HERE and the lantern
+function pickVisiblePoint(pts) {
+  const zones = [
+    { x0: 176, x1: 310, y0: 30, y1: 46, aim: [YOURS.x, 40] },
+    { x0: 292, x1: 462, y0: 72, y1: 108, aim: [330, 90] },
+    { x0: 176, x1: 470, y0: 0, y1: 46, aim: [YOURS.x, 30] },
+  ];
+  for (const z of zones) {
+    let best = null;
+    let bestD = Infinity;
+    for (const [x, y] of pts) {
+      if (x < z.x0 || x > z.x1 || y < z.y0 || y > z.y1) continue;
+      const d = Math.hypot(x - z.aim[0], y - z.aim[1]);
+      if (d < bestD) {
+        bestD = d;
+        best = { x, y };
+      }
+    }
+    if (best) return best;
+  }
+  // nothing visible, point at whatever part is closest to the label
+  let best = { x: pts[0][0], y: pts[0][1] };
+  for (const [x, y] of pts) if (Math.hypot(x - YOURS.x, y - 40) < Math.hypot(best.x - YOURS.x, best.y - 40)) best = { x, y };
+  return best;
 }
