@@ -5,7 +5,8 @@ import { VIEW, INPUT } from '../config.js';
 export function attachPointer(input, target, toView) {
   const onMove = (e) => {
     const p = toView(e.clientX, e.clientY);
-    input.feed(p.x, p.y, e.pointerType === 'touch' ? 'touch' : 'mouse');
+    if (e.pointerType === 'touch') input.feed(p.x, p.y - INPUT.TOUCH_LIFT, 'touch');
+    else input.feed(p.x, p.y, 'mouse');
   };
   target.addEventListener('pointermove', onMove, { passive: true });
   target.addEventListener('pointerdown', (e) => {

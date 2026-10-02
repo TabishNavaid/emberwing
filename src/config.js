@@ -81,6 +81,9 @@ export const INPUT = {
     keys: { minCutoff: 5.0, beta: 0.0 },
   },
   KEY_SPEED: 220, // arrow keys, desk testing only
+  // on phones the light sits this far above your fingertip (internal px, ~40 css px on a phone)
+  // otherwise your finger covers the light and ember
+  TOUCH_LIFT: 26,
 };
 
 export const STORE = {
