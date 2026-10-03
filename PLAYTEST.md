@@ -10,7 +10,7 @@ Write results in the blanks. Anything that fails goes in the notes at the bottom
 
 - [ ] Laptop on power (not battery saver), plugged into the projector, projector at full resolution (1920×1080 if it supports it)
 - [ ] Close everything else (other browsers, VMs, Docker, chat apps). Open Activity Monitor > Memory: memory pressure should be green and swap used near zero. When we built this, a laptop deep in swap froze every app for minutes at a time, the game included
-- [ ] Open the game. Live site: `https://tabishnavaid.github.io/<repo-name>/`, or offline on the laptop: `npm run build && npm run preview`, then `http://localhost:4173`
+- [ ] Open the game. Live site: `https://tabishnavaid.github.io/emberwing/`, or offline on the laptop: `npm run build && npm run preview`, then `http://localhost:4173`
 - [ ] Press **F** for fullscreen. No browser bars or cursor visible on the wall
 - [ ] Press **D** for the debug overlay
 
