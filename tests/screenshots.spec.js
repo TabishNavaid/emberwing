@@ -13,6 +13,8 @@ const SHOTS = [
   ['find', 2, { x: 240, y: 90 }],
   ['find', 1.4, 'target'],
   ['find', 2.6, 'target'], // found: happy wiggle
+  ['find', 7.5, 'wander'], // hints: big eyes + spark trail
+  ['find', 10.5, 'wander'], // hints: beam leaning toward the eyes
   ['flight', 6, 'follow'],
   ['flight', 5.35, 'follow'], // barrel roll after 3 in a row
   ['flight', 9, { x: 400, y: 60 }], // tether when ember lags behind the light
@@ -63,6 +65,7 @@ for (const [label, viewport, dpr] of SIZES) {
         for (let i = 0; i < t * 20; i++) {
           const s = w.state();
           if ((ptr === 'target' || ptr === 'follow') && s.target) inp.feed(s.target.x, s.target.y, 'mouse');
+          if (ptr === 'wander') inp.feed(70 + Math.sin(i * 0.15) * 40, 50 + Math.cos(i * 0.11) * 25, 'mouse');
           w.step(0.05);
         }
       }, [t, ptr]);

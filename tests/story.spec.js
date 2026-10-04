@@ -11,12 +11,47 @@ test('home shows the act II line before the end card', async ({ page }) => {
   expect(await at(2.5)).toBe(true); // 4.5s in
 });
 
-test('find ember opens with the story beat, then the instruction', async ({ page }) => {
+test('find ember teaches one thing at a time, and the ring never resets', async ({ page }) => {
   await boot(page, '&scene=find');
-  await page.evaluate(() => { const w = window.__emberwing; w.pause(true); w.game.input.feed(40, 40, 'mouse'); });
-  const at = (t) => page.evaluate((t) => { window.__emberwing.step(t); return window.__emberwing.game.scenes.current.prompt; }, t);
-  expect(await at(0.5)).toBe('EMBER IS LOST!');
-  expect(await at(1.5)).toBe('FIND THE EYES');
+  const r = await page.evaluate(() => {
+    const w = window.__emberwing;
+    const f = () => w.game.scenes.current;
+    const inp = w.game.input;
+    w.pause(true);
+    w.goto('find'); // restart after pausing, so no real-time frames sneak in before we measure
+    const log = [f().prompt]; // the first instruction is up from frame zero
+    const step = (secs, aim) => {
+      for (let i = 0; i < secs * 20; i++) {
+        const e = f().eyes();
+        if (aim) inp.feed(e.x, e.y, 'mouse');
+        else inp.feed(60 + (i % 40) * 3, 60, 'mouse'); // sweeping around up top, nowhere near ember
+        w.step(0.05);
+        log.push(f().prompt);
+      }
+    };
+    step(1.0, false);
+    const first = f().prompt;
+    step(1.5, false); // moved plenty, 2.5s in
+    const second = f().prompt;
+    step(2.5, true); // light on the eyes
+    const third = f().prompt;
+    const holdOn = f().hold;
+    step(1.0, false); // slips off
+    const holdOff = f().hold;
+    // how long each instruction stayed up
+    const runs = [];
+    for (const p of log) {
+      if (runs.length && runs[runs.length - 1].p === p) runs[runs.length - 1].n++;
+      else runs.push({ p, n: 1 });
+    }
+    return { first, second, third, holdOn, holdOff, runs: runs.map((x) => [x.p, x.n * 0.05]) };
+  });
+  expect(r.first).toBe('MOVE YOUR LIGHT');
+  expect(r.second).toBe('FIND THE EYES');
+  expect(r.third).toBe('HOLD STILL');
+  expect(r.holdOn).toBeGreaterThan(0.1);
+  expect(r.holdOff).toBe(r.holdOn); // pauses, never goes back down
+  for (const [, secs] of r.runs.slice(0, -1)) expect(secs).toBeGreaterThanOrEqual(1.99);
 });
 
 test('brass swell: wind-up, then it fires on time and the flock joins', async ({ page }) => {

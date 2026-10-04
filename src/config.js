@@ -14,14 +14,18 @@ export const DUR = {
   YOURS_LABEL: 15, // "YOURS!" points at the newest ribbon after a run, so you can show your friends
 
   FIND_HOLD: 2.0, // steady light on the eyes this long fills the ring
-  // the assist clock only runs while someone is pointing, so a walked-away game idles out instead
-  // these were 4 / 6.5 / 9.5 and the worst run hit 44.3s, right at the 45s ceiling.
-  // most people find ember in ~5s so pulling them in only changes things for people who are stuck
-  FIND_ASSIST_GLOW: 3.0, // sparks start leading to the eyes
-  FIND_ASSIST_HOP: 4.5, // ember hops toward the beam on its own
-  FIND_AUTO_COMPLETE: 7.0, // hard cap so nobody gets stuck
-  FIND_AUTO_FILL: 0.4, // once the cap hits, the ring fills in this long
-  FIND_BURST: 1.5, // wing-glow celebration before takeoff
+  PROMPT_MIN: 2.0, // an instruction stays up at least this long before the next one can replace it
+  FIND_MOVE_TO_LEARN: 60, // internal px of moving the light before "MOVE YOUR LIGHT" is done
+  // hints only get stronger, they never play for you. the clock only runs while someone is pointing.
+  // (the old version hopped ember into the beam at 4.5s and finished itself at 7s, so a guest who
+  // had no idea what was going on still "won" before understanding anything)
+  FIND_HINT_BIG: 4.0, // eyes get bigger and brighter
+  FIND_HINT_TRAIL: 6.5, // sparkle trail from the light to the eyes
+  FIND_HINT_PULL: 9.0, // the beam drifts a little toward the eyes
+  FIND_PULL_MAX: 0.35, // ...but only this fraction of the way, you still have to get there
+  FIND_LAST_RESORT: 10.5, // ember flutters into your beam, you still do the hold (done ~12.5-13s)
+  FIND_HARD_CAP: 13.0, // truly stuck (light parked off in a corner), the ring fills anyway
+  FIND_BURST: 1.6, // the "YOU FOUND EMBER!" moment, everything holds still for this long
 
   FLIGHT: 20.0, // fixed, doesn't depend on how well you fly
   HOME: 6.5,
