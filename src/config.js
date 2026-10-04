@@ -44,6 +44,7 @@ export const FLIGHT = {
   RING_R_START: 15, // ring radius in internal px, grows over the flight
   RING_R_END: 30,
   FOLLOW: 7.5, // how tightly ember chases the light
+  X_PLAY: 40, // how far ember can drift left/right of the gate (internal px)
   WOBBLE: 7, // px of early wobble, fades out as it gets confident
   MAGNET: 0.35, // gentle pull toward the next ring, 0 turns it off
   ZOOM_START: 1.18,

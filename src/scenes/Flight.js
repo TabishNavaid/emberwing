@@ -8,7 +8,10 @@ import { drawHorn, drawSoundLines, drawCursorLight } from '../art/icons.js';
 import { drawBaseAurora } from '../art/aurora.js';
 
 const { W, H } = VIEW;
-const REF_X = 150; // rings reach this x exactly on a beat
+// the gate: every hoop is judged when it crosses this x, exactly on its beat. it used to be
+// judged at ember's x, and ember could chase the light to x=320, so the first hoop could
+// arrive 0.8s into the flight while the screen was still fading in
+const REF_X = 150;
 const SEA_Y = 222;
 
 export class Flight {
@@ -17,7 +20,7 @@ export class Flight {
   enter(g, data = {}) {
     this.gentle = g.motion.reduced;
     const r = mulberry32(g.rng.int(1, 1e6));
-    this.ex = 110;
+    this.ex = REF_X - 30;
     this.ey = data.fromY ? clamp(data.fromY, 80, 200) : 150;
     this.vy = 0;
     this.camX = 0;
@@ -97,7 +100,7 @@ export class Flight {
     return { x: (x - W / 2) / z + W / 2, y: (y - H / 2) / z + H / 2 + this.camY };
   }
   nextRing() {
-    return this.rings.find((r) => r.state === 'coming' && this.ringX(r) > this.ex - 4);
+    return this.rings.find((r) => r.state === 'coming' && this.ringX(r) > REF_X - 4);
   }
   target(g) {
     const r = this.nextRing();
@@ -125,7 +128,8 @@ export class Flight {
 
     // follow the light. if nobody's pointing, autopilot to the next ring so it still looks good
     const w = this.toWorld(inp.x, inp.y);
-    let tx = clamp(w.x, 70, 320);
+    // ember mostly steers up and down near the gate, a little sideways play so it feels alive
+    let tx = clamp(w.x, REF_X - FLIGHT.X_PLAY, REF_X + FLIGHT.X_PLAY);
     let ty = clamp(w.y, 34, 212);
     const next = this.nextRing();
     if (next) {
@@ -170,7 +174,10 @@ export class Flight {
         continue;
       }
       const rx = this.ringX(ring);
-      if (rx <= this.ex) {
+      // when it first shows up on screen (the cold-run test checks every hoop gets real warning)
+      if (ring.seenAt === undefined && (rx - W / 2) * this.zoom + W / 2 < W) ring.seenAt = this.t;
+      if (rx <= REF_X) {
+        ring.gateAt = this.t;
         const r = this.ringR(ring);
         const hit = Math.abs(this.ey - ring.y) < r + 4; // +4 slack so grazing the edge still counts
         ring.state = hit ? 'hit' : 'miss';
