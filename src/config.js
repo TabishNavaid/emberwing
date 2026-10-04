@@ -28,9 +28,11 @@ export const DUR = {
   FIND_BURST: 1.6, // the "YOU FOUND EMBER!" moment, everything holds still for this long
 
   FLIGHT: 18.0, // the timeline after the tutorial hoop. fixed, doesn't depend on how well you fly
-  HOME: 6.5,
+  // home was 6.5. the dragon card at the end now carries the act II line for 5s, so home only
+  // needs to land the ribbon and the counter (keeps the worst-case run under ~50s)
+  HOME: 5.0,
   CELEBRATE: 3.6, // every FLOCK.CELEBRATE_EVERY-th dragon, home runs this much longer for the flyover
-  END: 3.0,
+  END: 5.0, // the dragon card, long enough to snap a photo of it
   END_SKIP_DWELL: 1.0,
 
   FADE: 0.4, // every scene change. was up to 0.6, that's dead air nobody enjoys

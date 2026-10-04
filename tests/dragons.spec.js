@@ -151,3 +151,29 @@ test('cold first run of the night: nobody home yet, the first dragon flies home 
   expect(after.seen).toMatchObject({ near: 1, far: 0, names: [start.name], partyLeft: 7 });
   expect(after.next).not.toBe(start.name); // a new dragon is lost for the next guest
 });
+
+test('the dragon card shows the rescued dragon and its number tonight, then goes back to attract', async ({ page }) => {
+  await boot(page);
+  const r = await page.evaluate(() => {
+    const w = window.__emberwing;
+    const g = w.game;
+    w.pause(true);
+    g.store.clear();
+    for (let i = 0; i < 8; i++) g.store.add([[0, 0.5], [1, 0.4]], i % 6);
+    w.goto('attract');
+    const lost = g.dragon.name;
+    w.goto('home');
+    w.goto('end');
+    const card = g.scenes.current;
+    const shown = { name: card.d.name, nth: card.nth };
+    w.step(4.5);
+    const stillUp = g.scenes.name;
+    w.step(1.2);
+    return { lost, shown, stillUp, after: g.scenes.name, saved: g.store.dragons.at(-1).name };
+  });
+  expect(r.shown.name).toBe(r.lost);
+  expect(r.saved).toBe(r.lost);
+  expect(r.shown.nth).toBe(9); // "THE 9TH EMBERWING HOME TONIGHT"
+  expect(r.stillUp).toBe('end'); // holds about 5s
+  expect(r.after).toBe('attract');
+});
