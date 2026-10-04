@@ -15,12 +15,14 @@ const SHOTS = [
   ['find', 2.6, 'target'], // found: happy wiggle
   ['find', 7.5, 'wander'], // hints: big eyes + spark trail
   ['find', 10.5, 'wander'], // hints: beam leaning toward the eyes
-  ['flight', 6, 'follow'],
-  ['flight', 5.35, 'follow'], // barrel roll after 3 in a row
-  ['flight', 9, { x: 400, y: 60 }], // tether when ember lags behind the light
-  ['flight', 12.2, 'follow'], // swell wind-up
-  ['flight', 12.6, 'follow'], // swell fires
-  ['flight', 13.4, 'follow'],
+  ['flight', 0.8, { x: 380, y: 210 }], // EMBER FOLLOWS YOUR LIGHT + arrow, tutorial hoop gliding in
+  ['flight', 2.6, { x: 150, y: 232 }], // tutorial hoop waiting, chevron, FLY THROUGH THE HOOPS
+  ['flight', 5.9, 'follow'], // barrel roll after 3 in a row
+  ['flight', 8.5, 'follow'], // mid flight, counter
+  ['flight', 9.5, { x: 400, y: 60 }], // tether when ember lags behind the light
+  ['flight', 12.4, 'follow'], // swell wind-up
+  ['flight', 12.9, 'follow'], // swell fires
+  ['flight', 13.8, 'follow'],
   ['flight', 19.2, 'follow'],
   ['home', 1.4, null],
   ['home', 3.6, null], // shimmer + counter rolling

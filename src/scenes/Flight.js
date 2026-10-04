@@ -5,6 +5,11 @@ import { drawKnotRing, drawKnotBand } from '../art/knotwork.js';
 import { drawEmber, FLOCK_COLORS } from '../art/ember.js';
 import { drawSky, SKY, makeStars, drawStars, drawSea, drawStone, drawStack, drawCloud, drawWind, drawRays, drawRune, makeCliff } from '../art/world.js';
 import { drawHorn, drawSoundLines, drawCursorLight } from '../art/icons.js';
+import { INPUT } from '../config.js';
+
+// instructions at the start of the flight, one at a time
+const FOLLOWS = 'EMBER FOLLOWS YOUR LIGHT';
+const HOOPS = 'FLY THROUGH THE HOOPS';
 import { drawBaseAurora } from '../art/aurora.js';
 
 const { W, H } = VIEW;
@@ -40,25 +45,34 @@ export class Flight {
     this.done = false;
     this.swellT = 0;
     this.riseY = 0;
+    // two clocks: this.t runs from the start, this.tt (the timeline: hoops, swell, climb) only
+    // starts once the tutorial hoop is done, so nobody misses the start while learning to steer
+    this.tt = 0;
+    this.tutorial = true;
+    this.tutT = 0;
+    this.hits = 0;
+    this.countPop = 0;
+    this.prompt = FOLLOWS;
+    this.promptT = 0;
     this.stars = makeStars(13, 80, 160);
     this.flock = FLOCK_COLORS.map((c, i) => ({ c, i, x: -60 - i * 30, y: 60 + i * 40, ox: [-38, -52, -84, -98][i], oy: [-34, 30, -8, 42][i], trail: [] }));
 
-    // rings are scheduled up front so each one crosses REF_X exactly on a beat
+    // hoop 1 is the tutorial hoop: it parks above or below ember and waits to be flown through.
+    // the rest are scheduled on the timeline so each one crosses REF_X exactly on a beat.
+    // always FLIGHT.HOOPS in total, so every guest gets the same flight
     const beat = 60 / MUSIC.BPM;
-    const end = DUR.FLIGHT * FLIGHT.RISE_AT - 0.6;
-    this.rings = [];
-    let tt = FLIGHT.FIRST_RING_AT;
-    let i = 0;
-    let y = this.ey;
-    while (tt < end) {
-      const p = tt / DUR.FLIGHT;
-      const amp = lerp(40, 70, clamp(p / FLIGHT.SWELL_AT));
+    // kept between 110 and 190: higher and the zoomed-in camera pushes it up into the instruction text
+    const tutY = clamp(this.ey >= 150 ? this.ey - 62 : this.ey + 62, 110, 190);
+    this.rings = [{ tutorial: true, y: tutY, p: 0, rune: 0, state: 'coming', fx: 0, seenAt: 0 }];
+    let y = tutY;
+    for (let i = 1; i < FLIGHT.HOOPS; i++) {
+      const at = FLIGHT.FIRST_RING_AT + (i - 1) * FLIGHT.HOOP_BEATS * beat;
+      const p = at / DUR.FLIGHT;
+      const amp = lerp(40, 65, clamp(p / FLIGHT.SWELL_AT));
       const ny = 140 + Math.sin(i * 1.15 + r() * 0.6) * amp + Math.sin(i * 0.43) * 18;
-      // lerp from the last ring so consecutive rings are always reachable
-      y = clamp(lerp(y, ny, 0.8), 55, 200);
-      this.rings.push({ at: tt, y, p, rune: i, state: 'coming', fx: 0 });
-      tt += beat * (p < FLIGHT.WOBBLY_UNTIL ? FLIGHT.RING_BEATS_EARLY : FLIGHT.RING_BEATS_LATE);
-      i++;
+      // lerp from the last hoop so consecutive hoops are always reachable
+      y = clamp(lerp(y, ny, 0.8), 60, 196);
+      this.rings.push({ at, y, p, rune: i, state: 'coming', fx: 0 });
     }
 
     this.far = makeCliff({ seed: 31, x0: 0, x1: W, top: 196, bottom: SEA_Y + 2, rough: 14, periodic: true, colors: { rock: '#1b2638', rock2: '#223048', rock3: '#2a3a55', grass: '#24403c', grass2: '#2c4c46' } });
@@ -70,7 +84,7 @@ export class Flight {
   }
 
   get p() {
-    return clamp(this.t / DUR.FLIGHT);
+    return clamp(this.tt / DUR.FLIGHT);
   }
   get conf() {
     return ease.inOutSine(clamp(this.p / FLIGHT.SWELL_AT));
@@ -89,9 +103,12 @@ export class Flight {
     return base * (1 + 0.06 * this.windup - 0.07 * punch);
   }
   ringX(ring) {
-    return REF_X + (ring.at - this.t) * FLIGHT.SCROLL;
+    // the tutorial hoop glides in to ember's column and stays there
+    if (ring.tutorial) return lerp(W + 40, this.ex, ease.outCubic(clamp(this.tutT / FLIGHT.TUT_SLIDE)));
+    return REF_X + (ring.at - this.tt) * FLIGHT.SCROLL;
   }
   ringR(ring) {
+    if (ring.tutorial) return FLIGHT.TUT_R;
     return lerp(FLIGHT.RING_R_START, FLIGHT.RING_R_END, ease.inOutSine(clamp(ring.p / FLIGHT.RISE_AT)));
   }
   // the pointer is in screen space but ember lives in the zoomed world
@@ -100,7 +117,7 @@ export class Flight {
     return { x: (x - W / 2) / z + W / 2, y: (y - H / 2) / z + H / 2 + this.camY };
   }
   nextRing() {
-    return this.rings.find((r) => r.state === 'coming' && this.ringX(r) > REF_X - 4);
+    return this.rings.find((r) => r.state === 'coming' && (r.tutorial || this.ringX(r) > REF_X - 4));
   }
   target(g) {
     const r = this.nextRing();
@@ -120,11 +137,29 @@ export class Flight {
     g.scenes.go('home', { path: this.path }, { color: '#0a1024' });
   }
 
+  // one instruction at a time, each readable for PROMPT_MIN, then gone for the rest of the flight
+  wantPrompt() {
+    if (this.prompt === FOLLOWS) return this.promptT >= DUR.PROMPT_MIN ? HOOPS : FOLLOWS;
+    if (this.prompt === HOOPS) return !this.tutorial && this.promptT >= DUR.PROMPT_MIN ? null : HOOPS;
+    return null;
+  }
+
   update(g, dt) {
     const inp = g.input;
+    if (!this.tutorial) this.tt += dt;
     const p = this.p;
     const conf = this.conf;
-    this.camX += FLIGHT.SCROLL * dt;
+    // the world drifts slowly during the tutorial so it still feels like flying
+    this.camX += FLIGHT.SCROLL * dt * (this.tutorial ? 0.4 : 1);
+    this.promptT += dt;
+    const want = this.wantPrompt();
+    if (want !== this.prompt && this.promptT >= DUR.PROMPT_MIN) {
+      this.prompt = want;
+      this.promptT = 0;
+    }
+    this.countPop = Math.max(0, this.countPop - dt);
+    // autopilot only when the pointer is really gone, not just resting for a second
+    const gone = inp.idle > INPUT.GONE_AFTER;
 
     // follow the light. if nobody's pointing, autopilot to the next ring so it still looks good
     const w = this.toWorld(inp.x, inp.y);
@@ -134,9 +169,9 @@ export class Flight {
     const next = this.nextRing();
     if (next) {
       const dx = this.ringX(next) - this.ex;
-      const pull = FLIGHT.MAGNET * clamp(1 - dx / 120) * (inp.present ? 1 : 0);
+      const pull = next.tutorial ? 0 : FLIGHT.MAGNET * clamp(1 - dx / 120) * (gone ? 0 : 1);
       ty = lerp(ty, next.y, pull);
-      if (!inp.present) {
+      if (gone) {
         tx = lerp(this.ex, REF_X, 0.5);
         ty = next.y;
       }
@@ -151,8 +186,8 @@ export class Flight {
     this.gentle = g.motion.reduced;
     this.camY = approach(this.camY, this.gentle ? 0 : (this.ey - H / 2) * FLIGHT.CAM_FOLLOW, 2, dt);
 
-    // sluggish at first, snappier as ember gets confident
-    const follow = FLIGHT.FOLLOW * lerp(0.55, 1, conf);
+    // a little looser at first, snappier as ember gets confident
+    const follow = FLIGHT.FOLLOW * lerp(0.85, 1, conf);
     const ny = approach(this.ey, ty, follow, dt);
     this.vy = (ny - this.ey) / dt;
     this.ex = approach(this.ex, tx, follow * 0.6, dt);
@@ -168,11 +203,14 @@ export class Flight {
     // accumulate the phase, t * speed jumps the wings whenever the speed changes
     this.flapPh += dt * (this.vy < -20 ? 4.5 : lerp(3.6, 2.4, conf));
 
+    if (this.tutorial) this.updateTutorial(g, dt);
+
     for (const ring of this.rings) {
       if (ring.state !== 'coming') {
         ring.fx += dt;
         continue;
       }
+      if (ring.tutorial) continue;
       const rx = this.ringX(ring);
       // when it first shows up on screen (the cold-run test checks every hoop gets real warning)
       if (ring.seenAt === undefined && (rx - W / 2) * this.zoom + W / 2 < W) ring.seenAt = this.t;
@@ -180,30 +218,55 @@ export class Flight {
         ring.gateAt = this.t;
         const r = this.ringR(ring);
         const hit = Math.abs(this.ey - ring.y) < r + 4; // +4 slack so grazing the edge still counts
-        ring.state = hit ? 'hit' : 'miss';
-        ring.hitX = rx;
-        ring.hitY = ring.y;
-        const gold = ring.p > FLIGHT.WOBBLY_UNTIL;
-        if (hit) {
-          this.squash = 1;
-          this.cheerT = 0.4;
-          // every 3 in a row earns a barrel roll
-          this.streak++;
-          if (this.streak % 3 === 0) this.rollT = 0.7;
-          g.audio.cue('ring');
-          g.cam.shake(1 + ring.p * 2);
-          g.particles.burst(rx, ring.y, 26 + Math.round(ring.p * 20), { speed: 80 + ring.p * 60, colors: gold ? [PAL.gold, PAL.gold2, '#fff6d8'] : ['#bff8ee', PAL.teal, '#ffffff'], kind: 'spark', size: 2, drag: 2.5, life: 0.8 }, g.rng);
-        } else {
-          // a miss is never a fail: ember does a loop and the ring's sparkles fly into it anyway
-          this.loopT = 0.75;
-          this.streak = 0;
-          for (let k = 0; k < 14; k++) {
-            const a = (k / 14) * Math.PI * 2;
-            g.particles.add({ x: rx + Math.cos(a) * r, y: ring.y + Math.sin(a) * r, vx: (this.ex - rx) * 1.6, vy: (this.ey - ring.y) * 1.6, life: 0.6, color: gold ? PAL.gold2 : '#bff8ee', kind: 'spark', size: 1, drag: 0.5 });
-          }
-        }
+        this.resolveRing(g, ring, rx, hit);
       }
     }
+    this.updateTail(g, dt, p, conf);
+  }
+
+  resolveRing(g, ring, rx, hit) {
+    const r = this.ringR(ring);
+    ring.state = hit ? 'hit' : 'miss';
+    ring.hitX = rx;
+    ring.hitY = ring.y;
+    const gold = ring.p > FLIGHT.WOBBLY_UNTIL;
+    if (hit) {
+      this.hits++;
+      this.countPop = 0.4;
+      this.squash = 1;
+      this.cheerT = 0.4;
+      // every 3 in a row earns a barrel roll
+      this.streak++;
+      if (this.streak % 3 === 0) this.rollT = 0.7;
+      g.audio.cue('ring');
+      g.cam.shake(1 + ring.p * 2);
+      g.particles.burst(rx, ring.y, 26 + Math.round(ring.p * 20), { speed: 80 + ring.p * 60, colors: gold ? [PAL.gold, PAL.gold2, '#fff6d8'] : ['#bff8ee', PAL.teal, '#ffffff'], kind: 'spark', size: 2, drag: 2.5, life: 0.8 }, g.rng);
+    } else {
+      // a miss is never a fail: ember does a loop and the ring's sparkles fly into it anyway
+      this.loopT = 0.75;
+      this.streak = 0;
+      for (let k = 0; k < 14; k++) {
+        const a = (k / 14) * Math.PI * 2;
+        g.particles.add({ x: rx + Math.cos(a) * r, y: ring.y + Math.sin(a) * r, vx: (this.ex - rx) * 1.6, vy: (this.ey - ring.y) * 1.6, life: 0.6, color: gold ? PAL.gold2 : '#bff8ee', kind: 'spark', size: 1, drag: 0.5 });
+      }
+    }
+  }
+
+  // the tutorial hoop waits at ember's column until you steer through it (or TUT_CAP runs out)
+  updateTutorial(g, dt) {
+    this.tutT += dt;
+    const ring = this.rings[0];
+    if (ring.state !== 'coming') return;
+    const parked = this.tutT >= FLIGHT.TUT_SLIDE;
+    const inside = Math.abs(this.ey - ring.y) < FLIGHT.TUT_R * 0.8;
+    if ((parked && inside) || this.tutT >= FLIGHT.TUT_CAP) {
+      ring.gateAt = this.t;
+      this.resolveRing(g, ring, this.ringX(ring), parked && inside);
+      this.tutorial = false;
+    }
+  }
+
+  updateTail(g, dt, p, conf) {
 
     if (!this.swellFired && p >= FLIGHT.SWELL_AT) {
       this.swellFired = true;
@@ -234,7 +297,7 @@ export class Flight {
 
     this.trail.push({ x: this.camX + this.ex, y: this.ey });
     if (this.trail.length > 90) this.trail.shift();
-    this.pathT -= dt;
+    if (!this.tutorial) this.pathT -= dt;
     if (this.pathT <= 0) {
       this.pathT = DUR.FLIGHT / 48; // ~48 points is plenty for a ribbon and keeps localStorage small
       this.path.push([p, clamp(this.ey / H)]);
@@ -244,7 +307,7 @@ export class Flight {
       g.particles.add({ x: W / 2 + (g.rng() - 0.5) * W * 1.2, y: g.rng() * H * 0.8, vx: -FLIGHT.SCROLL * 0.6, vy: 0, life: 1.4, color: conf > 0.5 ? PAL.gold2 : '#bfe8ff', kind: 'px', size: 1, layer: 1 });
     }
 
-    if (this.t >= DUR.FLIGHT) this.finish(g);
+    if (this.tt >= DUR.FLIGHT) this.finish(g);
   }
 
   draw(g, ctx) {
@@ -346,7 +409,11 @@ export class Flight {
     g.particles.draw(ctx, 1);
 
     this.drawJourney(ctx, p, t);
-    if (t < 1.8) drawTextPop(ctx, 'FLY!', W / 2, 44, t * 1.4, { scale: 5, color: PAL.cream });
+    this.drawCounter(ctx);
+    if (this.prompt) {
+      drawText(ctx, this.prompt, W / 2, 30, { scale: 3, align: 'center', color: PAL.cream, alpha: clamp(this.promptT / 0.25) });
+    }
+    this.drawGuides(ctx, g.input.x, g.input.y, t);
     if (this.swellFired && this.swellT < 0.4) {
       // one soft flash, only once (photosensitivity)
       ctx.fillStyle = `rgba(255,226,138,${0.3 * g.motion.flash * (1 - this.swellT / 0.4)})`;
@@ -362,8 +429,63 @@ export class Flight {
     }
     if (rise > 0.1) drawText(ctx, 'HOME IS UP THERE', W / 2, 236, { scale: 2, align: 'center', color: '#bff8ee', alpha: clamp(rise * 3) });
 
-    this.drawTether(ctx, g.input.x, g.input.y, t);
+    if (this.prompt !== FOLLOWS) this.drawTether(ctx, g.input.x, g.input.y, t);
     drawCursorLight(ctx, g.input.x, g.input.y, t, 1);
+  }
+
+  // ember's position on screen (it lives in the zoomed world)
+  emberOnScreen() {
+    const z = this.zoom;
+    return { x: (this.ex - W / 2) * z + W / 2, y: (this.ey - this.camY - H / 2) * z + H / 2 };
+  }
+
+  // teaching arrows: light -> ember while "EMBER FOLLOWS YOUR LIGHT" is up, then a bouncing
+  // chevron from ember toward the tutorial hoop while it's waiting
+  drawGuides(ctx, lx, ly, t) {
+    const e = this.emberOnScreen();
+    if (this.prompt === FOLLOWS) {
+      const d = Math.hypot(e.x - lx, e.y - ly);
+      if (d > 30) {
+        const ux = (e.x - lx) / d;
+        const uy = (e.y - ly) / d;
+        ctx.fillStyle = PAL.gold2;
+        for (let s = 10 + ((t * 40) % 8); s < d - 30; s += 8) ctx.fillRect(Math.round(lx + ux * s) - 1, Math.round(ly + uy * s) - 1, 3, 3);
+        // arrowhead pointing at ember
+        const hx = e.x - ux * 26;
+        const hy = e.y - uy * 26;
+        for (let i = 0; i < 7; i++) {
+          const w = 7 - i;
+          ctx.fillRect(Math.round(hx - ux * i - uy * w), Math.round(hy - uy * i + ux * w), 2, 2);
+          ctx.fillRect(Math.round(hx - ux * i + uy * w), Math.round(hy - uy * i - ux * w), 2, 2);
+        }
+      }
+    }
+    const tut = this.rings[0];
+    if (this.tutorial && this.tutT >= FLIGHT.TUT_SLIDE && tut.state === 'coming') {
+      const z = this.zoom;
+      const hy = (tut.y - this.camY - H / 2) * z + H / 2;
+      const dir = Math.sign(hy - e.y);
+      if (Math.abs(hy - e.y) > 24) {
+        const bob = Math.sin(t * 8) * 3;
+        const cy = (e.y + hy) / 2 + bob * dir;
+        ctx.fillStyle = PAL.gold2;
+        for (let k = 0; k < 2; k++) {
+          for (let i = 0; i < 6; i++) {
+            const yy = Math.round(cy + dir * (k * 7 + i)); // tip of the V points at the hoop
+            ctx.fillRect(Math.round(e.x - 6 + i), yy, 2, 2);
+            ctx.fillRect(Math.round(e.x + 6 - i), yy, 2, 2);
+          }
+        }
+      }
+    }
+  }
+
+  // "3 / 8" up in the corner with a little hoop, pops when you get one
+  drawCounter(ctx) {
+    const pop = this.countPop > 0 ? 1 + Math.sin((this.countPop / 0.4) * Math.PI) * 0.3 : 1;
+    const label = `${this.hits} / ${FLIGHT.HOOPS}`;
+    drawKnotRing(ctx, 412, 14, 7 * pop, 1, { lobes: 5, amp: 1.5, width: 1, on: PAL.gold });
+    drawTextPop(ctx, label, 446, 14, 1, { scale: Math.round(2 * pop) || 2, color: PAL.gold2 });
   }
 
   // lighthouse -> home track across the top. someone who glances over mid-flight gets
@@ -426,6 +548,8 @@ export class Flight {
     const color = mix('#bff8ee', PAL.gold, gold);
     if (ring.state === 'coming') {
       const pulse = 1 + g.beat.pulse * 0.06;
+      // the waiting tutorial hoop breathes so it's obviously the thing to aim for
+      if (ring.tutorial) glow(ctx, x, ring.y, r * 2.2, PAL.teal, 0.25 + 0.2 * Math.sin(this.t * 5));
       glow(ctx, x, ring.y, r * 1.6, gold > 0.5 ? PAL.gold : PAL.teal, 0.25 + 0.15 * g.beat.pulse);
       drawKnotRing(ctx, x, ring.y, r * pulse, 1, { lobes: 6 + Math.round(gold * 4), amp: 2 + r * 0.08, width: 2, on: color });
       drawRune(ctx, x, ring.y, Math.max(8, r * 0.55), ring.rune, mix('#e8fffb', PAL.gold2, gold), 1);

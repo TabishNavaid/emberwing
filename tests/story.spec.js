@@ -67,7 +67,9 @@ test('brass swell: wind-up, then it fires on time and the flock joins', async ({
     const f = w.game.scenes.current;
     return { windup: f.windup, fired: f.swellFired, flockX: f.flock[0].x };
   }, t);
-  const before = await at(12.1); // swell is at 0.62 * 20s = 12.4s
+  // step until the wind-up starts (the swell timeline only begins after the tutorial hoop)
+  let before = await at(0.5);
+  for (let i = 0; i < 60 && !(before.windup > 0); i++) before = await at(0.5);
   expect(before.windup).toBeGreaterThan(0);
   expect(before.fired).toBe(false);
   const after = await at(1.6);

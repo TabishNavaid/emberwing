@@ -27,7 +27,7 @@ export const DUR = {
   FIND_HARD_CAP: 13.0, // truly stuck (light parked off in a corner), the ring fills anyway
   FIND_BURST: 1.6, // the "YOU FOUND EMBER!" moment, everything holds still for this long
 
-  FLIGHT: 20.0, // fixed, doesn't depend on how well you fly
+  FLIGHT: 18.0, // the timeline after the tutorial hoop. fixed, doesn't depend on how well you fly
   HOME: 6.5,
   END: 3.0,
   END_SKIP_DWELL: 1.0,
@@ -44,15 +44,20 @@ export const FLIGHT = {
   SWELL_AT: 0.62, // brass swell: rays, camera pulls back, flock joins
   SWELL_WINDUP: 0.035, // the "breath in" before the swell (~0.7s)
   RISE_AT: 0.9, // climb toward the aurora, no more rings
-  RING_BEATS_EARLY: 3, // wobbly part gets more time between rings
-  RING_BEATS_LATE: 2,
-  FIRST_RING_AT: 2.0, // seconds, gives people a moment to get their bearings
+  HOOPS: 8, // every guest gets exactly this many: 1 tutorial hoop + the rest on the beat
+  HOOP_BEATS: 4, // a hoop every 4 beats (2s). at 2 beats first-timers had no time to steer
+  // seconds into the timeline. 3s puts the first hoop just off screen while the tutorial hoop is
+  // waiting, at 2s it sat frozen on screen and people didn't know which hoop to go for
+  FIRST_RING_AT: 3.0,
+  TUT_SLIDE: 1.5, // the tutorial hoop glides in this long, then waits for you
+  TUT_CAP: 5.0, // ...but never longer than this, then the timeline starts anyway
+  TUT_R: 30, // tutorial hoop radius, extra big
   SCROLL: 110, // internal px/sec
-  RING_R_START: 15, // ring radius in internal px, grows over the flight
-  RING_R_END: 30,
-  FOLLOW: 7.5, // how tightly ember chases the light
+  RING_R_START: 24, // hoop radius in internal px, grows over the flight (was 15, too small to aim for)
+  RING_R_END: 34,
+  FOLLOW: 12, // how tightly ember chases the light. 7.5 felt like steering a boat
   X_PLAY: 40, // how far ember can drift left/right of the gate (internal px)
-  WOBBLE: 7, // px of early wobble, fades out as it gets confident
+  WOBBLE: 3, // px of early wobble, fades out as it gets confident (7 fought the guest's steering)
   MAGNET: 0.35, // gentle pull toward the next ring, 0 turns it off
   ZOOM_START: 1.18,
   ZOOM_END: 0.86,
@@ -80,6 +85,7 @@ export const MUSIC = {
 export const INPUT = {
   IDLE_RESET: 10.0, // no input this long during play -> back to attract
   IDLE_MOVE_EPS: 3, // internal px. smaller than this is jitter, not a person
+  GONE_AFTER: 3.0, // flight autopilot only after the pointer's been still this long (was 1.5)
   STEADY_SPEED: 0.35, // screen-widths/sec. under this counts as holding steady
   LOCK_RADIUS: 26, // internal px from ember's eyes
   // one-euro filter settings per input source. mocap is way jittier so it gets smoothed harder
