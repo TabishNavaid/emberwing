@@ -32,6 +32,10 @@ export class Flight {
     this.pathT = 0;
     this.trail = [];
     this.swellFired = false;
+    // scene objects get reused every run. done used to stay true after the first guest, so every
+    // later flight never handed off to home (and never saved the ribbon)
+    this.done = false;
+    this.swellT = 0;
     this.riseY = 0;
     this.stars = makeStars(13, 80, 160);
     this.flock = FLOCK_COLORS.map((c, i) => ({ c, i, x: -60 - i * 30, y: 60 + i * 40, ox: [-38, -52, -84, -98][i], oy: [-34, 30, -8, 42][i], trail: [] }));
