@@ -8,3 +8,6 @@ tests/screens/
 .DS_Store
 # course docs include internal emails from the symphony, keep them out of the public repo
 docs/
+
+# per-second clueless captures are big, the contact sheets + log get committed instead
+notes/clueless-*/[0-9][0-9].png
