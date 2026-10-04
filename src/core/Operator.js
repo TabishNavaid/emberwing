@@ -1,6 +1,7 @@
 import { VIEW, PAL, INPUT } from '../config.js';
 import { drawText } from '../art/font.js';
 import { drawKnotRing } from '../art/knotwork.js';
+import { ROUTES } from '../art/routes.js';
 import { glow } from './util.js';
 import { CAL_TARGETS, CAL_NAMES } from '../input/Calibration.js';
 
@@ -117,7 +118,8 @@ export class Operator {
         `PTR ${g.input.x.toFixed(0)},${g.input.y.toFixed(0)} ${g.input.source}`,
         `SPEED ${g.input.speed.toFixed(2)} IDLE ${g.input.idle.toFixed(1)}`,
         `HOLD ${g.input.holding ? 'Y' : 'N'} BEAT ${g.beat.count}`,
-        `DRAGONS ${g.store.count}`,
+        `DRAGONS ${g.store.count} NEXT ${g.dragon.name}`,
+        `ROUTE ${ROUTES[g.route % ROUTES.length].name}`,
         `MOTION ${g.motion.label()}`,
         `CAL ${this.cal ? `IN PROGRESS ${this.cal.step + 1}/4` : g.cal.label()}`,
       ];

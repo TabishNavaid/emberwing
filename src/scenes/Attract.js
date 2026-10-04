@@ -6,6 +6,7 @@ import { drawKnotRing, drawKnotFrame, drawKnotBand } from '../art/knotwork.js';
 import { drawDragon, drawSpeck, eyeOffset } from '../art/dragon.js';
 import { flockOf, member, chirp, updateMember, drawMember } from '../art/flock.js';
 import { nextLostDragon } from '../core/dragons.js';
+import { ROUTES } from '../art/routes.js';
 import { drawSky, SKY, makeStars, drawStars, drawSea, drawLighthouse, drawStone, drawCloud, drawWind, drawFog } from '../art/world.js';
 import { drawLantern, drawFeet, drawHorn, drawSoundLines, drawCursorLight, drawSparkle, drawArrowUp } from '../art/icons.js';
 import { drawBaseAurora, drawRibbon, ribbonSkyPoints, RIBBON_COLORS } from '../art/aurora.js';
@@ -66,6 +67,8 @@ export class Attract {
     if (this.starting) return;
     this.starting = true;
     g.runStart = g.time;
+    // the three flight routes take turns, so guests in a row each see a different one
+    g.route = g.routePin ?? g.store.count % ROUTES.length;
     g.audio.cue('start');
     g.particles.burst(LANTERN.x, LANTERN.y, 40, { speed: 90, colors: [PAL.gold, PAL.gold2, '#fff6d8'], kind: 'spark', size: 2, drag: 2, life: 1 }, g.rng);
     g.cam.shake(2);

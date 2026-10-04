@@ -4,9 +4,9 @@ import { drawText, drawTextPop, fitScale } from '../art/font.js';
 import { drawKnotRing, drawKnotBand } from '../art/knotwork.js';
 import { drawDragon, drawSpeck } from '../art/dragon.js';
 import { flockOf, member, chirp, updateMember, drawMember } from '../art/flock.js';
-import { drawSky, SKY, makeStars, drawStars, drawSea, drawStone, drawStack, drawCloud, drawWind, drawRays, drawRune, makeCliff } from '../art/world.js';
+import { makeStars, drawWind, drawRune } from '../art/world.js';
+import { ROUTES, SEA_Y } from '../art/routes.js';
 import { drawHorn, drawSoundLines, drawCursorLight } from '../art/icons.js';
-import { drawBaseAurora } from '../art/aurora.js';
 
 // second instruction at the start of the flight (the first one has the dragon's name in it)
 const HOOPS = 'FLY THROUGH THE HOOPS';
@@ -19,7 +19,6 @@ const { W, H } = VIEW;
 // judged at the dragon's x, and the dragon could chase the light to x=320, so the first hoop could
 // arrive 0.8s into the flight while the screen was still fading in
 const REF_X = 150;
-const SEA_Y = 222;
 
 export class Flight {
   interactive = true;
@@ -84,12 +83,11 @@ export class Flight {
       this.rings.push({ at, y, p, rune: i, state: 'coming', fx: 0 });
     }
 
-    this.far = makeCliff({ seed: 31, x0: 0, x1: W, top: 196, bottom: SEA_Y + 2, rough: 14, periodic: true, colors: { rock: '#1b2638', rock2: '#223048', rock3: '#2a3a55', grass: '#24403c', grass2: '#2c4c46' } });
-    this.stacks = [];
-    for (let x = 200; x < 3200; x += 150 + r() * 160) this.stacks.push({ x, w: 16 + Math.floor(r() * 12), h: 60 + Math.floor(r() * 70), seed: Math.floor(r() * 99) });
-    this.stones = [];
-    for (let x = 380; x < 3200; x += 260 + r() * 220) this.stones.push({ x, h: 26 + Math.floor(r() * 16), w: 11 + Math.floor(r() * 4), rune: Math.floor(r() * 6) });
-    this.clouds = Array.from({ length: 7 }, (_, k) => ({ x: k * 110 + r() * 60, y: 40 + r() * 70, w: 70 + r() * 70, seed: k + 40 }));
+    // which of the three routes this guest gets. only the scenery changes, the hoops above are
+    // laid out before this so every route gets the same flight
+    this.routeIndex = (g.route ?? 0) % ROUTES.length;
+    this.route = ROUTES[this.routeIndex];
+    this.route.setup(this, r);
   }
 
   // everyone who's home tonight comes out at the swell: near + far is always the count
@@ -337,29 +335,10 @@ export class Flight {
     const rise = invLerp(FLIGHT.RISE_AT, 1, p);
     const swell = this.swellFired ? clamp(this.swellT / 1.2) : 0;
 
-    // storm -> dusk -> gold -> aurora night
-    drawSky(ctx, SKY.storm, 0, H);
-    drawSky(ctx, SKY.dusk, 0, H, invLerp(0, 0.35, p));
-    drawSky(ctx, SKY.gold, 0, H, invLerp(0.4, FLIGHT.SWELL_AT + 0.05, p) * (1 - rise));
-    drawSky(ctx, SKY.aurora, 0, H, rise);
-    drawStars(ctx, this.stars, t, clamp(1 - p * 3) + rise);
-    if (rise > 0) drawBaseAurora(ctx, t, rise * 1.2, 10);
-    const windup = this.windup;
-    if (windup > 0) {
-      // sky dims a little so the swell has somewhere to go
-      ctx.fillStyle = `rgba(5,7,13,${0.3 * windup})`;
-      ctx.fillRect(0, 0, W, H);
-    }
-
-    const sunX = W * 0.72;
-    const sunY = SEA_Y - 4 + this.riseY;
-    glow(ctx, sunX, sunY, 90 + conf * 40, PAL.amber, 0.25 + conf * 0.35 * (1 - rise));
-    if (this.swellFired) drawRays(ctx, sunX, sunY, t, PAL.gold2, 0.22 * swell * (1 - rise) * (0.8 + 0.2 * g.beat.pulse), 13, 560);
-
-    for (const c of this.clouds) {
-      const x = ((c.x - this.camX * 0.2) % (W + 200) + W + 200) % (W + 200) - 100;
-      drawCloud(ctx, x, c.y + this.riseY * 0.5, c.w, mix(mix('#2a3a52', '#f0a890', conf), '#1a2440', rise), c.seed, 0.45 + conf * 0.2);
-    }
+    const route = this.route;
+    const s = { t, p, conf, rise, swell, windup: this.windup };
+    // the route's sky: clouds, sun or moon, and how it changes over the flight
+    route.sky(ctx, this, g, s);
 
     // dragons from earlier tonight that don't fit up close, out in the far sky
     if (this.swellFired) {
@@ -370,16 +349,13 @@ export class Flight {
       }
     }
 
-    // sea and islands drop away during the climb
+    // sea, land and islands drop away during the climb
     ctx.save();
     ctx.translate(0, Math.round(this.riseY - this.camY * this.zoom));
-    const farOff = (this.camX * 0.15) % W;
-    ctx.drawImage(this.far.canvas, -Math.round(farOff), 0);
-    ctx.drawImage(this.far.canvas, W - Math.round(farOff), 0);
-    drawSea(ctx, SEA_Y, t, { c1: mix('#10202e', '#3a3a6a', conf), c2: mix('#1b3242', '#6a5a8a', conf), foam: mix('#9fc0cc', '#ffd8a0', conf), scroll: this.camX, glint: conf > 0.2 ? { x: sunX, color: PAL.gold2 } : null });
+    route.ground(ctx, this, g, s);
     ctx.restore();
 
-    drawWind(ctx, t, g.beat, { lanes: [0.2, 0.46, 0.7], alpha: 0.25 + conf * 0.2 + swell * 0.2, color: conf > 0.5 ? '#ffe8b0' : '#bfe8ff', speed: 160, thick: this.swellFired });
+    drawWind(ctx, t, g.beat, { lanes: [0.2, 0.46, 0.7], alpha: 0.25 + conf * 0.2 + swell * 0.2, color: route.wind(conf), speed: 160, thick: this.swellFired });
 
     // camera starts close and pulls back as the dragon gets confident. sky and sea stay unzoomed
     // because they're full-width cached images and would show their edges
@@ -389,18 +365,7 @@ export class Flight {
     ctx.scale(z, z);
     ctx.translate(-W / 2, -H / 2 + this.riseY - this.camY);
 
-    for (const s of this.stacks) {
-      const x = s.x - this.camX * 0.7;
-      if (x < -60 || x > W + 60) continue;
-      drawStack(ctx, x, SEA_Y + 4, s.w, s.h, s.seed, { c1: mix('#1c2738', '#4a3a5a', conf), c2: mix('#2a3a50', '#8a6a7a', conf) });
-    }
-    for (const s of this.stones) {
-      const x = s.x - this.camX;
-      if (x < -60 || x > W + 60) continue;
-      ctx.fillStyle = mix('#1a2433', '#3a2e48', conf);
-      for (let i = -18; i <= 18; i++) ctx.fillRect(Math.round(x + i), SEA_Y + 2 - Math.round(Math.sqrt(324 - i * i) * 0.35), 1, 8);
-      drawStone(ctx, x, SEA_Y - 2, s.h, s.w, s.rune, clamp(0.3 + g.beat.pulse * 0.7));
-    }
+    route.mid(ctx, this, g, s);
     ctx.restore();
 
     ctx.save();
@@ -437,6 +402,7 @@ export class Flight {
     g.particles.draw(ctx, 0);
     ctx.restore();
     g.particles.draw(ctx, 1);
+    route.front(ctx, this, g, s);
 
     this.drawJourney(ctx, p, t);
     this.drawCounter(ctx);

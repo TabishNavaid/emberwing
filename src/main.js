@@ -77,6 +77,9 @@ const game = {
 };
 // the dragon that's lost right now. a new one gets picked once this one makes it home
 game.dragon = nextLostDragon(game);
+// which flight route the next run gets. they take turns, ?route=0..2 pins one for testing
+game.routePin = params.has('route') ? +params.get('route') : null;
+game.route = game.routePin ?? 0;
 game.cal = new Calibration();
 input.cal = game.cal;
 game.motion = new Motion();
@@ -155,6 +158,7 @@ window.__emberwing = {
     t: game.scenes.current?.t ?? 0,
     count: game.store.count,
     dragon: game.dragon.name,
+    route: game.route,
     runs: game.runs.slice(),
     target: game.scenes.current?.target?.(game) ?? null,
   }),
