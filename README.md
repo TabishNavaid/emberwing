@@ -2,11 +2,11 @@
 
 A 40-second lobby interactive for the Walla Walla Symphony's **Symphonicon** (Nov 5, Cordiner Hall), paired with *From the Motion Picture How to Train Your Dragon* (John Powell), played in Act II by the Walla Walla Symphony Youth Orchestra.
 
-A young dragon, Ember, is blown off course in a storm. The guest is the lighthouse keeper. Their light finds Ember in the fog, teaches it to fly, and guides it home to its flock. Each guest's flight path becomes a ribbon in the aurora and stays there for the rest of the evening.
+Emberwings are a kind of small dragon. Every guest rescues a different one: a young emberwing with its own name, colors, wings, horns, tail and personality (Pip sneezes sparks, Juniper loves loops, Bramble is shy at first...) is blown off course in a storm. The guest is the lighthouse keeper. Their light finds the dragon in the fog, teaches it to fly, and guides it home. Every dragon that makes it home joins the flock for the rest of the evening, and its flight path becomes a ribbon in the aurora. The flock on screen is always exactly the dragons people brought home tonight, and every 8th one gets a celebration.
 
 - **One pointer, no clicks.** Mouse, touch, or a motion-capture prop all work. Every "button" is *hover and hold* (a knotwork ring fills in about 1 second).
-- **Works with the sound off.** Every cue is visual. Audio is optional ambience, off by default.
-- **Static site.** Vite plus vanilla JS and Canvas. No server code. Runs on GitHub Pages or any static host.
+- **Sound on, but never needed.** An original folk-style score builds through the flight, with a real brass swell. Every cue is also visual, so the game plays and reads the same muted.
+- **Static site.** Vite plus vanilla JS and Canvas. No server code, no sound files. Runs on GitHub Pages or any static host.
 
 ![Attract screen](design/01-attract-next-flyer.png)
 
@@ -40,7 +40,8 @@ npm run build && npm run preview
 | `?mocapFlipX=1` / `?mocapFlipY=1` | Mirror mocap axes (camera facing the guest) |
 | `?debug` | Start with the debug overlay on |
 | `?scene=flight` | Jump straight to a scene (`attract`, `find`, `flight`, `home`, `end`) |
-| `?seed=5` | Deterministic randomness (for testing) |
+| `?route=1` | Pin one flight route (`0` sea stacks, `1` rain squall, `2` standing stones) instead of taking turns |
+| `?seed=5` | Deterministic randomness, including which dragons get picked (for testing) |
 
 ## Operator hotkeys
 
@@ -52,29 +53,38 @@ Hidden from guests. Nothing on screen mentions them.
 | **R** | Reset to attract |
 | **S** | Skip to the next scene |
 | **D** | Debug overlay (FPS, scene timer, pointer x/y, speed, idle time, mocap status) |
-| **C** | Clear tonight's aurora. Asks on screen first: **Y** clears, anything else keeps |
-| **M** | Ambient audio on/off (off by default) |
+| **C** | Clear tonight's aurora and flock (every saved dragon). Asks on screen first: **Y** clears, anything else keeps |
+| **M** | Sound on/off. On by default, remembered across refreshes |
 | **K** | Calibrate the mocap rig: point at the 4 corner rings and hold still (see below). In the calibration screen **Space** grabs a corner, **Esc** cancels, **Delete** clears the saved calibration |
 | **G** | Reduced motion: AUTO (follows the OS setting), FORCED REDUCED, FORCED FULL. Reduced = no shake, softer flashes, calmer flight camera. Remembered across refreshes |
 | Arrows / Space | Move the pointer / "hold" (desk testing only) |
 
 Before a shift, run through [PLAYTEST.md](PLAYTEST.md) on the real projector.
 
-The aurora (every guest's ribbon, plus the "N dragons home tonight" count) is saved to `localStorage`, so a refresh or a crashed tab doesn't wipe the wall. It starts fresh automatically on a new calendar day. Use **C** to clear it by hand.
+The night (every rescued dragon's seed and name, its ribbon, and the "N dragons home tonight" count) is saved to `localStorage`, so a refresh or a crashed tab doesn't wipe the wall or the flock. It starts fresh automatically on a new calendar day. Use **C** to clear it by hand.
+
+## Sound
+
+Sound is on by default: an original folk-style tune in D mixolydian (harp, tin whistle, drone, hand drum, strings, brass), all synthesized live with Web Audio, so there are no sound files. It's gentle on the attract screen, sparse and windy while you search the fog, builds layer by layer through the flight, and the brass takes the tune at the swell. Hoops chime in key, on the beat; finding the dragon gets a warm chord; every dragon chirps (smaller ones higher). None of it is taken from the film score.
+
+- **Start the station with any key.** Browsers block sound until someone presses a key or clicks. When that's the case the laptop shows **PRESS ANY KEY TO START** and the lantern waits. That first key only starts the station (it doesn't also skip or reset), except **M**, which starts it muted.
+- **Phones** don't get that screen. The first touch turns the sound on.
+- **Speaker icon** in the bottom left corner: waves = sound running, an **X** = muted with **M**, slowly blinking waves = waiting for a key or a touch. The **D** overlay also shows the audio state.
+- Everything you hear has a visual version (hoop bursts, the found burst, the horn icon and rays at the swell, little chirp marks at each dragon's mouth), so a muted run is the same game.
 
 ## Timing (all in `src/config.js`)
 
 | Scene | Target | Notes |
 |---|---|---|
-| Attract | loop | 1 s hold on the lantern starts a run |
-| Title card | 1.3 s | "EMBER IS LOST!" before Find Ember, "NOW FLY HOME!" before the flight. The next scene is paused underneath (`DUR.TITLE`) |
-| Find Ember | ~5-15 s | One instruction at a time, each up at least 2 s: MOVE YOUR LIGHT, FIND THE EYES, HOLD STILL (with a tiny framed demo). The hold ring sits on the eyes and pauses (never resets) when the light slips off. Hints get stronger with active pointing time: bigger eyes at 4 s, a dotted trail to the eyes at 6.5 s, the beam leaning toward them at 9 s. Ember only comes to the light as a last resort at 10.5 s, and the guest still does the hold. Then a 1.6 s "YOU FOUND EMBER!" moment |
-| Flight | ~2-5 s tutorial + 18 s | EMBER FOLLOWS YOUR LIGHT (with an arrow), then FLY THROUGH THE HOOPS. Hoop 1 waits next to Ember until you fly through it (5 s cap), then the timeline starts: 7 more hoops, one every 2 s on the beat, always 8 in total with a "3 / 8" counter. Brass swell at 62% of the timeline, climb at 90%. Autopilot only after 3 s of a still pointer |
-| Home | 6.5 s | Ribbon lifts into the aurora, a shimmer runs across the sky, the counter rolls up, then "HEAR IT LIVE IN ACT II" |
-| End card | 3 s | "ACT II", the title, "LISTEN FOR THE BRASS!". Hold the small lantern to skip |
+| Attract | loop | 1 s hold on the lantern starts a run. Tonight's flock circles above the lantern, and a countdown shows how many more dragons until the next celebration |
+| Title card | 1.3 s | "PIP IS LOST!" before Find, "NOW FLY HOME!" before the flight. The next scene is paused underneath (`DUR.TITLE`) |
+| Find | ~5-15 s | One instruction at a time, each up at least 2 s: MOVE YOUR LIGHT, FIND THE EYES, HOLD STILL (with a tiny framed demo). The hold ring sits on the eyes and pauses (never resets) when the light slips off. Hints get stronger with active pointing time: bigger eyes at 4 s, a dotted trail to the eyes at 6.5 s, the beam leaning toward them at 9 s. The dragon only comes to the light as a last resort at 10.5 s, and the guest still does the hold. Then a 1.6 s "YOU FOUND PIP!" moment |
+| Flight | ~2-5 s tutorial + 18 s | PIP FOLLOWS YOUR LIGHT (with an arrow), then FLY THROUGH THE HOOPS. Hoop 1 waits next to the dragon until you fly through it (5 s cap), then the timeline starts on the next beat: 7 more hoops, one every 2 s on the beat, always 8 in total with a "3 / 8" counter. Brass swell 12 s into the timeline (on a downbeat), where everyone already home tonight flies out to join you. Climb at 90%. Autopilot only after 3 s of a still pointer. Three routes take turns (sea stacks at dusk, a rain squall into clearing sky, low over standing stones under early aurora): only the scenery changes |
+| Home | 4.6 s | The guest's dragon lands in the circle with the rest of tonight's flock, its path lifts into the aurora, and the counter appears once it's on the new number. Every 8th dragon adds a 3.6 s celebration (`DUR.CELEBRATE`): the whole flock does a flyover, the aurora flares, "8 DRAGONS HOME!" |
+| Dragon card | 5 s | The rescued dragon's portrait and name, "THE 9TH EMBERWING HOME TONIGHT", its quirk, and "HEAR IT LIVE IN ACT II / LISTEN FOR THE BRASS!". Hold the small lantern to skip |
 | Scene fades | 0.4 s | `DUR.FADE` |
 
-Measured by the Playwright suite: **~40 s** for a guest who knows what to do, **~49 s** for one who never finds Ember on their own (the test fails above 50 s), and about 52 s for a completely clueless guest who wanders the whole time (`tests/clueless.spec.js`, notes in `notes/clueless-after.md`). **Idle reset:** 10 s without input during Find Ember or Flight returns to attract. The assists only count time while someone is actually pointing, so an abandoned game resets instead of playing itself.
+Measured by the Playwright suite: **~40 s** for a guest who knows what to do, **~49 s** for one who never finds the dragon on their own (the test fails above 50 s), and about 49 s for a completely clueless guest who wanders the whole time (`tests/clueless.spec.js`, `tools/clueless.mjs`). The 8th, 16th, 24th... guest gets 3.6 s more for the celebration. Muted runs take exactly as long. **Idle reset:** 10 s without input during Find or Flight returns to attract. The assists only count time while someone is actually pointing, so an abandoned game resets instead of playing itself. Notes on this round of changes are in `notes/phase3.md`.
 
 **Slow laptops:** the game clock follows real time even when frames drop (it catches up in small steps, `LOOP` in `config.js`), so a choppy laptop doesn't make runs longer. Below about 4 fps it starts to slow down, and a frozen or backgrounded tab only moves the game forward a quarter second when it comes back. The YOURS! label after a run lasts `DUR.YOURS_LABEL` (15 s).
 
@@ -99,7 +109,7 @@ If the light doesn't land where the prop points (offset, squashed, or a keystone
 
 ### Phones
 
-On touch screens the light sits about 40 px above your fingertip (`INPUT.TOUCH_LIFT`), so your finger doesn't cover it or Ember.
+On touch screens the light sits about 40 px above your fingertip (`INPUT.TOUCH_LIFT`), so your finger doesn't cover it or the dragon.
 
 ### HTTPS and WebSockets (important for GitHub Pages)
 
@@ -160,16 +170,21 @@ npm test
 
 This builds the site, serves it, and runs Playwright:
 
-- **`tests/fullrun.spec.js`**: a scripted guest plays a whole run by pointer only. It asserts 35-45 s, that the ribbon persists across a refresh, that a guest who never finds Ember still finishes in time, and that the end card can be skipped.
-- **`tests/idle.spec.js`**: walking away during Find Ember or Flight resets to attract after about 10 s.
+- **`tests/fullrun.spec.js`**: a scripted guest plays a whole run by pointer only. It asserts 35-50 s, that the ribbon persists across a refresh, that a guest who never finds the dragon still finishes within 50 s, and that the dragon card can be skipped.
+- **`tests/idle.spec.js`**: walking away during Find or Flight resets to attract after about 10 s.
 - **`tests/input.spec.js`**: the mocap pointer path, the clear confirmation, the portrait "rotate your phone" hint, and the touch offset.
 - **`tests/runs.spec.js`**: three flights in a row on one page all reach Home, and a cold first run and a second run both get all 8 hoops, each on screen at least 1.5 s before it arrives.
-- **`tests/clueless.spec.js`**: three wandering guests in a row: Find Ember never finishes before 10 s, every instruction is up at least 2 s, every run gets the same 8 hoops.
-- **`tests/story.spec.js`**: the story beats show up when they should: "EMBER IS LOST!" first, the Act II line during Home, the brass swell's wind-up, firing and flock join, and "YOURS!" on attract after a finished run (but not after an idle reset).
+- **`tests/clueless.spec.js`**: three wandering guests in a row: Find never finishes before 10 s, every instruction is up at least 2 s, every run gets the same 8 hoops.
+- **`tests/story.spec.js`**: the story beats show up when they should: the title card first, the Act II line during Home, the brass swell's wind-up, firing and flock join, and "YOURS!" on attract after a finished run (but not after an idle reset).
+- **`tests/dragons.spec.js`**: 70 dragons in a row: no name repeats until the list runs out, and each looks different from the one before. The flock on attract, at the swell and at home always adds up to the saved dragons (0, 1, 3, 12, 13 and 20 home), the counter stays hidden until it lands, the 8th and 16th dragons get a celebration, **C** clears the flock, a cold first run of the night ends with exactly one dragon home, and the dragon card shows the right dragon and number.
+- **`tests/sound.spec.js`**: sound is on by default and **M** is remembered, a browser that blocks audio gets "press any key" and that key does nothing else, phones skip it and unlock on the first touch, a whole run works muted, and every hoop and the swell land on the beat.
+- **`tests/routes.spec.js`**: guests in a row get the three routes in turn with identical hoops, and every route plays all the way home.
 - **`tests/framerate.spec.js`**: at 8 fps the game clock still keeps real time, a frozen tab only nudges the game forward, and a full run at ~8 fps lands within 2 s of a normal one.
 - **`tests/motion.spec.js`**: reduced motion follows the OS setting, **G** cycles and is remembered, no shake and a calmer camera when reduced.
 - **`tests/calibration.spec.js`**: a deliberately misaligned pretend rig is fixed by **K**, the calibration survives a refresh, Delete clears it, and a mouse isn't affected.
-- **`tests/screenshots.spec.js`**: `npm run shots` writes every scene at 1920×1080 and phone landscape to `tests/screens/`.
+- **`tests/screenshots.spec.js`**: `npm run shots` writes every scene at 1920×1080 and phone landscape to `tests/screens/`, including all three routes, the celebration, the dragon card and the "press any key" screen.
+
+The tests press a key right after loading, the same way the operator starts the station, because a browser holds the sound (and so the lantern) until then. With `npm run dev` running, `node tools/pitch.mjs` regenerates the pitch images in `design/`.
 
 ## Code map
 
@@ -177,9 +192,11 @@ This builds the site, serves it, and runs Playwright:
 src/config.js          every tunable number (durations, tempo, thresholds, palette)
 src/main.js            loop, letterbox scaling, test hooks
 src/input/             Input (one pointer), adapters (mouse/touch/mocap/keys), OneEuroFilter, Dwell
-src/core/              SceneManager, Beat (120 BPM), Camera, Particles, AuroraStore, Audio, Operator
-src/art/               font (pixel font), knotwork, ember, world, aurora, icons, sprites
-src/scenes/            Attract, FindEmber, Flight, Home, EndCard
+src/core/              SceneManager, Beat (120 BPM), Camera, Particles, AuroraStore (ribbons + dragons), Operator,
+                       dragons (seeded dragon parts + names), Audio (mixing, unlock, scheduler), synth (instruments), score (the tune)
+src/art/               font (pixel font), knotwork, dragon (parts-based dragon drawing), quirks, flock, routes (the 3 flights),
+                       world, aurora, icons, sprites
+src/scenes/            Attract, FindDragon, Flight, Home, EndCard (the dragon card)
 ```
 
 Everything renders into a 480×270 buffer that is scaled up with nearest-neighbor (4× on a 1080p projector), so it stays crisp from across the lobby.

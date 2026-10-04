@@ -11,13 +11,14 @@ Write results in the blanks. Anything that fails goes in the notes at the bottom
 - [ ] Laptop on power (not battery saver), plugged into the projector, projector at full resolution (1920×1080 if it supports it)
 - [ ] Close everything else (other browsers, VMs, Docker, chat apps). Open Activity Monitor > Memory: memory pressure should be green and swap used near zero. When we built this, a laptop deep in swap froze every app for minutes at a time, the game included
 - [ ] Open the game. Live site: `https://tabishnavaid.github.io/emberwing/`, or offline on the laptop: `npm run build && npm run preview`, then `http://localhost:4173`
+- [ ] The screen says **PRESS ANY KEY TO START**. Press any key (that key only starts the station, it won't skip or reset anything). The speaker icon in the bottom left now shows waves. If it shows an X, sound was muted with M last time: press **M**
 - [ ] Press **F** for fullscreen. No browser bars or cursor visible on the wall
 - [ ] Press **D** for the debug overlay
 
 ## 2. Frame rate (debug overlay, top left)
 
 - [ ] FPS on the attract screen: ____
-- [ ] FPS during the brass swell (busiest moment, about 12s into the flight): ____
+- [ ] FPS during the brass swell (busiest moment, about 15s into the flight, when the flock swoops in): ____
 - [ ] Anything under 30 is worth writing down. The game clock keeps real time down to about 4 fps, so a slow laptop won't make runs longer, but it will look choppy
 - [ ] Press **D** again to hide it
 
@@ -25,11 +26,11 @@ Write results in the blanks. Anything that fails goes in the notes at the bottom
 
 Stand 15 ft from the wall (measure it), at the far edge of where the line will be.
 
-- [ ] Attract: NEXT FLYER, STEP HERE, RAISE YOUR LIGHT, the storybook captions, "N DRAGONS HOME TONIGHT"
-- [ ] Find Ember: EMBER IS LOST!, FIND THE EYES, HOLD STEADY. Can you see the two glowing eyes in the fog?
-- [ ] Flight: FLY!, SOAR!, the lighthouse-to-home track along the top
-- [ ] Home: HOME!, the counter, HEAR IT LIVE IN ACT II
-- [ ] End card: ACT II, the title, LISTEN FOR THE BRASS!
+- [ ] Attract: NEXT FLYER, STEP HERE, RAISE YOUR LIGHT, the storybook captions, "N DRAGONS HOME TONIGHT", "N MORE TO THE NEXT CELEBRATION". Can you tell the circling dragons apart?
+- [ ] Find: PIP IS LOST! (the dragon's name changes every run), FIND THE EYES, HOLD STILL. Can you see the two glowing eyes in the fog?
+- [ ] Flight: PIP FOLLOWS YOUR LIGHT, FLY THROUGH THE HOOPS, SOAR!, the lighthouse-to-home track along the top
+- [ ] Home: PIP IS HOME!, the counter, HEAR IT LIVE IN ACT II
+- [ ] Dragon card: the name, THE 9TH EMBERWING HOME TONIGHT, the quirk, LISTEN FOR THE BRASS!. Take a phone photo of it from where a guest would stand. Is it readable in the photo?
 - [ ] Anything washed out by the room lights? Note it with where you were standing: ____
 
 ## 4. Calibration (mocap rig)
@@ -52,7 +53,9 @@ Start the stopwatch the moment the lantern ring finishes filling. Stop it when t
 - [ ] Do the instructions (MOVE YOUR LIGHT / FIND THE EYES / HOLD STILL, then EMBER FOLLOWS YOUR LIGHT / FLY THROUGH THE HOOPS) read from 15 ft? ____
 - [ ] Does the first-timer get through the waiting tutorial hoop on their own? ____
 - [ ] Ember follows the light without lag or jitter? ____
-- [ ] The dragon count went up by one after each run
+- [ ] The dragon count went up by one after each run, and one more dragon is circling on the attract screen
+- [ ] Each run had a different dragon (name and look) and the routes took turns: sea stacks, rain squall, standing stones
+- [ ] Play until the count reaches 8 (or press **S** to skip through runs): the 8th run gets the celebration flyover and "8 DRAGONS HOME!"
 
 ## 6. Idle reset
 
@@ -60,12 +63,14 @@ Start the stopwatch the moment the lantern ring finishes filling. Stop it when t
 - [ ] Same thing during the flight: ____ s
 - [ ] Rest the prop on a table pointing at the screen (still, but present). Still resets after about 10s?
 
-## 7. Audio (never checked by anyone yet)
+## 7. Sound (on by default, nobody has heard it on the real speakers yet)
 
-- [ ] Press **M**. Toast says AUDIO ON. Do you hear a soft drone, wind, and some random notes? ____
-- [ ] Do a run with audio on. Chimes on rings, a chord when Ember's wings light up, a rising arpeggio at home?
-- [ ] Is it too loud or too quiet for the lobby? Is it annoying after 10 minutes?
-- [ ] Press **M** again. Silence. Leave it off unless the team decides otherwise
+- [ ] On attract: a soft harp and a quiet drone, the tune on a whistle every other time round. Not annoying after 10 minutes? ____
+- [ ] During a run: wind and rain in the fog, a warm chord when the dragon is found, the tune building through the flight, a chime on every hoop, a drum roll and then a big brass chord at SOAR!, chirps from each dragon at home
+- [ ] Does the brass swell land right when SOAR! appears (not late)? ____
+- [ ] Too loud or too quiet for the lobby? Set the laptop or room volume so it's clear at the footprints but doesn't fight the youth orchestra: ____
+- [ ] Press **M**: toast says SOUND OFF, the speaker icon shows an X, silence. Refresh: still off. Press **M** again to turn it back on
+- [ ] On a phone: no "press any key" screen, and sound starts on the first touch
 
 ## 8. Other operator keys
 

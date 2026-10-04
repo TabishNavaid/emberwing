@@ -16,9 +16,9 @@ Only these small crops ship with the game. The full packs are **not** in the rep
 We also reviewed **Sprout Lands** by Cup Nooble ("Assets from Sprout Lands, by Cup Nooble"), plus Cozy Characters, Cozy Farm, Cozy Interiors and Cozy Town. None of their art is used in the game: their top-down farm and town style doesn't fit the side-view sea-cliff world.
 
 ## Original work (made for this project)
-- **Ember and the flock:** original dragon designs drawn procedurally in code (`src/art/ember.js`).
+- **The dragons:** original emberwing designs built from parts in code (`src/core/dragons.js`, `src/art/dragon.js`): body colors, wing shapes, horns, frills, antlers, crests, tail tips, markings and personality quirks. The 56 names are our own list, picked to avoid anything from the films.
 - **World art:** cliffs, lighthouse, sea stacks, standing stones, invented rune glyphs (not a real alphabet), clouds, fog, aurora, knotwork, icons.
 - **Pixel font:** a hand-made 5×7 font drawn in code (`src/art/font.js`).
-- **Ambient audio:** generated live with Web Audio (drone, wind, random notes from a pentatonic scale). Off by default.
+- **Music and sound effects:** an original folk-style tune in D mixolydian and every sound effect (harp, tin whistle, drone, hand drum, strings, brass, bells, chirps, wind and rain), composed for this project and synthesized live with Web Audio (`src/core/score.js`, `src/core/synth.js`). No recordings or samples are used.
 
 No characters, names, places, logos, dragon designs or music from the *How to Train Your Dragon* films are used.
