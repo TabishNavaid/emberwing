@@ -29,6 +29,9 @@ export const DUR = {
   END_SKIP_DWELL: 1.0,
 
   FADE: 0.4, // every scene change. was up to 0.6, that's dead air nobody enjoys
+  // title card between scenes ("NOW FLY HOME!"). playtesting the live site, the hard cuts
+  // made people think the game had glitched or ended
+  TITLE: 1.3,
 };
 
 // fractions of DUR.FLIGHT

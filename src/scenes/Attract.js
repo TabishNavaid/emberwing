@@ -62,7 +62,7 @@ export class Attract {
     g.audio.cue('start');
     g.particles.burst(LANTERN.x, LANTERN.y, 40, { speed: 90, colors: [PAL.gold, PAL.gold2, '#fff6d8'], kind: 'spark', size: 2, drag: 2, life: 1 }, g.rng);
     g.cam.shake(2);
-    g.scenes.go('find');
+    g.scenes.go('find', {}, { title: 'EMBER IS LOST!' });
   }
 
   pageDuration() {

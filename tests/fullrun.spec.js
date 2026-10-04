@@ -2,11 +2,12 @@ import { test, expect } from '@playwright/test';
 import { boot, state, startRun, findEmber, fly, watch, waitScene, hover } from './helpers.js';
 
 const MIN = 35;
-const MAX = 45;
-// worst case (guest never finds ember) should stay well clear of the 45s ceiling
-const ASSISTED_MAX = 41;
+const MAX = 50;
+// worst case (guest never finds ember). after the live playtest we traded some speed for
+// clarity (title cards, guests do the find themselves), the ok'd ceiling is now ~50s
+const ASSISTED_MAX = 50;
 
-test('a guest who finds Ember plays a full run in 35-45s and returns to attract', async ({ page }) => {
+test('a guest who finds Ember plays a full run in 35-50s and returns to attract', async ({ page }) => {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
@@ -37,7 +38,7 @@ test('a guest who finds Ember plays a full run in 35-45s and returns to attract'
   expect((await state(page)).count).toBe(1);
 });
 
-test('a guest who never finds Ember is helped and still finishes in about 40s', async ({ page }) => {
+test('a guest who never finds Ember is helped and still finishes within 50s', async ({ page }) => {
   await boot(page);
   await startRun(page);
   await findEmber(page, { neverFind: true });

@@ -12,8 +12,9 @@ export async function moveTo(page, x, y, steps = 4) {
   await page.mouse.move(p.x, p.y, { steps });
 }
 
+// resolves once the scene is actually playing (not still under a title card)
 export async function waitScene(page, name, timeout = 30_000) {
-  await page.waitForFunction((n) => window.__emberwing.state().scene === n, name, { timeout, polling: 100 });
+  await page.waitForFunction((n) => { const s = window.__emberwing.state(); return s.scene === n && !s.title; }, name, { timeout, polling: 100 });
 }
 
 // tiny tremble like a real hand, still under the steady threshold
@@ -34,6 +35,8 @@ export async function startRun(page) {
   await page.waitForFunction(() => window.__emberwing.state().scene === 'find', null, { timeout: 5000, polling: 50 }).catch(() => {});
   const deadline = Date.now() + 4000;
   while ((await state(page)).scene !== 'find' && Date.now() < deadline) await hover(page, 372, 152, 0.3);
+  // wait out the "EMBER IS LOST!" title card, the scene doesn't start until it's gone
+  await page.waitForFunction(() => !window.__emberwing.state().title, null, { timeout: 10_000, polling: 50 });
 }
 
 export async function findEmber(page, { searchSeconds = 2.5, neverFind = false } = {}) {

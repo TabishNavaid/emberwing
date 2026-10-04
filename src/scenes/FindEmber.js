@@ -56,7 +56,7 @@ export class FindEmber {
 
   skip(g) {
     if (!this.found) this.burst();
-    else g.scenes.go('flight', {}, { color: '#e8fff8' });
+    else g.scenes.go('flight', {}, { title: 'NOW FLY HOME!' });
   }
 
   burst() {
@@ -85,7 +85,7 @@ export class FindEmber {
       if (!this.popped && this.burstT >= 0.1) this.pop(g);
       this.fogA = approach(this.fogA, 0, 3.5, dt);
       if (this.burstT > 0.8) this.ey -= dt * 40 * ease.inCubic(clamp((this.burstT - 0.8) / 1));
-      if (this.burstT > DUR.FIND_BURST) g.scenes.go('flight', { fromY: this.ey }, { color: '#e8fff8' });
+      if (this.burstT > DUR.FIND_BURST) g.scenes.go('flight', { fromY: this.ey }, { title: 'NOW FLY HOME!' });
       return;
     }
 

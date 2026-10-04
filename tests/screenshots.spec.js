@@ -9,6 +9,7 @@ const SHOTS = [
   ['attract', 3, 'yours'], // YOURS! label after a run
   ['attract', 1, 'calibrate'], // K screen
   ['find', 0.8, { x: 240, y: 90 }], // story beat
+  ['find', 0.9, 'title'], // title card between scenes
   ['find', 2, { x: 240, y: 90 }],
   ['find', 1.4, 'target'],
   ['find', 2.6, 'target'], // found: happy wiggle
@@ -49,6 +50,7 @@ for (const [label, viewport, dpr] of SIZES) {
         const inp = w.game.input;
         w.pause(true);
         inp.feed(300, 250, 'mouse');
+        if (ptr === 'title') w.game.scenes.go('flight', {}, { title: 'NOW FLY HOME!' });
         if (ptr === 'calibrate') {
           w.game.op.cal = { step: 1, pts: [[40, 40]], hold: 0.6, ax: 300, ay: 60, armed: true, source: 'mocap' };
           inp.feed(330, 70, 'mocap');

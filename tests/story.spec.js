@@ -69,3 +69,20 @@ test('no "YOURS!" after an idle reset', async ({ page }) => {
   });
   expect(t).toBe(0);
 });
+
+test('title cards between scenes, and the next scene waits underneath them', async ({ page }) => {
+  await boot(page);
+  const r = await page.evaluate(() => {
+    const w = window.__emberwing;
+    w.pause(true);
+    w.game.scenes.go('flight', {}, { title: 'NOW FLY HOME!' });
+    w.step(0.6); // fade out, then the card
+    const during = { title: w.state().title, flightT: w.game.scenes.current.t };
+    w.step(1.5);
+    return { during, after: { title: w.state().title, flightT: w.game.scenes.current.t } };
+  });
+  expect(r.during.title).toBe('NOW FLY HOME!');
+  expect(r.during.flightT).toBe(0); // the flight hasn't started yet
+  expect(r.after.title).toBe(null);
+  expect(r.after.flightT).toBeGreaterThan(0);
+});

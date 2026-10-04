@@ -148,6 +148,7 @@ window.__emberwing = {
   },
   state: () => ({
     scene: game.scenes.name,
+    title: game.scenes.title?.text ?? null,
     t: game.scenes.current?.t ?? 0,
     count: game.store.count,
     runs: game.runs.slice(),
