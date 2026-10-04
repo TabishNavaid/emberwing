@@ -11,10 +11,11 @@ import { Operator } from './core/Operator.js';
 import { Motion } from './core/Motion.js';
 import { Calibration } from './input/Calibration.js';
 import { mulberry32 } from './core/util.js';
+import { nextLostDragon } from './core/dragons.js';
 import { loadSprites } from './art/sprites.js';
 import { AuroraWall } from './art/aurora.js';
 import { Attract } from './scenes/Attract.js';
-import { FindEmber } from './scenes/FindEmber.js';
+import { FindDragon } from './scenes/FindDragon.js';
 import { Flight } from './scenes/Flight.js';
 import { Home } from './scenes/Home.js';
 import { EndCard } from './scenes/EndCard.js';
@@ -74,6 +75,8 @@ const game = {
   runStart: 0,
   runs: [], // finished run lengths, the tests read these
 };
+// the dragon that's lost right now. a new one gets picked once this one makes it home
+game.dragon = nextLostDragon(game);
 game.cal = new Calibration();
 input.cal = game.cal;
 game.motion = new Motion();
@@ -82,7 +85,7 @@ game.audio = new Audio(beat);
 game.wall = new AuroraWall(game.store);
 game.scenes = new SceneManager(game, {
   attract: new Attract(),
-  find: new FindEmber(),
+  find: new FindDragon(),
   flight: new Flight(),
   home: new Home(),
   end: new EndCard(),
@@ -151,6 +154,7 @@ window.__emberwing = {
     title: game.scenes.title?.text ?? null,
     t: game.scenes.current?.t ?? 0,
     count: game.store.count,
+    dragon: game.dragon.name,
     runs: game.runs.slice(),
     target: game.scenes.current?.target?.(game) ?? null,
   }),

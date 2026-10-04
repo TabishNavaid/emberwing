@@ -19,7 +19,7 @@ const state = () => page.evaluate(() => {
   return {
     scene: g.scenes.name, t: s.t, prompt: s.prompt ?? null, hold: s.hold ?? null,
     rings: s.rings ? s.rings.map((r) => r.state[0]).join('') : null,
-    ember: s.ex !== undefined ? [Math.round(s.ex), Math.round(s.ey)] : null,
+    dragon: s.ex !== undefined ? [Math.round(s.ex), Math.round(s.ey)] : null,
     present: g.input.present, idle: +g.input.idle.toFixed(1),
   };
 });

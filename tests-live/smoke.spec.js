@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, state, startRun, findEmber, fly, watch, waitScene } from '../tests/helpers.js';
+import { boot, state, startRun, findDragon, fly, watch, waitScene } from '../tests/helpers.js';
 
 // does the deployed build load from its subpath, and can a guest actually play it?
 
@@ -24,7 +24,7 @@ test('live site plays: a scripted guest goes all the way home and back', async (
   await boot(page);
   await startRun(page);
   expect((await state(page)).scene).toBe('find');
-  await findEmber(page);
+  await findDragon(page);
   await waitScene(page, 'flight', 60_000);
   await fly(page);
   await waitScene(page, 'home', 60_000);

@@ -29,6 +29,7 @@ export const DUR = {
 
   FLIGHT: 18.0, // the timeline after the tutorial hoop. fixed, doesn't depend on how well you fly
   HOME: 6.5,
+  CELEBRATE: 3.6, // every FLOCK.CELEBRATE_EVERY-th dragon, home runs this much longer for the flyover
   END: 3.0,
   END_SKIP_DWELL: 1.0,
 
@@ -103,6 +104,12 @@ export const INPUT = {
   CAL_INSET: 30, // corner targets sit this far in from the edges, nobody can aim at the very corner
   CAL_HOLD: 1.2, // hold the prop still this long on each corner
   CAL_STEADY: 4, // internal px of wobble that still counts as holding still
+};
+
+// the flock is the dragons people actually brought home tonight
+export const FLOCK = {
+  CLOSE: 12, // this many of the newest get drawn up close, the rest are specks further off
+  CELEBRATE_EVERY: 8, // every 8th dragon home gets the whole flock out for a flyover
 };
 
 export const STORE = {

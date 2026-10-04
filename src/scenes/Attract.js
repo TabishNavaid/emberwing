@@ -1,10 +1,12 @@
-import { VIEW, DUR, PAL } from '../config.js';
+import { VIEW, DUR, PAL, FLOCK } from '../config.js';
 import { makeCanvas, glow, clamp, ease, lerp } from '../core/util.js';
 import { Dwell } from '../input/Dwell.js';
 import { drawText } from '../art/font.js';
 import { drawKnotRing, drawKnotFrame, drawKnotBand } from '../art/knotwork.js';
-import { drawEmber, FLOCK_COLORS, eyeOffset } from '../art/ember.js';
-import { drawSky, SKY, makeStars, drawStars, drawSea, drawLighthouse, drawStone, drawCloud, drawWind, drawFlyingGull, drawFog } from '../art/world.js';
+import { drawDragon, drawSpeck, eyeOffset } from '../art/dragon.js';
+import { flockOf, member, chirp, updateMember, drawMember } from '../art/flock.js';
+import { nextLostDragon } from '../core/dragons.js';
+import { drawSky, SKY, makeStars, drawStars, drawSea, drawLighthouse, drawStone, drawCloud, drawWind, drawFog } from '../art/world.js';
 import { drawLantern, drawFeet, drawHorn, drawSoundLines, drawCursorLight, drawSparkle, drawArrowUp } from '../art/icons.js';
 import { drawBaseAurora, drawRibbon, ribbonSkyPoints, RIBBON_COLORS } from '../art/aurora.js';
 import { drawTree } from '../art/sprites.js';
@@ -16,12 +18,13 @@ const BOOK = { x: 14, y: 54, w: 252, h: 172 };
 const PANEL_X = 372;
 const LANTERN = { x: PANEL_X, y: 152, r: 34 };
 const YOURS = { x: 242, y: 10 }; // the free strip of sky between the title and NEXT FLYER
+const CIRCLE = { x: PANEL_X, y: 92 }; // tonight's flock circles between STEP HERE and the lantern
 
 const PAGES = [
   { id: 'storm', caption: 'A STORM...' },
-  { id: 'lost', caption: 'A LOST DRAGON' },
+  { id: 'lost', caption: null }, // "PIP IS LOST", set per dragon
   { id: 'demo', caption: '' }, // sets its own caption as it goes
-  { id: 'home', caption: 'GUIDE IT HOME' },
+  { id: 'home', caption: null }, // "GUIDE PIP HOME"
   { id: 'music', caption: 'HEAR IT IN ACT II' },
 ];
 
@@ -30,6 +33,10 @@ export class Attract {
 
   enter(g, data = {}) {
     this.dwell = new Dwell(LANTERN.x, LANTERN.y, LANTERN.r + 6, DUR.START_DWELL);
+    // the next guest's dragon. it stays the same one until somebody actually gets it home
+    if (!g.dragon || g.dragon.home) g.dragon = nextLostDragon(g);
+    this.flockVersion = -1;
+    this.syncFlock(g);
     // only after a finished run. an idle reset means nobody made it home this time
     this.yoursT = 0;
     const rs = g.store.ribbons;
@@ -62,15 +69,48 @@ export class Attract {
     g.audio.cue('start');
     g.particles.burst(LANTERN.x, LANTERN.y, 40, { speed: 90, colors: [PAL.gold, PAL.gold2, '#fff6d8'], kind: 'spark', size: 2, drag: 2, life: 1 }, g.rng);
     g.cam.shake(2);
-    g.scenes.go('find', {}, { title: 'EMBER IS LOST!' });
+    g.scenes.go('find', {}, { title: `${g.dragon.name} IS LOST!` });
   }
 
   pageDuration() {
     return PAGES[this.page].id === 'demo' ? DUR.ATTRACT_DEMO_PAGE : DUR.ATTRACT_PAGE;
   }
 
+  // the circle is rebuilt whenever the store changes (a run finished, the operator cleared it)
+  syncFlock(g) {
+    if (this.flockVersion === g.store.version) return;
+    this.flockVersion = g.store.version;
+    const { near, far } = flockOf(g.store);
+    this.flock = near.map((d, i) => member(d, i));
+    this.far = far.map((d, i) => ({ d, a: i * 2.39996, r: 0.4 + ((i * 13) % 10) / 16, y: 6 + ((i * 17) % 30) }));
+    this.chirpT = 3;
+  }
+
+  // where member i is on the circle. z: -1 behind, 1 in front
+  slot(i, t) {
+    const n = this.flock.length;
+    const a = t * 0.45 + (i / Math.max(1, n)) * Math.PI * 2;
+    const rx = lerp(50, 92, clamp((n - 3) / 9));
+    return { x: CIRCLE.x + Math.cos(a) * rx, y: CIRCLE.y + Math.sin(a) * 12, z: Math.sin(a) };
+  }
+
+  visibleDragons() {
+    return { near: this.flock.length, far: this.far.length, names: this.flock.map((m) => m.d.name), partyLeft: partyLeft(this.flock.length + this.far.length) };
+  }
+
   update(g, dt) {
+    this.syncFlock(g);
     this.yoursT = Math.max(0, this.yoursT - dt);
+    // every few seconds somebody in the flock calls out
+    this.chirpT -= dt;
+    if (this.chirpT <= 0 && this.flock.length) {
+      this.chirpT = 4 + g.rng() * 3;
+      chirp(this.flock[Math.floor(g.rng() * this.flock.length)]);
+    }
+    this.flock.forEach((m, i) => {
+      const p = this.slot(i, this.t);
+      updateMember(g, m, dt, p.x, p.y, { scale: 0.36, flip: p.z > 0 });
+    });
     this.pageT += dt;
     this.flip = Math.min(1, this.flip + dt / 0.55);
     if (this.pageT > this.pageDuration()) {
@@ -97,10 +137,16 @@ export class Attract {
     g.wall.draw(ctx, t);
     // your ribbon glows a bit brighter than the rest while the label is up
     if (this.yoursT > 0) drawRibbon(ctx, this.yoursPts, this.yoursColor, 0.45 * clamp(this.yoursT / 1.5), t, 34);
-    for (let i = 0; i < 5; i++) {
-      const a = t * 0.35 + (i / 5) * Math.PI * 2;
-      drawFlyingGull(ctx, 380 + Math.cos(a) * 60, 95 + Math.sin(a) * 12, t + i, i % 2 ? '#ffd88a' : '#8ffff0');
+    this.syncFlock(g);
+    for (const f of this.far) {
+      const a = f.a + t * 0.18;
+      drawSpeck(ctx, 330 + Math.cos(a) * 140 * f.r, 60 + f.y + Math.sin(a * 2) * 4, f.d, t + f.a);
     }
+    const drawers = this.flock.map((m, i) => {
+      const p = this.slot(i, t);
+      return { z: p.z, f: () => drawMember(ctx, m, p.x, p.y, { mood: 'joy', flap: t * 2.4 + i * 0.23, life: t, glow: 2, scale: 0.36 * (0.85 + 0.15 * (p.z + 1) / 2), flip: p.z > 0 }) };
+    });
+    drawers.sort((a, b) => a.z - b.z).forEach((d) => d.f());
     drawSea(ctx, 212, t, { c1: '#0c1a2c', c2: '#16304a', foam: '#6fb6c8' });
     drawWind(ctx, t, g.beat, { lanes: [0.3, 0.72], alpha: 0.25, color: '#9fe8ff' });
 
@@ -111,15 +157,32 @@ export class Attract {
     drawText(ctx, 'EMBERWING', BOOK.x + 2, 6, { scale: 3, color: PAL.ember3 });
     drawText(ctx, 'THE WAY HOME', BOOK.x + 3, 31, { scale: 2, color: PAL.cream });
 
-    const n = g.store.count;
-    if (n > 0) {
-      const s = `${n} ${n === 1 ? 'DRAGON' : 'DRAGONS'} HOME TONIGHT`;
-      drawText(ctx, s, BOOK.x + BOOK.w / 2, 246, { scale: 2, align: 'center', color: '#bff8ee' });
-    }
+    this.drawTally(ctx, g.store.count, t);
 
     if (this.yoursT > 0) this.drawYours(ctx, t, g.beat.pulse);
     g.particles.draw(ctx);
     if (g.input.seen) drawCursorLight(ctx, g.input.x, g.input.y, t, 1);
+  }
+
+  // how many are home (always the same number as dragons in the circle) and how close the next
+  // celebration is. the line reads this while they wait
+  drawTally(ctx, n, t) {
+    const s = n === 0 ? 'NO DRAGONS HOME YET' : `${n} ${n === 1 ? 'DRAGON' : 'DRAGONS'} HOME TONIGHT`;
+    drawText(ctx, s, BOOK.x + BOOK.w / 2, 246, { scale: 2, align: 'center', color: '#bff8ee' });
+    const every = FLOCK.CELEBRATE_EVERY;
+    const done = n % every;
+    const left = partyLeft(n);
+    drawText(ctx, `${left} MORE TO THE`, PANEL_X, 223, { scale: 2, align: 'center', color: '#bff8ee' });
+    drawText(ctx, 'NEXT CELEBRATION', PANEL_X, 239, { scale: 2, align: 'center', color: '#bff8ee' });
+    // one pip per dragon in this round, the next one to fill breathes
+    const x0 = PANEL_X - ((every - 1) * 15) / 2;
+    for (let i = 0; i < every; i++) {
+      const on = i < done;
+      const next = i === done;
+      const r = next ? 4.5 + Math.sin(t * 4) * 0.7 : 4;
+      if (on) glow(ctx, x0 + i * 15, 260, 9, PAL.gold, 0.6);
+      drawKnotRing(ctx, x0 + i * 15, 260, r, on ? 1 : 0, { lobes: 3, amp: 1, width: 1, on: PAL.gold, off: next ? 'rgba(191,248,238,0.9)' : 'rgba(191,248,238,0.35)' });
+    }
   }
 
   // the label lives in the open strip of sky between the title and NEXT FLYER (anywhere else it
@@ -179,7 +242,7 @@ export class Attract {
     const pg = this.pg;
     pg.clearRect(0, 0, BOOK.w, BOOK.h);
     const id = PAGES[this.page].id;
-    const caption = this[`page_${id}`](pg, this.pageT, g) ?? PAGES[this.page].caption;
+    const caption = this[`page_${id}`](pg, this.pageT, g, g.dragon) ?? PAGES[this.page].caption;
     if (caption) {
       pg.fillStyle = 'rgba(5,7,13,0.55)';
       pg.fillRect(0, BOOK.h - 24, BOOK.w, 24);
@@ -208,7 +271,7 @@ export class Attract {
     }
   }
 
-  page_storm(pg, t) {
+  page_storm(pg, t, g, d) {
     drawSky(pg, SKY.storm, 0, BOOK.h);
     drawSea(pg, 130, t, { c1: '#10202e', c2: '#1d3445', foam: '#8fb0c0' });
     for (let i = 0; i < 3; i++) drawCloud(pg, ((t * 18 + i * 110) % 330) - 40, 30 + i * 10, 90, '#2a3a52', 11 + i, 0.9);
@@ -239,10 +302,10 @@ export class Attract {
     }
     const ex = 150 + Math.sin(t * 1.3) * 30 + t * 8;
     const ey = 64 + Math.sin(t * 2.1) * 14;
-    drawEmber(pg, ex, ey, { mood: 'scared', flap: t * 3, glow: 0, rot: Math.sin(t * 2.5) * 0.6, scale: 0.8 });
+    drawDragon(pg, ex, ey, d, { mood: 'scared', flap: t * 3, glow: 0, rot: Math.sin(t * 2.5) * 0.6, scale: 0.8 });
   }
 
-  page_lost(pg, t) {
+  page_lost(pg, t, g, d) {
     drawSky(pg, SKY.storm, 0, BOOK.h);
     drawStars(pg, this.pageStars, t, 0.4);
     pg.fillStyle = '#16202e';
@@ -253,15 +316,16 @@ export class Attract {
     drawStone(pg, 205, 116, 26, 10, 4, 0);
     drawTree(pg, 'bare', 30, 114, '#0e1622');
     const shake = Math.sin(t * 30) * 0.6;
-    drawEmber(pg, 140 + shake, 100, { mood: 'scared', wing: 'folded', glow: 0, life: t, look: -1 });
+    drawDragon(pg, 140 + shake, 111 - 11 * d.size, d, { mood: 'scared', wing: 'folded', glow: 0, life: t, look: -1 });
     const lx = lerp(20, 95, ease.outCubic(clamp(t / 3.5)));
     glow(pg, lx, 88, 40, PAL.gold, 0.35);
     drawLantern(pg, lx, 86, 1, 1, t);
     pg.fillStyle = 'rgba(92,114,140,0.25)';
     for (let i = 0; i < 4; i++) pg.fillRect(0, 90 + i * 20 + Math.round(Math.sin(t + i) * 3), BOOK.w, 6);
+    return `${d.name} IS LOST`;
   }
 
-  page_demo(pg, t, g) {
+  page_demo(pg, t, g, d) {
     // ghost player so the next person in line already knows what to do
     const FIND = 2.8;
     const eyes = { x: 0, y: 0 };
@@ -272,10 +336,10 @@ export class Attract {
       for (let x = 0; x < BOOK.w; x++) pg.fillRect(x, 124 + Math.round(Math.sin(x * 0.05) * 5 + Math.sin(x * 0.17) * 2), 1, 70);
       drawStone(pg, 60, 128, 30, 11, 1, 0);
       const ex = 170, ey = 118;
-      const eo = eyeOffset(0.85);
+      const eo = eyeOffset(d, 0.85);
       eyes.x = ex + eo.x;
       eyes.y = ey + eo.y;
-      drawEmber(pg, ex, ey, { mood: t > 1.8 ? 'curious' : 'scared', wing: 'folded', glow: 0, look: -1, scale: 0.85, life: t });
+      drawDragon(pg, ex, ey, d, { mood: t > 1.8 ? 'curious' : 'scared', wing: 'folded', glow: 0, look: -1, scale: 0.85, life: t });
       const k = ease.inOutSine(clamp(t / 1.3));
       ghost = { x: lerp(30, eyes.x, k) + Math.sin(t * 5) * 18 * (1 - k), y: lerp(50, eyes.y, k) };
       // same dark fog + warm beam as the real scene so the demo looks like the game
@@ -299,31 +363,34 @@ export class Attract {
       }
         const nextY = 80 + Math.sin(Math.floor((ft * 70 - 164 + 70) / 70) * 1.7) * 26;
       ghost = { x: 130, y: lerp(80, nextY, 0.8) + Math.sin(ft * 2) * 6 };
-      this.demoEmberY = this.demoEmberY === undefined ? ghost.y : lerp(this.demoEmberY, ghost.y, 0.08);
+      this.demoY = this.demoY === undefined ? ghost.y : lerp(this.demoY, ghost.y, 0.08);
       pg.fillStyle = 'rgba(255,201,74,0.5)';
-      for (let i = 1; i < 18; i++) pg.fillRect(96 - i * 4, Math.round(this.demoEmberY + Math.sin(ft * 3 - i * 0.4) * 3), 3, 1);
-      drawEmber(pg, 96, this.demoEmberY, { mood: 'fly', flap: ft * 3, life: ft, glow: 2, scale: 0.9 });
+      for (let i = 1; i < 18; i++) pg.fillRect(96 - i * 4, Math.round(this.demoY + Math.sin(ft * 3 - i * 0.4) * 3), 3, 1);
+      drawDragon(pg, 96, this.demoY, d, { mood: 'fly', flap: ft * 3, life: ft, glow: 2, scale: 0.9 });
     }
-    if (t < 0.2) this.demoEmberY = undefined;
+    if (t < 0.2) this.demoY = undefined;
     pg.globalAlpha = 0.85;
     drawLantern(pg, ghost.x, ghost.y, 1, 0.8, t);
     pg.globalAlpha = 1;
     drawText(pg, 'YOU', ghost.x, ghost.y - 28, { scale: 2, align: 'center', color: PAL.gold2 });
-    return t < FIND ? 'FIND EMBER' : 'FLY HOME!';
+    return t < FIND ? `FIND ${d.name}` : 'FLY HOME!';
   }
 
-  page_home(pg, t, g) {
+  page_home(pg, t, g, d) {
     drawSky(pg, SKY.aurora, 0, BOOK.h);
     drawStars(pg, this.pageStars, t);
     drawBaseAurora(pg, t * 1.5, 1.2, 8);
     drawSea(pg, 134, t, { c1: '#0c1a2c', c2: '#16304a', foam: '#6fb6c8' });
-    for (let i = 0; i < 4; i++) {
-      const a = t * 0.7 + (i / 4) * Math.PI * 2;
+    // the last few who made it home tonight wait for this one (nobody, for the first guest)
+    const waiting = this.flock.slice(-4);
+    waiting.forEach((m, i) => {
+      const a = t * 0.7 + (i / waiting.length) * Math.PI * 2;
       const x = 125 + Math.cos(a) * 92;
       const y = 78 + Math.sin(a) * 30;
-      drawEmber(pg, x, y, { mood: 'joy', flap: t * 2.5 + i * 0.3, life: t, glow: 2, colors: FLOCK_COLORS[i], ci: i, scale: 0.7, flip: Math.sin(a) > 0 });
-    }
-    drawEmber(pg, 125, 92 + Math.sin(t * 3) * 3, { mood: 'happy', flap: t * 2.5, glow: 2 });
+      drawDragon(pg, x, y, m.d, { mood: 'joy', flap: t * 2.5 + i * 0.3, life: t, glow: 2, scale: 0.7, flip: Math.sin(a) > 0 });
+    });
+    drawDragon(pg, 125, 92 + Math.sin(t * 3) * 3, d, { mood: 'happy', flap: t * 2.5, glow: 2 });
+    return `GUIDE ${d.name} HOME`;
   }
 
   page_music(pg, t, g) {
@@ -339,6 +406,9 @@ export class Attract {
     drawText(pg, 'YOUTH ORCHESTRA', BOOK.w / 2, 120, { scale: 2, align: 'center', color: PAL.cream });
   }
 }
+
+// how many more dragons until the next celebration
+export const partyLeft = (n) => FLOCK.CELEBRATE_EVERY - (n % FLOCK.CELEBRATE_EVERY);
 
 // the aurora is mostly hidden behind the storybook. pick a bit of the ribbon you can see,
 // closest to the label first, then the gap between STEP HERE and the lantern

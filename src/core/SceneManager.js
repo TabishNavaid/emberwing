@@ -1,8 +1,8 @@
 import { DUR, INPUT, VIEW, PAL } from '../config.js';
 import { clamp, ease } from './util.js';
-import { drawTextPop } from '../art/font.js';
+import { drawTextPop, fitScale } from '../art/font.js';
 import { drawKnotBand } from '../art/knotwork.js';
-import { drawEmber } from '../art/ember.js';
+import { drawDragon } from '../art/dragon.js';
 
 // one scene at a time with fades between them. also the idle watchdog: interactive
 // scenes bail back to attract after INPUT.IDLE_RESET seconds of nobody pointing
@@ -91,12 +91,13 @@ export class SceneManager {
     const { W, H } = VIEW;
     const k = this.title.t;
     const a = clamp(Math.min(k / 0.15, (DUR.TITLE - k) / 0.2));
-    // little ember above the words: scared and dark before the find, flying after it
+    // tonight's dragon above the words: scared and dark before the find, flying after it
+    const d = this.game.dragon;
     ctx.globalAlpha = a;
-    if (this.title.lost) drawEmber(ctx, W / 2, H / 2 - 52, { mood: 'scared', wing: 'folded', glow: 0, life: k, sx: 1 + Math.sin(k * 30) * 0.02 });
-    else drawEmber(ctx, W / 2 - 60 + k * 90, H / 2 - 54 + Math.sin(k * 6) * 4, { mood: 'fly', flap: k * 3.4, glow: 2 });
+    if (this.title.lost) drawDragon(ctx, W / 2, H / 2 - 52, d, { mood: 'scared', wing: 'folded', glow: 0, life: k, sx: 1 + Math.sin(k * 30) * 0.02 });
+    else drawDragon(ctx, W / 2 - 60 + k * 90, H / 2 - 54 + Math.sin(k * 6) * 4, d, { mood: 'fly', flap: k * 3.4, glow: 2 });
     ctx.globalAlpha = 1;
-    drawTextPop(ctx, this.title.text, W / 2, H / 2 - 6, k * 1.4, { scale: 4, color: PAL.gold2, alpha: a });
+    drawTextPop(ctx, this.title.text, W / 2, H / 2 - 6, k * 1.4, { scale: fitScale(this.title.text, W - 16, 4), color: PAL.gold2, alpha: a });
     const len = Math.round(220 * ease.outCubic(clamp(k / 0.5)));
     ctx.globalAlpha = a;
     drawKnotBand(ctx, W / 2 - len / 2, H / 2 + 22, len, { color: PAL.gold, period: 10, amp: 2 });

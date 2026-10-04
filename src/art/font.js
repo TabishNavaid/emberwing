@@ -129,3 +129,9 @@ export function drawTextPop(ctx, str, x, y, t, opts = {}) {
   ctx.drawImage(s, Math.round(x - (s.width * kk) / 2), Math.round(y - (s.height * kk) / 2), Math.round(s.width * kk), Math.round(s.height * kk));
   ctx.globalAlpha = pa;
 }
+
+// biggest scale (up to max) that fits in maxW. names make some lines longer than others
+export function fitScale(str, maxW, max = 3, min = 2) {
+  for (let s = max; s > min; s--) if (textWidth(str, s) <= maxW) return s;
+  return min;
+}

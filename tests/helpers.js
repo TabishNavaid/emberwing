@@ -35,18 +35,18 @@ export async function startRun(page) {
   await page.waitForFunction(() => window.__emberwing.state().scene === 'find', null, { timeout: 5000, polling: 50 }).catch(() => {});
   const deadline = Date.now() + 4000;
   while ((await state(page)).scene !== 'find' && Date.now() < deadline) await hover(page, 372, 152, 0.3);
-  // wait out the "EMBER IS LOST!" title card, the scene doesn't start until it's gone
+  // wait out the "PIP IS LOST!" title card, the scene doesn't start until it's gone
   await page.waitForFunction(() => !window.__emberwing.state().title, null, { timeout: 10_000, polling: 50 });
 }
 
-export async function findEmber(page, { searchSeconds = 2.5, neverFind = false } = {}) {
+export async function findDragon(page, { searchSeconds = 2.5, neverFind = false } = {}) {
   const t0 = Date.now();
   let i = 0;
   while ((await state(page)).scene === 'find') {
     const s = await state(page);
     const el = (Date.now() - t0) / 1000;
     if (neverFind || el < searchSeconds) {
-      // neverFind stays up in the top-left corner so it can't stumble onto ember by accident
+      // neverFind stays up in the top-left corner so it can't stumble onto the dragon by accident
       const x = neverFind ? 60 + ((i * 7) % 60) : 60 + ((Math.sin(i * 0.15) + 1) / 2) * 360;
       const y = neverFind ? 40 + Math.sin(i * 0.3) * 20 : 90 + Math.sin(i * 0.23) * 60;
       await moveTo(page, x, y, 2);

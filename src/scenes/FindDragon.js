@@ -1,8 +1,9 @@
 import { VIEW, DUR, INPUT, PAL } from '../config.js';
 import { clamp, dist, lerp, approach, glow, ease } from '../core/util.js';
-import { drawText, drawTextPop } from '../art/font.js';
+import { drawText, drawTextPop, fitScale } from '../art/font.js';
 import { drawKnotRing } from '../art/knotwork.js';
-import { drawEmber, eyeOffset, flapPose, blinkAt } from '../art/ember.js';
+import { drawDragon, drawChirp, eyeOffset, noseOffset, flapPose, blinkAt } from '../art/dragon.js';
+import { chirp, member, updateMember, drawMember } from '../art/flock.js';
 import { drawSky, SKY, drawSea, makeCliff, drawCliff, drawLighthouse, drawStone, drawCloud, drawFog, drawFlyingGull } from '../art/world.js';
 import { drawSparkle, drawLantern } from '../art/icons.js';
 import { drawGull, drawTree } from '../art/sprites.js';
@@ -14,15 +15,17 @@ const MOVE = 'MOVE YOUR LIGHT';
 const FIND = 'FIND THE EYES';
 const HOLD = 'HOLD STILL';
 
-export class FindEmber {
+export class FindDragon {
   interactive = true;
 
   enter(g) {
     const r = g.rng;
+    this.d = g.dragon;
+    this.me = member(this.d);
     this.lighthouseCliff = makeCliff({ seed: 5, x0: 0, x1: 126, top: 128, rough: 4, taperR: 30 });
     this.cliff = makeCliff({ seed: 11 + Math.floor(r() * 50), x0: 84, x1: W, top: 196, rough: 12 });
     // different hiding spot each run, and never right where the light already is (it starts
-    // wherever it was on the attract screen, and ember used to be sitting right under it)
+    // wherever it was on the attract screen, and the dragon used to be sitting right under it)
     const spots = [196, 262, 332, 410].filter((x) => Math.abs(x - g.input.x) > 110);
     this.ex = spots[Math.floor(r() * spots.length)] ?? 196;
     this.ey = this.restY(this.ex);
@@ -53,11 +56,11 @@ export class FindEmber {
   }
 
   restY(x) {
-    return this.cliff.top(x) - 11;
+    return this.cliff.top(x) - 11 * this.d.size;
   }
 
   eyes() {
-    const o = eyeOffset(1);
+    const o = eyeOffset(this.d);
     return { x: this.ex + o.x, y: this.ey + o.y };
   }
 
@@ -77,15 +80,18 @@ export class FindEmber {
     this.popped = false;
   }
 
-  // fires 0.1s after burst(), once ember comes up out of its crouch
+  // fires 0.1s after burst(), once the dragon comes up out of its crouch
   pop(g) {
     this.popped = true;
     const e = this.eyes();
+    const lit = this.d.colors.wingLit;
     g.cam.shake(3);
-    g.audio.cue('burst');
+    g.audio.cue('found');
+    chirp(this.me, 0.25);
+    this.me.q.reset();
     // fewer, faster sparks so they fly clear and you can actually see the wiggle
-    g.particles.burst(this.ex, this.ey - 4, 45, { speed: 210, colors: [PAL.teal, PAL.gold, PAL.gold2, '#ffffff', PAL.ember3], kind: 'spark', size: 2, drag: 2.2, life: 1.2 }, g.rng);
-    g.particles.burst(this.ex, this.ey - 4, 8, { speed: 50, colors: [PAL.teal], kind: 'glow', size: 8, drag: 1, life: 1 }, g.rng);
+    g.particles.burst(this.ex, this.ey - 4, 45, { speed: 210, colors: [lit, PAL.gold, PAL.gold2, '#ffffff', this.d.colors.body3], kind: 'spark', size: 2, drag: 2.2, life: 1.2 }, g.rng);
+    g.particles.burst(this.ex, this.ey - 4, 8, { speed: 50, colors: [lit], kind: 'glow', size: 8, drag: 1, life: 1 }, g.rng);
     g.particles.burst(e.x, e.y, 20, { speed: 60, colors: [PAL.gold2], kind: 'px', size: 1, grav: 40, drag: 1, life: 1.5 }, g.rng);
   }
 
@@ -102,6 +108,7 @@ export class FindEmber {
       // the YOU FOUND EMBER! moment: hold still, nothing else happens until it's over
       this.burstT += dt;
       if (!this.popped && this.burstT >= 0.1) this.pop(g);
+      if (this.popped) updateMember(g, this.me, dt, this.ex, this.ey, { flying: this.burstT > 0.95 });
       this.fogA = approach(this.fogA, 0, 3.5, dt);
       if (this.burstT > DUR.FIND_BURST) g.scenes.go('flight', { fromY: this.ey }, { title: 'NOW FLY HOME!' });
       return;
@@ -125,7 +132,7 @@ export class FindEmber {
     const lastResort = this.activeT > DUR.FIND_LAST_RESORT;
 
     if (near) {
-      // moving fast still counts, just slower, and ember flinches. slipping off only pauses it
+      // moving fast still counts, just slower, and the dragon flinches. slipping off only pauses it
       this.hold += (dt / DUR.FIND_HOLD) * (steady || lastResort ? 1 : 0.4);
       if (!steady && !lastResort) this.flinch = Math.min(1, this.flinch + dt * 4);
     }
@@ -140,7 +147,7 @@ export class FindEmber {
     }
     if (this.hold >= 1) return this.burst();
 
-    // last resort: ember flutters into your beam. you still have to keep it there for the hold
+    // last resort: the dragon flutters into your beam. you still have to keep it there for the hold
     if (lastResort && !near) {
       this.hopT += dt;
       const tx = clamp(this.bx, 100, W - 20);
@@ -190,7 +197,7 @@ export class FindEmber {
     const gl = this.gull;
     if (gl.perched) drawGull(ctx, gl.x, gl.y, Math.floor(t * 2.5) % 4 === 3 ? 2 : Math.floor(t * 1.5) % 2, true);
 
-    this.drawEmber(g, ctx, t);
+    this.drawLost(g, ctx, t);
 
     if (!this.found) {
       glow(ctx, bx, by, 50, PAL.gold, 0.45);
@@ -227,7 +234,7 @@ export class FindEmber {
     if (this.popped && this.burstT < 1.3) {
       const k = (this.burstT - 0.1) / 1.2;
       ctx.globalAlpha = 1 - k;
-      drawKnotRing(ctx, this.ex, this.ey - 6, 34 + ease.outCubic(k) * 120, 1, { lobes: 12, amp: 4, width: 2, on: PAL.teal });
+      drawKnotRing(ctx, this.ex, this.ey - 6, 34 + ease.outCubic(k) * 120, 1, { lobes: 12, amp: 4, width: 2, on: this.d.colors.wingLit });
       ctx.globalAlpha = 1;
     }
 
@@ -242,7 +249,10 @@ export class FindEmber {
         ctx.fillRect(0, 0, W, H);
         ctx.globalAlpha = 1;
       }
-      if (this.popped) drawTextPop(ctx, 'YOU FOUND EMBER!', W / 2, 40, (this.burstT - 0.1) * 1.6, { scale: 4, color: PAL.ember3 });
+      if (this.popped) {
+        const msg = `YOU FOUND ${this.d.name}!`;
+        drawTextPop(ctx, msg, W / 2, 40, (this.burstT - 0.1) * 1.6, { scale: fitScale(msg, W - 16, 4), color: PAL.gold2 });
+      }
     }
   }
 
@@ -255,7 +265,7 @@ export class FindEmber {
     const cy = 52;
     ctx.globalAlpha = a;
     // the demo sits in its own little framed card so it reads as a picture of what to do.
-    // loose on the sky, the demo eyes looked exactly like ember's real eyes
+    // loose on the sky, the demo eyes looked exactly like the dragon's real eyes
     ctx.fillStyle = 'rgba(8,10,24,0.85)';
     ctx.fillRect(cx - 50, cy - 13, 100, 26);
     ctx.strokeStyle = 'rgba(255,201,74,0.8)';
@@ -350,7 +360,8 @@ export class FindEmber {
     if (big) drawSparkle(ctx, e.x + 12, e.y - 12, 2 + Math.round(g.beat.pulse * 2), PAL.gold2);
   }
 
-  drawEmber(g, ctx, t) {
+  drawLost(g, ctx, t) {
+    const d = this.d;
     const look = this.bx < this.ex - 10 ? -1 : this.bx > this.ex + 30 ? 1 : 0;
     if (this.found) {
       // crouch (anticipation) -> pop up -> happy wiggle with wings flared -> flap in place
@@ -368,11 +379,15 @@ export class FindEmber {
         const p = (k - 0.35) / 0.6;
         rot = Math.sin(p * Math.PI * 5) * 0.2 * (1 - p);
         mood = 'happy';
-      } else {
-        wing = flapPose(k * 3.2);
       }
-      drawEmber(ctx, this.ex, this.ey, { mood, wing, glow: k < 0.1 ? 1 : 2, sx, sy, rot });
-      glow(ctx, this.ex - 10, this.ey - 10, 44, PAL.teal, 0.25 * (1 - clamp(k / 1.8)) + 0.12);
+      glow(ctx, this.ex - 10, this.ey - 10, 44, d.colors.wingLit, 0.25 * (1 - clamp(k / 1.8)) + 0.12);
+      // its own personality only kicks in once the wiggle is over
+      if (k < 0.95) drawDragon(ctx, this.ex, this.ey, d, { mood, wing, glow: k < 0.1 ? 1 : 2, sx, sy, rot });
+      else drawMember(ctx, this.me, this.ex, this.ey, { mood, flap: k * 3.2, glow: 2, life: t });
+      if (k < 0.95 && this.me.chirpT >= 0) {
+        const n = noseOffset(d);
+        drawChirp(ctx, this.ex + n.x, this.ey + n.y, this.me.chirpT / 0.5);
+      }
       return;
     }
     const h = this.hold;
@@ -382,10 +397,10 @@ export class FindEmber {
     const perk = h * 0.08;
     const glowLvl = h > 0.6 ? 1 : 0;
     const air = this.ey < this.restY(this.ex) - 3;
-    drawEmber(ctx, this.ex + shake, this.ey, {
+    drawDragon(ctx, this.ex + shake, this.ey, d, {
       mood, wing: air ? flapPose(t * 4) : 'folded', glow: glowLvl, look,
       life: t, sx: 1 + duck * 0.6, sy: 1 - duck + perk,
     });
-    if (h > 0.05) glow(ctx, this.ex - 4, this.ey - 6, 20 + h * 20, PAL.teal, h * 0.35);
+    if (h > 0.05) glow(ctx, this.ex - 4, this.ey - 6, 20 + h * 20, d.colors.wingLit, h * 0.35);
   }
 }

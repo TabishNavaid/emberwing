@@ -90,6 +90,7 @@ export class Audio {
       this.note(deg + 12 * (Math.random() < 0.3 ? 1 : 0), 0, 1.4, 0.06);
     }
   }
+  chirp() {}
   // one-shot cues, nothing in the game depends on hearing them
   cue(name) {
     if (!this.on) return;

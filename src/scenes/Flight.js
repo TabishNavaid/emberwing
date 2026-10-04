@@ -1,20 +1,22 @@
-import { VIEW, DUR, FLIGHT, PAL, MUSIC, MOTION } from '../config.js';
+import { VIEW, DUR, FLIGHT, PAL, MUSIC, MOTION, INPUT } from '../config.js';
 import { clamp, lerp, approach, glow, ease, mix, invLerp, mulberry32 } from '../core/util.js';
-import { drawText, drawTextPop } from '../art/font.js';
+import { drawText, drawTextPop, fitScale } from '../art/font.js';
 import { drawKnotRing, drawKnotBand } from '../art/knotwork.js';
-import { drawEmber, FLOCK_COLORS } from '../art/ember.js';
+import { drawDragon, drawSpeck } from '../art/dragon.js';
+import { flockOf, member, chirp, updateMember, drawMember } from '../art/flock.js';
 import { drawSky, SKY, makeStars, drawStars, drawSea, drawStone, drawStack, drawCloud, drawWind, drawRays, drawRune, makeCliff } from '../art/world.js';
 import { drawHorn, drawSoundLines, drawCursorLight } from '../art/icons.js';
-import { INPUT } from '../config.js';
-
-// instructions at the start of the flight, one at a time
-const FOLLOWS = 'EMBER FOLLOWS YOUR LIGHT';
-const HOOPS = 'FLY THROUGH THE HOOPS';
 import { drawBaseAurora } from '../art/aurora.js';
+
+// second instruction at the start of the flight (the first one has the dragon's name in it)
+const HOOPS = 'FLY THROUGH THE HOOPS';
+// where the flock flies around the guest's dragon after the swell, newest first.
+// a loose wedge trailing behind, so 1 or 12 of them both look like a flock
+const WEDGE = [[-36, -30], [-44, 28], [-70, -4], [-78, -50], [-84, 46], [-106, 14], [-112, -28], [-128, 60], [-138, -62], [-142, -6], [-162, 34], [-170, -40]];
 
 const { W, H } = VIEW;
 // the gate: every hoop is judged when it crosses this x, exactly on its beat. it used to be
-// judged at ember's x, and ember could chase the light to x=320, so the first hoop could
+// judged at the dragon's x, and the dragon could chase the light to x=320, so the first hoop could
 // arrive 0.8s into the flight while the screen was still fading in
 const REF_X = 150;
 const SEA_Y = 222;
@@ -24,6 +26,9 @@ export class Flight {
 
   enter(g, data = {}) {
     this.gentle = g.motion.reduced;
+    this.d = g.dragon;
+    this.me = member(this.d);
+    this.follows = `${this.d.name} FOLLOWS YOUR LIGHT`;
     const r = mulberry32(g.rng.int(1, 1e6));
     this.ex = REF_X - 30;
     this.ey = data.fromY ? clamp(data.fromY, 80, 200) : 150;
@@ -52,12 +57,16 @@ export class Flight {
     this.tutT = 0;
     this.hits = 0;
     this.countPop = 0;
-    this.prompt = FOLLOWS;
+    this.prompt = this.follows;
     this.promptT = 0;
     this.stars = makeStars(13, 80, 160);
-    this.flock = FLOCK_COLORS.map((c, i) => ({ c, i, x: -60 - i * 30, y: 60 + i * 40, ox: [-38, -52, -84, -98][i], oy: [-34, 30, -8, 42][i], trail: [] }));
+    // the swell brings out everyone who's already home tonight. nobody home yet = nobody comes,
+    // the first dragon of the night does this part on its own
+    const { near, far } = flockOf(g.store);
+    this.flock = near.reverse().map((d, i) => ({ ...member(d, i), x: -60 - i * 26, y: 50 + ((i * 37) % 160), ox: WEDGE[i][0], oy: WEDGE[i][1], trail: [] }));
+    this.distant = far.map((d, i) => ({ d, x: -20 - ((i * 53) % 200), y: 18 + ((i * 29) % 70), ph: i * 1.7, sp: 0.9 + ((i * 7) % 5) * 0.06 }));
 
-    // hoop 1 is the tutorial hoop: it parks above or below ember and waits to be flown through.
+    // hoop 1 is the tutorial hoop: it parks above or below the dragon and waits to be flown through.
     // the rest are scheduled on the timeline so each one crosses REF_X exactly on a beat.
     // always FLIGHT.HOOPS in total, so every guest gets the same flight
     const beat = 60 / MUSIC.BPM;
@@ -83,6 +92,11 @@ export class Flight {
     this.clouds = Array.from({ length: 7 }, (_, k) => ({ x: k * 110 + r() * 60, y: 40 + r() * 70, w: 70 + r() * 70, seed: k + 40 }));
   }
 
+  // everyone who's home tonight comes out at the swell: near + far is always the count
+  visibleDragons() {
+    return { near: this.flock.length, far: this.distant.length, names: this.flock.map((m) => m.d.name) };
+  }
+
   get p() {
     return clamp(this.tt / DUR.FLIGHT);
   }
@@ -103,7 +117,7 @@ export class Flight {
     return base * (1 + 0.06 * this.windup - 0.07 * punch);
   }
   ringX(ring) {
-    // the tutorial hoop glides in to ember's column and stays there
+    // the tutorial hoop glides in to the dragon's column and stays there
     if (ring.tutorial) return lerp(W + 40, this.ex, ease.outCubic(clamp(this.tutT / FLIGHT.TUT_SLIDE)));
     return REF_X + (ring.at - this.tt) * FLIGHT.SCROLL;
   }
@@ -111,7 +125,7 @@ export class Flight {
     if (ring.tutorial) return FLIGHT.TUT_R;
     return lerp(FLIGHT.RING_R_START, FLIGHT.RING_R_END, ease.inOutSine(clamp(ring.p / FLIGHT.RISE_AT)));
   }
-  // the pointer is in screen space but ember lives in the zoomed world
+  // the pointer is in screen space but the dragon lives in the zoomed world
   toWorld(x, y) {
     const z = this.zoom;
     return { x: (x - W / 2) / z + W / 2, y: (y - H / 2) / z + H / 2 + this.camY };
@@ -139,7 +153,7 @@ export class Flight {
 
   // one instruction at a time, each readable for PROMPT_MIN, then gone for the rest of the flight
   wantPrompt() {
-    if (this.prompt === FOLLOWS) return this.promptT >= DUR.PROMPT_MIN ? HOOPS : FOLLOWS;
+    if (this.prompt === this.follows) return this.promptT >= DUR.PROMPT_MIN ? HOOPS : this.follows;
     if (this.prompt === HOOPS) return !this.tutorial && this.promptT >= DUR.PROMPT_MIN ? null : HOOPS;
     return null;
   }
@@ -163,7 +177,7 @@ export class Flight {
 
     // follow the light. if nobody's pointing, autopilot to the next ring so it still looks good
     const w = this.toWorld(inp.x, inp.y);
-    // ember mostly steers up and down near the gate, a little sideways play so it feels alive
+    // the dragon mostly steers up and down near the gate, a little sideways play so it feels alive
     let tx = clamp(w.x, REF_X - FLIGHT.X_PLAY, REF_X + FLIGHT.X_PLAY);
     let ty = clamp(w.y, 34, 212);
     const next = this.nextRing();
@@ -181,12 +195,12 @@ export class Flight {
       tx = W * 0.45;
       this.riseY += dt * 150 * ease.inCubic(invLerp(FLIGHT.RISE_AT, 1, p) + 0.2);
     }
-    // camera drifts a little toward ember so high and low flying both feel framed.
-    // ember still lands right under the light on screen because toWorld adds camY back
+    // camera drifts a little toward the dragon so high and low flying both feel framed.
+    // the dragon still lands right under the light on screen because toWorld adds camY back
     this.gentle = g.motion.reduced;
     this.camY = approach(this.camY, this.gentle ? 0 : (this.ey - H / 2) * FLIGHT.CAM_FOLLOW, 2, dt);
 
-    // a little looser at first, snappier as ember gets confident
+    // a little looser at first, snappier as the dragon gets confident
     const follow = FLIGHT.FOLLOW * lerp(0.85, 1, conf);
     const ny = approach(this.ey, ty, follow, dt);
     this.vy = (ny - this.ey) / dt;
@@ -198,10 +212,11 @@ export class Flight {
     this.cheerT = Math.max(0, this.cheerT - dt);
     if (this.rollT > 0) {
       this.rollT = Math.max(0, this.rollT - dt);
-      if (g.rng() < dt * 40) g.particles.add({ x: this.ex - 10, y: this.ey + (g.rng() - 0.5) * 16, vx: -60, vy: 0, life: 0.5, color: g.rng() < 0.5 ? PAL.gold2 : PAL.teal, kind: 'spark', size: 1 });
+      if (g.rng() < dt * 40) g.particles.add({ x: this.ex - 10, y: this.ey + (g.rng() - 0.5) * 16, vx: -60, vy: 0, life: 0.5, color: g.rng() < 0.5 ? PAL.gold2 : this.d.colors.wingLit, kind: 'spark', size: 1 });
     }
     // accumulate the phase, t * speed jumps the wings whenever the speed changes
     this.flapPh += dt * (this.vy < -20 ? 4.5 : lerp(3.6, 2.4, conf));
+    updateMember(g, this.me, dt, this.ex, this.ey);
 
     if (this.tutorial) this.updateTutorial(g, dt);
 
@@ -242,7 +257,7 @@ export class Flight {
       g.cam.shake(1 + ring.p * 2);
       g.particles.burst(rx, ring.y, 26 + Math.round(ring.p * 20), { speed: 80 + ring.p * 60, colors: gold ? [PAL.gold, PAL.gold2, '#fff6d8'] : ['#bff8ee', PAL.teal, '#ffffff'], kind: 'spark', size: 2, drag: 2.5, life: 0.8 }, g.rng);
     } else {
-      // a miss is never a fail: ember does a loop and the ring's sparkles fly into it anyway
+      // a miss is never a fail: the dragon does a loop and the ring's sparkles fly into it anyway
       this.loopT = 0.75;
       this.streak = 0;
       for (let k = 0; k < 14; k++) {
@@ -252,13 +267,13 @@ export class Flight {
     }
   }
 
-  // the tutorial hoop waits at ember's column until you steer through it (or TUT_CAP runs out)
+  // the tutorial hoop waits at the dragon's column until you steer through it (or TUT_CAP runs out)
   updateTutorial(g, dt) {
     this.tutT += dt;
     const ring = this.rings[0];
     if (ring.state !== 'coming') return;
     const parked = this.tutT >= FLIGHT.TUT_SLIDE;
-    // counts as soon as ember's middle is inside the hoop. at 80% of the radius, ember visibly
+    // counts as soon as the dragon's middle is inside the hoop. at 80% of the radius, the dragon visibly
     // overlapped the hoop and still didn't count, which read as "it's broken"
     const inside = Math.abs(this.ey - ring.y) < FLIGHT.TUT_R;
     if ((parked && inside) || this.tutT >= FLIGHT.TUT_CAP) {
@@ -276,7 +291,9 @@ export class Flight {
       this.swellX = this.ex;
       this.swellY = this.ey;
       g.cam.shake(4);
-      g.audio.cue('burst');
+      g.audio.cue('swell');
+      // everyone who's home calls out as they swoop in
+      this.flock.forEach((f, i) => chirp(f, 0.35 + i * 0.11));
       // gold confetti over the whole screen
       for (let i = 0; i < 70; i++) {
         const r = g.rng;
@@ -288,8 +305,9 @@ export class Flight {
       const on = this.swellFired;
       const tx2 = on ? this.ex + f.ox : -80;
       const ty2 = on ? this.ey + f.oy + Math.sin(this.t * 2 + f.i) * 5 : f.y;
-      f.x = approach(f.x, tx2, on ? 2.2 - f.i * 0.25 : 1, dt);
-      f.y = approach(f.y, ty2, 2.4 - f.i * 0.3, dt);
+      f.x = approach(f.x, tx2, on ? 2.2 - Math.min(f.i, 8) * 0.18 : 1, dt);
+      f.y = approach(f.y, ty2, 2.4 - Math.min(f.i, 8) * 0.2, dt);
+      updateMember(g, f, dt, f.x, f.y, { scale: 0.72 });
       // light trails so the swoop-in reads from across the room
       if (on) {
         f.trail.push({ x: this.camX + f.x, y: f.y });
@@ -343,6 +361,15 @@ export class Flight {
       drawCloud(ctx, x, c.y + this.riseY * 0.5, c.w, mix(mix('#2a3a52', '#f0a890', conf), '#1a2440', rise), c.seed, 0.45 + conf * 0.2);
     }
 
+    // dragons from earlier tonight that don't fit up close, out in the far sky
+    if (this.swellFired) {
+      const k = ease.outCubic(clamp(this.swellT / 2.5));
+      for (const f of this.distant) {
+        const x = lerp(f.x, 30 + ((f.ph * 97) % 420), k) + Math.sin(t * 0.7 * f.sp + f.ph) * 6;
+        drawSpeck(ctx, x, f.y + Math.sin(t * 1.3 + f.ph) * 3 + this.riseY * 0.3, f.d, t);
+      }
+    }
+
     // sea and islands drop away during the climb
     ctx.save();
     ctx.translate(0, Math.round(this.riseY - this.camY * this.zoom));
@@ -354,7 +381,7 @@ export class Flight {
 
     drawWind(ctx, t, g.beat, { lanes: [0.2, 0.46, 0.7], alpha: 0.25 + conf * 0.2 + swell * 0.2, color: conf > 0.5 ? '#ffe8b0' : '#bfe8ff', speed: 160, thick: this.swellFired });
 
-    // camera starts close and pulls back as ember gets confident. sky and sea stay unzoomed
+    // camera starts close and pulls back as the dragon gets confident. sky and sea stay unzoomed
     // because they're full-width cached images and would show their edges
     const z = this.zoom;
     ctx.save();
@@ -386,7 +413,7 @@ export class Flight {
       for (let i = 1; i < f.trail.length; i++) {
         const k = i / f.trail.length;
         ctx.globalAlpha = k * 0.6;
-        ctx.fillStyle = f.c.wingLit;
+        ctx.fillStyle = f.d.colors.wingLit;
         ctx.fillRect(Math.round(f.trail[i].x - this.camX - 10), Math.round(f.trail[i].y + 3), 2, 1 + Math.round(k * 2));
       }
       ctx.globalAlpha = 1;
@@ -401,11 +428,12 @@ export class Flight {
         ctx.globalAlpha = 1;
       }
     }
-    for (const f of this.flock) {
+    for (let i = this.flock.length - 1; i >= 0; i--) {
+      const f = this.flock[i];
       if (f.x < -50) continue;
-      drawEmber(ctx, f.x, f.y, { mood: 'fly', flap: t * 2.6 + f.i * 0.21, life: t, glow: 2, colors: f.c, ci: f.i, scale: 0.78, rot: Math.sin(t * 2 + f.i) * 0.06 });
+      drawMember(ctx, f, f.x, f.y, { mood: 'fly', flap: t * 2.6 + f.i * 0.21, life: t, glow: 2, scale: 0.72, rot: Math.sin(t * 2 + f.i) * 0.06 });
     }
-    this.drawEmberFlying(g, ctx, t, conf);
+    this.drawFlyer(g, ctx, t, conf);
     g.particles.draw(ctx, 0);
     ctx.restore();
     g.particles.draw(ctx, 1);
@@ -413,7 +441,7 @@ export class Flight {
     this.drawJourney(ctx, p, t);
     this.drawCounter(ctx);
     if (this.prompt) {
-      drawText(ctx, this.prompt, W / 2, 30, { scale: 3, align: 'center', color: PAL.cream, alpha: clamp(this.promptT / 0.25) });
+      drawText(ctx, this.prompt, W / 2, 30, { scale: fitScale(this.prompt, W - 10), align: 'center', color: PAL.cream, alpha: clamp(this.promptT / 0.25) });
     }
     this.drawGuides(ctx, g.input.x, g.input.y, t);
     if (this.swellFired && this.swellT < 0.4) {
@@ -431,28 +459,28 @@ export class Flight {
     }
     if (rise > 0.1) drawText(ctx, 'HOME IS UP THERE', W / 2, 236, { scale: 2, align: 'center', color: '#bff8ee', alpha: clamp(rise * 3) });
 
-    if (this.prompt !== FOLLOWS) this.drawTether(ctx, g.input.x, g.input.y, t);
+    if (this.prompt !== this.follows) this.drawTether(ctx, g.input.x, g.input.y, t);
     drawCursorLight(ctx, g.input.x, g.input.y, t, 1);
   }
 
-  // ember's position on screen (it lives in the zoomed world)
-  emberOnScreen() {
+  // the dragon's position on screen (it lives in the zoomed world)
+  dragonOnScreen() {
     const z = this.zoom;
     return { x: (this.ex - W / 2) * z + W / 2, y: (this.ey - this.camY - H / 2) * z + H / 2 };
   }
 
-  // teaching arrows: light -> ember while "EMBER FOLLOWS YOUR LIGHT" is up, then a bouncing
-  // chevron from ember toward the tutorial hoop while it's waiting
+  // teaching arrows: light -> dragon while "PIP FOLLOWS YOUR LIGHT" is up, then a bouncing
+  // chevron from the dragon toward the tutorial hoop while it's waiting
   drawGuides(ctx, lx, ly, t) {
-    const e = this.emberOnScreen();
-    if (this.prompt === FOLLOWS) {
+    const e = this.dragonOnScreen();
+    if (this.prompt === this.follows) {
       const d = Math.hypot(e.x - lx, e.y - ly);
       if (d > 30) {
         const ux = (e.x - lx) / d;
         const uy = (e.y - ly) / d;
         ctx.fillStyle = PAL.gold2;
         for (let s = 10 + ((t * 40) % 8); s < d - 30; s += 8) ctx.fillRect(Math.round(lx + ux * s) - 1, Math.round(ly + uy * s) - 1, 3, 3);
-        // arrowhead pointing at ember
+        // arrowhead pointing at the dragon
         const hx = e.x - ux * 26;
         const hy = e.y - uy * 26;
         for (let i = 0; i < 7; i++) {
@@ -512,19 +540,19 @@ export class Flight {
     for (let i = -6; i <= 6; i++) ctx.fillRect(hx + i, y - 7 + Math.round((i * i) / 12), 1, 2);
     ctx.fillStyle = '#56698a';
     for (const [dx, h] of [[-5, 6], [0, 8], [5, 6]]) ctx.fillRect(hx + dx - 1, y + 5 - h, 3, h);
-    // ember marker: orange body, teal wing, one eye
+    // the dragon's marker, in its own colors: body, wing, one eye
     const bob = Math.round(Math.sin(t * 6) * 1);
-    ctx.fillStyle = PAL.teal;
+    ctx.fillStyle = this.d.colors.wingLit;
     ctx.fillRect(px - 4, y - 6 + bob, 4, 3);
-    ctx.fillStyle = PAL.ember;
+    ctx.fillStyle = this.d.colors.body;
     ctx.fillRect(px - 3, y - 3 + bob, 7, 6);
     ctx.fillRect(px + 3, y - 4 + bob, 3, 4);
     ctx.fillStyle = '#1b1030';
     ctx.fillRect(px + 4, y - 3 + bob, 1, 1);
   }
 
-  // dotted light from the guest's light to ember when they drift apart, so it's obvious
-  // ember is following YOU
+  // dotted light from the guest's light to the dragon when they drift apart, so it's obvious
+  // the dragon is following YOU
   drawTether(ctx, x, y, t) {
     const z = this.zoom;
     const ex = (this.ex - W / 2) * z + W / 2;
@@ -579,7 +607,7 @@ export class Flight {
     ctx.globalAlpha = 1;
   }
 
-  drawEmberFlying(g, ctx, t, conf) {
+  drawFlyer(g, ctx, t, conf) {
     const wob = FLIGHT.WOBBLE * (1 - conf);
     const wx = Math.sin(t * 9.3) * wob * 0.5;
     const wy = Math.sin(t * 7.1) * wob + Math.sin(t * 13) * wob * 0.3;
@@ -606,10 +634,11 @@ export class Flight {
     if (this.loopT > 0 || this.rollT > 0) mood = 'joy';
     else if (this.cheerT > 0) mood = 'happy';
     const glide = this.vy > 60 && conf > 0.4;
-    glow(ctx, x - 6, y - 6, 26, PAL.teal, 0.3 + conf * 0.2);
-    drawEmber(ctx, x, y, {
-      mood, glow: 2, rot, sx: sxw, sy, life: t,
-      ...(glide ? { wing: 'mid' } : { flap: this.flapPh }),
-    });
+    glow(ctx, x - 6, y - 6, 26, this.d.colors.wingLit, 0.3 + conf * 0.2);
+    // its quirk goes on top, except while it's busy with a hoop trick
+    const busy = this.loopT > 0 || this.rollT > 0;
+    const o = { mood, glow: 2, rot, sx: sxw, sy, life: t, ...(glide ? { wing: 'mid' } : { flap: this.flapPh }) };
+    if (busy) drawDragon(ctx, x, y, this.d, o);
+    else drawMember(ctx, this.me, x, y, o);
   }
 }

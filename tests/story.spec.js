@@ -11,7 +11,7 @@ test('home shows the act II line before the end card', async ({ page }) => {
   expect(await at(2.5)).toBe(true); // 4.5s in
 });
 
-test('find ember teaches one thing at a time, and the ring never resets', async ({ page }) => {
+test('find teaches one thing at a time, and the ring never resets', async ({ page }) => {
   await boot(page, '&scene=find');
   const r = await page.evaluate(() => {
     const w = window.__emberwing;
@@ -24,7 +24,7 @@ test('find ember teaches one thing at a time, and the ring never resets', async 
       for (let i = 0; i < secs * 20; i++) {
         const e = f().eyes();
         if (aim) inp.feed(e.x, e.y, 'mouse');
-        else inp.feed(60 + (i % 40) * 3, 60, 'mouse'); // sweeping around up top, nowhere near ember
+        else inp.feed(60 + (i % 40) * 3, 60, 'mouse'); // sweeping around up top, nowhere near the dragon
         w.step(0.05);
         log.push(f().prompt);
       }
@@ -55,8 +55,15 @@ test('find ember teaches one thing at a time, and the ring never resets', async 
 });
 
 test('brass swell: wind-up, then it fires on time and the flock joins', async ({ page }) => {
-  await boot(page, '&scene=flight');
-  await page.evaluate(() => window.__emberwing.pause(true));
+  await boot(page);
+  // the flock is whoever is already home tonight, so put three dragons home first
+  await page.evaluate(() => {
+    const w = window.__emberwing;
+    w.pause(true);
+    w.game.store.clear();
+    for (let i = 0; i < 3; i++) w.game.store.add([[0, 0.5], [1, 0.4]], i);
+    w.goto('flight');
+  });
   // keep the light moving or the 10s idle reset sends us back to attract
   const at = (t) => page.evaluate((t) => {
     const w = window.__emberwing;
@@ -65,7 +72,7 @@ test('brass swell: wind-up, then it fires on time and the flock joins', async ({
       w.step(0.1);
     }
     const f = w.game.scenes.current;
-    return { windup: f.windup, fired: f.swellFired, flockX: f.flock[0].x };
+    return { windup: f.windup, fired: f.swellFired, flock: f.flock.length, flockX: Math.min(...f.flock.map((m) => m.x)) };
   }, t);
   // step until the wind-up starts (the swell timeline only begins after the tutorial hoop)
   let before = await at(0.5);
@@ -74,6 +81,7 @@ test('brass swell: wind-up, then it fires on time and the flock joins', async ({
   expect(before.fired).toBe(false);
   const after = await at(1.6);
   expect(after.fired).toBe(true);
+  expect(after.flock).toBe(3);
   expect(after.flockX).toBeGreaterThan(0);
 });
 

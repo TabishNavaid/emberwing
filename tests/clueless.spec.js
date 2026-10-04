@@ -63,7 +63,7 @@ test('clueless guests: the game teaches, never finishes itself, and everyone get
     // no finishing itself before the guest has had a real chance to learn it
     expect(r.findDone).toBeGreaterThanOrEqual(10);
     // every instruction readable for 2s. the only one allowed to end sooner is the last one in
-    // find ember, because it ends when the guest succeeds
+    // find, because it ends when the guest succeeds
     r.prompts.forEach(([scene, , secs], i) => {
       const endedBySuccess = scene === 'find' && (i === r.prompts.length - 1 || r.prompts[i + 1][0] !== 'find');
       if (!endedBySuccess) expect(secs).toBeGreaterThanOrEqual(1.99);

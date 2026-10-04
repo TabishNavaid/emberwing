@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, startRun, findEmber, fly, watch, waitScene } from './helpers.js';
+import { boot, startRun, findDragon, fly, watch, waitScene } from './helpers.js';
 
 // several guests in a row on the same page, the way the lobby actually runs it
 
@@ -37,7 +37,7 @@ test('cold first run and a second run both give every hoop a real chance', async
   const runs = [];
   for (let run = 0; run < 2; run++) {
     await startRun(page);
-    await findEmber(page);
+    await findDragon(page);
     await waitScene(page, 'flight', 60_000);
     await fly(page);
     await waitScene(page, 'home', 60_000);

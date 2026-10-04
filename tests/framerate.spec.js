@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, state, startRun, findEmber, fly, watch, waitScene } from './helpers.js';
+import { boot, state, startRun, findDragon, fly, watch, waitScene } from './helpers.js';
 
 // a slow lobby laptop shouldn't make runs longer, the game clock has to keep up with real time
 
@@ -49,7 +49,7 @@ test.describe.serial('full run at a low frame rate', () => {
     await boot(page);
     await startRun(page);
     const t0 = Date.now();
-    await findEmber(page);
+    await findDragon(page);
     await waitScene(page, 'flight', 60_000);
     await fly(page);
     await waitScene(page, 'home', 60_000);
