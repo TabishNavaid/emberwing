@@ -46,8 +46,11 @@ Stand 15 ft from the wall (measure it), at the far edge of where the line will b
 
 Start the stopwatch the moment the lantern ring finishes filling. Stop it when the attract screen is back.
 
-- [ ] Run 1, finding Ember quickly: ____ s (expect about 38)
-- [ ] Run 2, someone who "can't find it" (wave the light around the top of the screen): ____ s (expect about 40.5, never over 45)
+- [ ] Run 1, someone who knows the game: ____ s (expect about 40)
+- [ ] Run 2, someone who "can't find it" (wave the light around the top of the screen): ____ s (expect about 49, around 50 at most)
+- [ ] Run 3, a first-timer who has never seen it (grab someone, explain nothing): ____ s, and write down the first moment they looked confused: ____
+- [ ] Do the instructions (MOVE YOUR LIGHT / FIND THE EYES / HOLD STILL, then EMBER FOLLOWS YOUR LIGHT / FLY THROUGH THE HOOPS) read from 15 ft? ____
+- [ ] Does the first-timer get through the waiting tutorial hoop on their own? ____
 - [ ] Ember follows the light without lag or jitter? ____
 - [ ] The dragon count went up by one after each run
 

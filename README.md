@@ -67,13 +67,14 @@ The aurora (every guest's ribbon, plus the "N dragons home tonight" count) is sa
 | Scene | Target | Notes |
 |---|---|---|
 | Attract | loop | 1 s hold on the lantern starts a run |
-| Find Ember | ~5-8 s | Opens with "EMBER IS LOST!", then a 2 s steady hold on the eyes. Assists at 3 s (sparks lead the way), 4.5 s (Ember hops to the light) and 7 s (auto-complete) |
-| Flight | 20 s fixed | Rings on the beat (120 BPM), a lighthouse-to-home track across the top. Brass swell at 62% (with a ~0.7 s wind-up), climb at 90% |
+| Title card | 1.3 s | "EMBER IS LOST!" before Find Ember, "NOW FLY HOME!" before the flight. The next scene is paused underneath (`DUR.TITLE`) |
+| Find Ember | ~5-15 s | One instruction at a time, each up at least 2 s: MOVE YOUR LIGHT, FIND THE EYES, HOLD STILL (with a tiny framed demo). The hold ring sits on the eyes and pauses (never resets) when the light slips off. Hints get stronger with active pointing time: bigger eyes at 4 s, a dotted trail to the eyes at 6.5 s, the beam leaning toward them at 9 s. Ember only comes to the light as a last resort at 10.5 s, and the guest still does the hold. Then a 1.6 s "YOU FOUND EMBER!" moment |
+| Flight | ~2-5 s tutorial + 18 s | EMBER FOLLOWS YOUR LIGHT (with an arrow), then FLY THROUGH THE HOOPS. Hoop 1 waits next to Ember until you fly through it (5 s cap), then the timeline starts: 7 more hoops, one every 2 s on the beat, always 8 in total with a "3 / 8" counter. Brass swell at 62% of the timeline, climb at 90%. Autopilot only after 3 s of a still pointer |
 | Home | 6.5 s | Ribbon lifts into the aurora, a shimmer runs across the sky, the counter rolls up, then "HEAR IT LIVE IN ACT II" |
 | End card | 3 s | "ACT II", the title, "LISTEN FOR THE BRASS!". Hold the small lantern to skip |
 | Scene fades | 0.4 s | `DUR.FADE` |
 
-Measured by the Playwright suite: **~38 s** for a typical guest, **~40.5 s** for a guest who never finds Ember on their own (the test fails above 41 s). **Idle reset:** 10 s without input during Find Ember or Flight returns to attract. The assists only count time while someone is actually pointing, so an abandoned game resets instead of playing itself.
+Measured by the Playwright suite: **~40 s** for a guest who knows what to do, **~49 s** for one who never finds Ember on their own (the test fails above 50 s), and about 52 s for a completely clueless guest who wanders the whole time (`tests/clueless.spec.js`, notes in `notes/clueless-after.md`). **Idle reset:** 10 s without input during Find Ember or Flight returns to attract. The assists only count time while someone is actually pointing, so an abandoned game resets instead of playing itself.
 
 **Slow laptops:** the game clock follows real time even when frames drop (it catches up in small steps, `LOOP` in `config.js`), so a choppy laptop doesn't make runs longer. Below about 4 fps it starts to slow down, and a frozen or backgrounded tab only moves the game forward a quarter second when it comes back. The YOURS! label after a run lasts `DUR.YOURS_LABEL` (15 s).
 
@@ -162,6 +163,8 @@ This builds the site, serves it, and runs Playwright:
 - **`tests/fullrun.spec.js`**: a scripted guest plays a whole run by pointer only. It asserts 35-45 s, that the ribbon persists across a refresh, that a guest who never finds Ember still finishes in time, and that the end card can be skipped.
 - **`tests/idle.spec.js`**: walking away during Find Ember or Flight resets to attract after about 10 s.
 - **`tests/input.spec.js`**: the mocap pointer path, the clear confirmation, the portrait "rotate your phone" hint, and the touch offset.
+- **`tests/runs.spec.js`**: three flights in a row on one page all reach Home, and a cold first run and a second run both get all 8 hoops, each on screen at least 1.5 s before it arrives.
+- **`tests/clueless.spec.js`**: three wandering guests in a row: Find Ember never finishes before 10 s, every instruction is up at least 2 s, every run gets the same 8 hoops.
 - **`tests/story.spec.js`**: the story beats show up when they should: "EMBER IS LOST!" first, the Act II line during Home, the brass swell's wind-up, firing and flock join, and "YOURS!" on attract after a finished run (but not after an idle reset).
 - **`tests/framerate.spec.js`**: at 8 fps the game clock still keeps real time, a frozen tab only nudges the game forward, and a full run at ~8 fps lands within 2 s of a normal one.
 - **`tests/motion.spec.js`**: reduced motion follows the OS setting, **G** cycles and is remembered, no shake and a calmer camera when reduced.
