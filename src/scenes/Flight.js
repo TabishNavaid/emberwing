@@ -258,7 +258,9 @@ export class Flight {
     const ring = this.rings[0];
     if (ring.state !== 'coming') return;
     const parked = this.tutT >= FLIGHT.TUT_SLIDE;
-    const inside = Math.abs(this.ey - ring.y) < FLIGHT.TUT_R * 0.8;
+    // counts as soon as ember's middle is inside the hoop. at 80% of the radius, ember visibly
+    // overlapped the hoop and still didn't count, which read as "it's broken"
+    const inside = Math.abs(this.ey - ring.y) < FLIGHT.TUT_R;
     if ((parked && inside) || this.tutT >= FLIGHT.TUT_CAP) {
       ring.gateAt = this.t;
       this.resolveRing(g, ring, this.ringX(ring), parked && inside);
