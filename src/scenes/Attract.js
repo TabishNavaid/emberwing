@@ -38,6 +38,7 @@ export class Attract {
     if (!g.dragon || g.dragon.home) g.dragon = nextLostDragon(g);
     this.flockVersion = -1;
     this.syncFlock(g);
+    g.audio.section('attract');
     // only after a finished run. an idle reset means nobody made it home this time
     this.yoursT = 0;
     const rs = g.store.ribbons;
@@ -112,7 +113,7 @@ export class Attract {
     }
     this.flock.forEach((m, i) => {
       const p = this.slot(i, this.t);
-      updateMember(g, m, dt, p.x, p.y, { scale: 0.36, flip: p.z > 0 });
+      updateMember(g, m, dt, p.x, p.y, { scale: 0.36, flip: p.z > 0, quiet: true });
     });
     this.pageT += dt;
     this.flip = Math.min(1, this.flip + dt / 0.55);
@@ -123,7 +124,8 @@ export class Attract {
       this.pageT = 0;
       this.flip = 0;
     }
-    if (!this.starting && this.dwell.update(g.input, dt)) this.start(g);
+    // nobody can start until the operator has started the station (see the gate in main.js)
+    if (!this.starting && !g.gate && this.dwell.update(g.input, dt)) this.start(g);
     if (this.dwell.hover && !this.starting && g.rng() < dt * 30) {
       const a = g.rng() * Math.PI * 2;
       const p = this.dwell.progress;

@@ -95,6 +95,33 @@ game.scenes = new SceneManager(game, {
 });
 game.op = new Operator(game);
 
+// browsers keep sound locked until someone presses a key or touches the screen. on the lobby
+// laptop the operator presses any key once to start the station (M starts it silent instead).
+// phones skip that, the first touch turns the sound on
+const touchFirst = !!window.matchMedia?.('(hover: none) and (pointer: coarse)').matches;
+game.gate = !touchFirst && game.audio.needsGesture;
+game.audio.ctx?.addEventListener('statechange', () => {
+  if (game.audio.ctx.state === 'running') game.gate = false;
+});
+const NOT_A_PRESS = ['Shift', 'Control', 'Alt', 'Meta', 'Escape', 'CapsLock', 'Fn'];
+window.addEventListener('keydown', (e) => {
+  if (NOT_A_PRESS.includes(e.key)) return;
+  game.audio.unlock();
+  if (!game.gate) return;
+  game.gate = false;
+  // the key that starts the station doesn't also do its hotkey (S would start a run), except M
+  if (e.key.toLowerCase() !== 'm') {
+    e.stopImmediatePropagation();
+    e.preventDefault();
+  }
+}, { capture: true });
+for (const ev of ['pointerdown', 'touchend']) {
+  window.addEventListener(ev, () => {
+    game.audio.unlock();
+    game.gate = false;
+  }, { passive: true });
+}
+
 function step(dt) {
   game.time += dt;
   keys(dt);
@@ -118,6 +145,8 @@ function render() {
   ctx.fillRect(0, 0, W, H);
   game.scenes.draw(ctx);
   game.op.draw(ctx);
+  // a short delay so a browser that starts audio a moment late doesn't flash the gate
+  if (game.gate && game.time > 0.5) game.op.drawGate(ctx);
 
   dctx.fillStyle = '#000';
   dctx.fillRect(0, 0, display.width, display.height);
@@ -159,6 +188,8 @@ window.__emberwing = {
     count: game.store.count,
     dragon: game.dragon.name,
     route: game.route,
+    gate: game.gate,
+    sound: game.audio.status,
     runs: game.runs.slice(),
     target: game.scenes.current?.target?.(game) ?? null,
   }),

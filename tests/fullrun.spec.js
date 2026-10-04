@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, state, startRun, findDragon, fly, watch, waitScene, hover } from './helpers.js';
+import { boot, state, startRun, findDragon, fly, watch, waitScene, hover, reload } from './helpers.js';
 
 const MIN = 35;
 const MAX = 50;
@@ -33,8 +33,7 @@ test('a guest who finds the dragon plays a full run in 35-50s and returns to att
   expect(errors).toEqual([]);
 
   // ribbon has to survive a refresh
-  await page.reload();
-  await page.waitForFunction(() => document.body.classList.contains('ready'));
+  await reload(page);
   expect((await state(page)).count).toBe(1);
 });
 

@@ -17,20 +17,21 @@ export const DUR = {
   PROMPT_MIN: 2.0, // an instruction stays up at least this long before the next one can replace it
   FIND_MOVE_TO_LEARN: 60, // internal px of moving the light before "MOVE YOUR LIGHT" is done
   // hints only get stronger, they never play for you. the clock only runs while someone is pointing.
-  // (the old version hopped ember into the beam at 4.5s and finished itself at 7s, so a guest who
+  // (the old version hopped the dragon into the beam at 4.5s and finished itself at 7s, so a guest who
   // had no idea what was going on still "won" before understanding anything)
   FIND_HINT_BIG: 4.0, // eyes get bigger and brighter
   FIND_HINT_TRAIL: 6.5, // sparkle trail from the light to the eyes
   FIND_HINT_PULL: 9.0, // the beam drifts a little toward the eyes
   FIND_PULL_MAX: 0.35, // ...but only this fraction of the way, you still have to get there
-  FIND_LAST_RESORT: 10.5, // ember flutters into your beam, you still do the hold (done ~12.5-13s)
+  FIND_LAST_RESORT: 10.5, // the dragon flutters into your beam, you still do the hold (done ~12.5-13s)
   FIND_HARD_CAP: 13.0, // truly stuck (light parked off in a corner), the ring fills anyway
-  FIND_BURST: 1.6, // the "YOU FOUND EMBER!" moment, everything holds still for this long
+  FIND_BURST: 1.6, // the "YOU FOUND PIP!" moment, everything holds still for this long
 
   FLIGHT: 18.0, // the timeline after the tutorial hoop. fixed, doesn't depend on how well you fly
   // home was 6.5. the dragon card at the end now carries the act II line for 5s, so home only
-  // needs to land the ribbon and the counter (keeps the worst-case run under ~50s)
-  HOME: 5.0,
+  // needs to land the ribbon and the counter. 4.6 and not 5 because the flight timeline now snaps
+  // to the beat (up to 0.25s later), and the worst-case run has to stay under 50s
+  HOME: 4.6,
   CELEBRATE: 3.6, // every FLOCK.CELEBRATE_EVERY-th dragon, home runs this much longer for the flyover
   END: 5.0, // the dragon card, long enough to snap a photo of it
   END_SKIP_DWELL: 1.0,
@@ -44,7 +45,9 @@ export const DUR = {
 // fractions of DUR.FLIGHT
 export const FLIGHT = {
   WOBBLY_UNTIL: 0.3, // shaky wings, small silver rings
-  SWELL_AT: 0.62, // brass swell: rays, camera pulls back, flock joins
+  // brass swell: rays, camera pulls back, flock joins. 12s into the timeline, which is the
+  // downbeat of a bar, so the brass chord lands right on the music (it was 0.62)
+  SWELL_AT: 2 / 3,
   SWELL_WINDUP: 0.035, // the "breath in" before the swell (~0.7s)
   RISE_AT: 0.9, // climb toward the aurora, no more rings
   HOOPS: 8, // every guest gets exactly this many: 1 tutorial hoop + the rest on the beat
@@ -58,13 +61,13 @@ export const FLIGHT = {
   SCROLL: 110, // internal px/sec
   RING_R_START: 24, // hoop radius in internal px, grows over the flight (was 15, too small to aim for)
   RING_R_END: 34,
-  FOLLOW: 12, // how tightly ember chases the light. 7.5 felt like steering a boat
-  X_PLAY: 40, // how far ember can drift left/right of the gate (internal px)
+  FOLLOW: 12, // how tightly the dragon chases the light. 7.5 felt like steering a boat
+  X_PLAY: 40, // how far the dragon can drift left/right of the gate (internal px)
   WOBBLE: 3, // px of early wobble, fades out as it gets confident (7 fought the guest's steering)
   MAGNET: 0.35, // gentle pull toward the next ring, 0 turns it off
   ZOOM_START: 1.18,
   ZOOM_END: 0.86,
-  CAM_FOLLOW: 0.12, // how much the camera drifts toward ember vertically, 0 = locked
+  CAM_FOLLOW: 0.12, // how much the camera drifts toward the dragon vertically, 0 = locked
 };
 
 // the game clock follows real time even when frames drop. a slow frame gets split into
@@ -90,7 +93,7 @@ export const INPUT = {
   IDLE_MOVE_EPS: 3, // internal px. smaller than this is jitter, not a person
   GONE_AFTER: 3.0, // flight autopilot only after the pointer's been still this long (was 1.5)
   STEADY_SPEED: 0.35, // screen-widths/sec. under this counts as holding steady
-  LOCK_RADIUS: 26, // internal px from ember's eyes
+  LOCK_RADIUS: 26, // internal px from the dragon's eyes
   // one-euro filter settings per input source. mocap is way jittier so it gets smoothed harder
   FILTER: {
     mouse: { minCutoff: 3.0, beta: 0.02 },
@@ -100,7 +103,7 @@ export const INPUT = {
   },
   KEY_SPEED: 220, // arrow keys, desk testing only
   // on phones the light sits this far above your fingertip (internal px, ~40 css px on a phone)
-  // otherwise your finger covers the light and ember
+  // otherwise your finger covers the light and the dragon
   TOUCH_LIFT: 26,
   // mocap calibration (K)
   CAL_INSET: 30, // corner targets sit this far in from the edges, nobody can aim at the very corner

@@ -11,7 +11,10 @@ page.on('pageerror', (e) => errs.push(e.message));
 page.on('console', (m) => m.type() === 'error' && errs.push(m.text()));
 await page.goto(`http://localhost:5173/?seed=3&scene=${scene}`);
 await page.waitForFunction(() => document.body.classList.contains('ready'));
-await page.evaluate(() => window.__emberwing.pause(true));
+await page.evaluate(() => {
+  window.__emberwing.pause(true);
+  window.__emberwing.game.gate = false; // as if the operator already started the station
+});
 if (flags.x) await page.evaluate(([x, y]) => { const i = window.__emberwing.game.input; i.feed(+x, +y, 'mouse'); }, [flags.x, flags.y]);
 if (flags.setup) await page.evaluate(flags.setup);
 await page.evaluate((t) => window.__emberwing.step(+t), t);

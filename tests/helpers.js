@@ -1,8 +1,18 @@
-// a scripted "guest". only ever moves the pointer, never clicks, same as the mocap rig
-export async function boot(page, query = '') {
+// a scripted "guest". only ever moves the pointer, never clicks, same as the mocap rig.
+// station: press a key first like the operator does, browsers keep sound (and so the game)
+// waiting for that. the sound tests turn it off to check the waiting screen itself
+export async function boot(page, query = '', { station = true } = {}) {
   await page.goto('./?seed=5' + query);
+  await ready(page, station);
+}
+export async function reload(page) {
+  await page.reload();
+  await ready(page);
+}
+async function ready(page, station = true) {
   // interval polling, the default polls on requestAnimationFrame which some tests replace
   await page.waitForFunction(() => document.body.classList.contains('ready'), null, { polling: 50 });
+  if (station && (await state(page)).gate) await page.keyboard.press('Enter');
 }
 export const state = (page) => page.evaluate(() => window.__emberwing.state());
 export const toScreen = (page, x, y) => page.evaluate(([x, y]) => window.__emberwing.toScreen(x, y), [x, y]);

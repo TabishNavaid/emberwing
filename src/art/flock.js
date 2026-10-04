@@ -28,7 +28,8 @@ export function chirp(m, delay = 0) {
 }
 
 // x/y/scale/flip: where the scene is drawing this member right now
-export function updateMember(g, m, dt, x, y, { scale = 1, flip = false, flying = true } = {}) {
+// quiet: sparks but no sneeze sound (a dozen dragons sneezing on attract got noisy)
+export function updateMember(g, m, dt, x, y, { scale = 1, flip = false, flying = true, quiet = false } = {}) {
   if (m.chirpIn !== undefined) {
     m.chirpIn -= dt;
     if (m.chirpIn <= 0) {
@@ -41,13 +42,13 @@ export function updateMember(g, m, dt, x, y, { scale = 1, flip = false, flying =
     m.chirpT += dt;
     if (m.chirpT > CHIRP) m.chirpT = -1;
   }
-  if (m.q.update(dt, flying) === 'sneeze') sneeze(g, m.d, x, y, scale, flip);
+  if (m.q.update(dt, flying) === 'sneeze') sneeze(g, m.d, x, y, scale, flip, quiet);
 }
 
-export function sneeze(g, d, x, y, scale = 1, flip = false) {
+export function sneeze(g, d, x, y, scale = 1, flip = false, quiet = false) {
   const n = noseOffset(d, scale, flip);
   g.particles.burst(x + n.x, y + n.y, 9, { speed: 70, angle: flip ? Math.PI : 0, spread: 1.2, colors: [PAL.gold2, PAL.amber, '#ffffff'], kind: 'spark', size: 1, drag: 3, life: 0.5 }, g.rng);
-  g.audio.cue('sneeze');
+  if (!quiet) g.audio.cue('sneeze');
 }
 
 // draws one member with its quirk on top of the scene's own pose

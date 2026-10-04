@@ -22,6 +22,7 @@ export class FindDragon {
     const r = g.rng;
     this.d = g.dragon;
     this.me = member(this.d);
+    g.audio.section('find');
     this.lighthouseCliff = makeCliff({ seed: 5, x0: 0, x1: 126, top: 128, rough: 4, taperR: 30 });
     this.cliff = makeCliff({ seed: 11 + Math.floor(r() * 50), x0: 84, x1: W, top: 196, rough: 12 });
     // different hiding spot each run, and never right where the light already is (it starts
@@ -105,7 +106,7 @@ export class FindDragon {
   update(g, dt) {
     const inp = g.input;
     if (this.found) {
-      // the YOU FOUND EMBER! moment: hold still, nothing else happens until it's over
+      // the YOU FOUND PIP! moment: hold still, nothing else happens until it's over
       this.burstT += dt;
       if (!this.popped && this.burstT >= 0.1) this.pop(g);
       if (this.popped) updateMember(g, this.me, dt, this.ex, this.ey, { flying: this.burstT > 0.95 });

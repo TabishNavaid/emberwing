@@ -32,6 +32,7 @@ export class EndCard {
     this.me = member(this.d);
     this.me.q.reset();
     chirp(this.me, 0.35);
+    g.audio.section('card');
     g.audio.cue('card');
   }
 

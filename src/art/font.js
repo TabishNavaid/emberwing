@@ -47,6 +47,7 @@ const G = {
   "'": ['#', '#', '.', '.', '.', '.', '.'],
   '-': ['...', '...', '...', '###', '...', '...', '...'],
   '+': ['.....', '..#..', '..#..', '#####', '..#..', '..#..', '.....'],
+  '=': ['.....', '.....', '#####', '.....', '#####', '.....', '.....'],
   '/': ['....#', '...#.', '...#.', '..#..', '.#...', '.#...', '#....'],
   '&': ['.#...', '#.#..', '#.#..', '.#...', '#.#.#', '#..#.', '.##.#'],
   '(': ['.#', '#.', '#.', '#.', '#.', '#.', '.#'],
@@ -80,7 +81,7 @@ function paint(ctx, str, x, y, scale, color) {
 }
 
 // outline thickness in internal px. it used to be 1 font-pixel, which at scale 5-7 turned
-// into big black slabs around EMBER! and ACT II. 2px still reads over fog and aurora
+// into big black slabs around SOAR! and ACT II. 2px still reads over fog and aurora
 const outlineW = (scale, outline) => (outline ? Math.min(scale, 2) : 0);
 
 const cache = new Map();
@@ -118,7 +119,7 @@ export function drawText(ctx, str, x, y, { scale = 1, color = '#fff', outline = 
   ctx.globalAlpha = pa;
 }
 
-// springy pop-in for the big one-word moments (EMBER!, FLY!, HOME!)
+// springy pop-in for the big one-word moments (SOAR!, PIP IS HOME!)
 export function drawTextPop(ctx, str, x, y, t, opts = {}) {
   const scale = opts.scale ?? 3;
   const s = textSprite(str, scale, opts.color ?? '#fff', opts.outline ?? '#0b0f1a');

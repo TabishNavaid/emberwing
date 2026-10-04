@@ -1,11 +1,12 @@
 import { VIEW, PAL, INPUT } from '../config.js';
 import { drawText } from '../art/font.js';
 import { drawKnotRing } from '../art/knotwork.js';
+import { drawSpeaker } from '../art/icons.js';
 import { ROUTES } from '../art/routes.js';
 import { glow } from './util.js';
 import { CAL_TARGETS, CAL_NAMES } from '../input/Calibration.js';
 
-// hidden operator keys: F fullscreen, R reset, S skip, D debug, C clear sky (asks first), M audio,
+// hidden operator keys: F fullscreen, R reset, S skip, D debug, C clear sky (asks first), M sound,
 // G reduced motion (auto / on / off), K calibrate the mocap rig
 export class Operator {
   constructor(game) {
@@ -54,7 +55,7 @@ export class Operator {
       g.motion.cycle();
       this.say(`MOTION ${g.motion.label()}`);
     } else if (k === 'm') {
-      this.say(g.audio.toggle() ? 'AUDIO ON' : 'AUDIO OFF');
+      this.say(g.audio.toggle() ? 'SOUND ON' : 'SOUND OFF');
     }
   }
   calKey(key) {
@@ -120,6 +121,7 @@ export class Operator {
         `HOLD ${g.input.holding ? 'Y' : 'N'} BEAT ${g.beat.count}`,
         `DRAGONS ${g.store.count} NEXT ${g.dragon.name}`,
         `ROUTE ${ROUTES[g.route % ROUTES.length].name}`,
+        `SOUND ${g.audio.status.toUpperCase()}${g.audio.ctx ? ' ' + g.audio.ctx.state.toUpperCase() : ''}`,
         `MOTION ${g.motion.label()}`,
         `CAL ${this.cal ? `IN PROGRESS ${this.cal.step + 1}/4` : g.cal.label()}`,
       ];
@@ -140,9 +142,24 @@ export class Operator {
       drawText(ctx, `${g.store.count} DRAGONS WILL BE ERASED`, W / 2, H / 2 + 40, { scale: 1, align: 'center', color: '#9fb4d0' });
     }
     if (this.cal) this.drawCal(ctx);
+    // sound state, always in the bottom left corner
+    drawSpeaker(ctx, 3, 263, g.audio.status, g.time, g.beat.pulse);
     if (this.toastT > 0) {
       drawText(ctx, this.toast, W - 8, 8, { scale: 2, align: 'right', color: PAL.gold, alpha: Math.min(1, this.toastT * 2) });
     }
+  }
+
+  // "press any key to start the station", until the browser lets sound play
+  drawGate(ctx) {
+    const { W, H } = VIEW;
+    const t = this.game.time;
+    ctx.fillStyle = 'rgba(5,7,13,0.82)';
+    ctx.fillRect(0, 0, W, H);
+    glow(ctx, W / 2, H / 2 - 10, 120, PAL.gold, 0.15 + 0.05 * Math.sin(t * 2));
+    drawText(ctx, 'PRESS ANY KEY', W / 2, H / 2 - 40, { scale: 4, align: 'center', color: PAL.gold });
+    drawText(ctx, 'TO START', W / 2, H / 2 - 4, { scale: 4, align: 'center', color: PAL.gold });
+    drawText(ctx, 'THIS TURNS THE SOUND ON', W / 2, H / 2 + 42, { scale: 2, align: 'center', color: PAL.cream });
+    drawText(ctx, 'OR PRESS M FOR NO SOUND', W / 2, H / 2 + 62, { scale: 2, align: 'center', color: '#9fb4d0' });
   }
 
   drawCal(ctx) {

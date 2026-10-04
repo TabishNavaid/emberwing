@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot } from './helpers.js';
+import { boot, reload } from './helpers.js';
 
 // a pretend rig that's off: shifted, squashed and a bit keystoned. aim() returns what it would
 // report (0..1) when someone points at view pixel (x, y)
@@ -36,15 +36,13 @@ test('K calibration: 4 corners fix a misaligned rig, survive a refresh, Delete c
   const mouse = await page.evaluate(() => { window.__emberwing.game.input.feed(100, 100, 'mouse'); return window.__emberwing.game.input.rawX; });
   expect(mouse).toBe(100);
 
-  await page.reload();
-  await page.waitForFunction(() => document.body.classList.contains('ready'), null, { polling: 50 });
+  await reload(page);
   expect(await page.evaluate(() => window.__emberwing.game.cal.label())).toContain('MOCAP');
 
   await page.keyboard.press('k');
   await page.keyboard.press('Delete');
   expect(await page.evaluate(() => window.__emberwing.game.cal.label())).toBe('OFF');
-  await page.reload();
-  await page.waitForFunction(() => document.body.classList.contains('ready'), null, { polling: 50 });
+  await reload(page);
   expect(await page.evaluate(() => window.__emberwing.game.cal.label())).toBe('OFF');
 });
 

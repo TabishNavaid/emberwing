@@ -5,7 +5,7 @@ import { drawKnotRing, drawKnotBand } from '../art/knotwork.js';
 import { drawDragon, drawSpeck } from '../art/dragon.js';
 import { flockOf, member, chirp, updateMember, drawMember } from '../art/flock.js';
 import { makeStars, drawWind, drawRune } from '../art/world.js';
-import { ROUTES, SEA_Y } from '../art/routes.js';
+import { ROUTES } from '../art/routes.js';
 import { drawHorn, drawSoundLines, drawCursorLight } from '../art/icons.js';
 
 // second instruction at the start of the flight (the first one has the dragon's name in it)
@@ -47,6 +47,9 @@ export class Flight {
     // scene objects get reused every run. done used to stay true after the first guest, so every
     // later flight never handed off to home (and never saved the ribbon)
     this.done = false;
+    this.windupCued = false;
+    this.climbing = false;
+    g.audio.section('flightIntro');
     this.swellT = 0;
     this.riseY = 0;
     // two clocks: this.t runs from the start, this.tt (the timeline: hoops, swell, climb) only
@@ -217,6 +220,7 @@ export class Flight {
     updateMember(g, this.me, dt, this.ex, this.ey);
 
     if (this.tutorial) this.updateTutorial(g, dt);
+    g.audio.rain(this.route.rain ? this.route.rain(p) : 0);
 
     for (const ring of this.rings) {
       if (ring.state !== 'coming') {
@@ -240,6 +244,7 @@ export class Flight {
   resolveRing(g, ring, rx, hit) {
     const r = this.ringR(ring);
     ring.state = hit ? 'hit' : 'miss';
+    ring.beat = g.beat.beat; // the music test checks these land on the beat
     ring.hitX = rx;
     ring.hitY = ring.y;
     const gold = ring.p > FLIGHT.WOBBLY_UNTIL;
@@ -256,6 +261,7 @@ export class Flight {
       g.particles.burst(rx, ring.y, 26 + Math.round(ring.p * 20), { speed: 80 + ring.p * 60, colors: gold ? [PAL.gold, PAL.gold2, '#fff6d8'] : ['#bff8ee', PAL.teal, '#ffffff'], kind: 'spark', size: 2, drag: 2.5, life: 0.8 }, g.rng);
     } else {
       // a miss is never a fail: the dragon does a loop and the ring's sparkles fly into it anyway
+      g.audio.cue('miss');
       this.loopT = 0.75;
       this.streak = 0;
       for (let k = 0; k < 14; k++) {
@@ -278,14 +284,29 @@ export class Flight {
       ring.gateAt = this.t;
       this.resolveRing(g, ring, this.ringX(ring), parked && inside);
       this.tutorial = false;
+      // the timeline snaps to the nearest beat (at most a quarter second early or late) so every
+      // hoop and the swell land right on the music. waiting for the next beat instead added up
+      // to half a second to every run
+      const per = g.beat.period;
+      const since = g.beat.phase * per;
+      this.tt = since <= per / 2 ? since : since - per;
+      g.audio.section('flight', { zeroBeat: Math.round(g.beat.beat - this.tt / per), lead: 2 });
     }
   }
 
   updateTail(g, dt, p, conf) {
-
+    if (!this.windupCued && this.windup > 0) {
+      this.windupCued = true;
+      g.audio.cue('windup');
+    }
+    if (!this.climbing && p > FLIGHT.RISE_AT) {
+      this.climbing = true;
+      g.audio.section('climb', { keep: true });
+    }
     if (!this.swellFired && p >= FLIGHT.SWELL_AT) {
       this.swellFired = true;
       this.swellT = 0;
+      this.swellBeat = g.beat.beat;
       this.swellX = this.ex;
       this.swellY = this.ey;
       g.cam.shake(4);

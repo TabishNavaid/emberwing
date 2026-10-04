@@ -92,7 +92,7 @@ export function drawArrowUp(ctx, x, y, s = 2, color = PAL.cream) {
   ctx.fillRect(Math.round(x - s), Math.round(y + 5 * s), 3 * s, 5 * s);
 }
 
-// the guest's light everywhere except find ember (that one's a beam)
+// the guest's light everywhere except find (that one's a beam)
 export function drawCursorLight(ctx, x, y, t, size = 1) {
   glow(ctx, x, y, 22 * size, PAL.gold, 0.55);
   glow(ctx, x, y, 8 * size, '#fff6d8', 0.9);
@@ -116,4 +116,46 @@ export function drawActBanner(ctx, cx, y, t, pulse, alpha = 1) {
   drawHorn(ctx, x + 20, y + 15, 1);
   drawText(ctx, label, x + 36, y + 9, { scale: 2, color: PAL.gold2 });
   ctx.restore();
+}
+
+// little speaker in the corner so the operator can see at a glance whether sound is running.
+// on = waves pulsing on the beat, muted = an x, locked = waves blinking slowly (waiting for a
+// key press or a touch). shape, not color, tells them apart
+export function drawSpeaker(ctx, x, y, state, t, pulse = 0) {
+  if (state === 'none') return;
+  x = Math.round(x);
+  y = Math.round(y);
+  ctx.fillStyle = 'rgba(5,7,13,0.55)';
+  ctx.fillRect(x - 2, y - 6, 19, 12);
+  const col = state === 'on' ? PAL.cream : 'rgba(255,243,214,0.7)';
+  ctx.fillStyle = col;
+  ctx.fillRect(x, y - 2, 2, 4);
+  ctx.fillRect(x + 2, y - 3, 1, 6);
+  ctx.fillRect(x + 3, y - 4, 1, 8);
+  if (state === 'muted') {
+    ctx.fillStyle = PAL.rose;
+    for (let i = 0; i < 5; i++) {
+      ctx.fillRect(x + 7 + i, y - 2 + i, 1, 1);
+      ctx.fillRect(x + 11 - i, y - 2 + i, 1, 1);
+    }
+    return;
+  }
+  // locked: blinks once a second, well under the flash limit
+  if (state === 'locked' && Math.floor(t) % 2 === 1) return;
+  ctx.fillStyle = state === 'on' ? PAL.gold2 : col;
+  ctx.globalAlpha = state === 'on' ? 0.6 + 0.4 * pulse : 1;
+  // two arcs, ")" shaped
+  ctx.fillRect(x + 6, y - 2, 1, 1);
+  ctx.fillRect(x + 7, y - 1, 1, 2);
+  ctx.fillRect(x + 6, y + 1, 1, 1);
+  ctx.fillRect(x + 9, y - 4, 1, 1);
+  ctx.fillRect(x + 10, y - 3, 1, 1);
+  ctx.fillRect(x + 11, y - 2, 1, 4);
+  ctx.fillRect(x + 10, y + 2, 1, 1);
+  ctx.fillRect(x + 9, y + 3, 1, 1);
+  if (state === 'locked') {
+    ctx.fillRect(x + 14, y - 3, 1, 4);
+    ctx.fillRect(x + 14, y + 2, 1, 1);
+  }
+  ctx.globalAlpha = 1;
 }

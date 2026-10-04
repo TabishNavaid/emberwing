@@ -10,8 +10,8 @@ import { drawSparkle, drawActBanner } from '../art/icons.js';
 const { W, H } = VIEW;
 const ORBIT = { x: 240, y: 118 };
 const ARRIVE = 1.6; // the guest's dragon reaches its spot in the circle
-const TICK = 3.4; // the ribbon settles into the aurora and the counter lands on the new number
-const PARTY = 3.6; // celebration starts here (only every FLOCK.CELEBRATE_EVERY-th dragon)
+const TICK = 3.1; // the ribbon settles into the aurora and the counter lands on the new number
+const PARTY = 3.3; // celebration starts here (only every FLOCK.CELEBRATE_EVERY-th dragon)
 
 export class Home {
   interactive = false; // people just watch this part, so no idle reset
@@ -28,6 +28,7 @@ export class Home {
     // saved on enter, not at the end, so leaving early still counts the dragon
     this.rib = g.store.add(path, this.hue, this.d);
     this.d.home = true; // attract picks a new lost dragon after this
+    g.audio.section('home');
     this.color = RIBBON_COLORS[this.hue];
     this.count = g.store.count;
 
@@ -56,7 +57,7 @@ export class Home {
     this.celebrate = this.count % FLOCK.CELEBRATE_EVERY === 0;
     this.partied = false;
     this.length = DUR.HOME + (this.celebrate ? DUR.CELEBRATE : 0);
-    this.actAt = this.celebrate ? PARTY + DUR.CELEBRATE - 0.3 : 3.9;
+    this.actAt = this.celebrate ? PARTY + DUR.CELEBRATE - 0.3 : 3.5;
   }
 
   skip(g) {

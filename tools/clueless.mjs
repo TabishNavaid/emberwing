@@ -11,6 +11,8 @@ const b = await chromium.launch();
 const page = await b.newPage({ viewport: { width: 960, height: 540 } });
 await page.goto(url + '?seed=' + seed);
 await page.waitForFunction(() => document.body.classList.contains('ready'), null, { polling: 50 });
+// start the station like the operator would (browsers hold the game until a key press)
+if (await page.evaluate(() => window.__emberwing.state().gate)) await page.keyboard.press('Enter');
 
 const toCss = (x, y) => ({ x: (x / 480) * 960, y: (y / 270) * 540 });
 const state = () => page.evaluate(() => {

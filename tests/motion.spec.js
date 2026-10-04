@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot } from './helpers.js';
+import { boot, reload } from './helpers.js';
 
 const motion = (page) => page.evaluate(() => {
   const g = window.__emberwing.game;
@@ -25,8 +25,7 @@ test('G cycles auto / forced on / forced off and survives a refresh', async ({ p
   expect(m.force).toBe('on');
   expect(m.reduced).toBe(true);
   expect(m.shake).toBe(0);
-  await page.reload();
-  await page.waitForFunction(() => document.body.classList.contains('ready'), null, { polling: 50 });
+  await reload(page);
   expect((await motion(page)).force).toBe('on');
   await page.keyboard.press('g');
   m = await motion(page);
