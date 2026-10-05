@@ -8,7 +8,9 @@ export const VIEW = {
 };
 
 export const DUR = {
-  START_DWELL: 1.0, // hold on the lantern to start
+  START_DWELL: 1.0, // hold on a level's lantern to start
+  CHOOSE: 5.0, // "who will you find?" picks a dragon for you after this, so the line keeps moving
+  CHOOSE_DWELL: 1.2, // hold the light on a dragon this long to pick it
   ATTRACT_PAGE: 4.5, // per storybook page
   ATTRACT_DEMO_PAGE: 6.5, // ghost demo needs longer to play out
   YOURS_LABEL: 15, // "YOURS!" points at the newest ribbon after a run, so you can show your friends
@@ -27,7 +29,7 @@ export const DUR = {
   FIND_HARD_CAP: 13.0, // truly stuck (light parked off in a corner), the ring fills anyway
   FIND_BURST: 1.6, // the "YOU FOUND PIP!" moment, everything holds still for this long
 
-  FLIGHT: 18.0, // the timeline after the tutorial hoop. fixed, doesn't depend on how well you fly
+  // (how long the flight's timeline runs is per level now, see LEVELS)
   // home was 6.5. the dragon card at the end now carries the act II line for 5s, so home only
   // needs to land the ribbon and the counter. 4.6 and not 5 because the flight timeline now snaps
   // to the beat (up to 0.25s later), and the worst-case run has to stay under 50s
@@ -42,32 +44,136 @@ export const DUR = {
   TITLE: 1.3,
 };
 
-// fractions of DUR.FLIGHT
+// fractions of the level's timeline (LEVELS), seconds where it says so
 export const FLIGHT = {
   WOBBLY_UNTIL: 0.3, // shaky wings, small silver rings
-  // brass swell: rays, camera pulls back, flock joins. 12s into the timeline, which is the
-  // downbeat of a bar, so the brass chord lands right on the music (it was 0.62)
+  // brass swell: rays, camera pulls back, flock joins. at 2/3 of the timeline, snapped to the
+  // next bar downbeat so the brass chord lands right on the music (12s on hatchling)
   SWELL_AT: 2 / 3,
-  SWELL_WINDUP: 0.035, // the "breath in" before the swell (~0.7s)
+  SWELL_WINDUP: 0.63, // seconds of "breath in" before the swell
   RISE_AT: 0.9, // climb toward the aurora, no more rings
-  HOOPS: 8, // every guest gets exactly this many: 1 tutorial hoop + the rest on the beat
-  HOOP_BEATS: 4, // a hoop every 4 beats (2s). at 2 beats first-timers had no time to steer
   // seconds into the timeline. 3s puts the first hoop just off screen while the tutorial hoop is
   // waiting, at 2s it sat frozen on screen and people didn't know which hoop to go for
   FIRST_RING_AT: 3.0,
   TUT_SLIDE: 1.5, // the tutorial hoop glides in this long, then waits for you
   TUT_CAP: 5.0, // ...but never longer than this, then the timeline starts anyway
-  TUT_R: 30, // tutorial hoop radius, extra big
-  SCROLL: 110, // internal px/sec
-  RING_R_START: 24, // hoop radius in internal px, grows over the flight (was 15, too small to aim for)
-  RING_R_END: 34,
   FOLLOW: 12, // how tightly the dragon chases the light. 7.5 felt like steering a boat
   X_PLAY: 40, // how far the dragon can drift left/right of the gate (internal px)
   WOBBLE: 3, // px of early wobble, fades out as it gets confident (7 fought the guest's steering)
-  MAGNET: 0.35, // gentle pull toward the next ring, 0 turns it off
   ZOOM_START: 1.18,
   ZOOM_END: 0.86,
   CAM_FOLLOW: 0.12, // how much the camera drifts toward the dragon vertically, 0 = locked
+};
+
+// three levels, and picking one on the attract screen is how a run starts. hatchling is the
+// game as it was (big slow hoops, for little kids and first-timers). everything that makes the
+// other two harder is in here so it can be tuned after playtesting
+export const LEVELS = {
+  hatchling: {
+    label: 'HATCHLING',
+    hint: 'FIRST TIME?',
+    fresh: 'START HERE!', // shown where the best flight goes until somebody sets one
+    timeline: 18, // seconds of hoops after the tutorial hoop
+    hoops: 8, // including the tutorial hoop
+    hoopBeats: 4, // a hoop every 4 beats (2s). at 2 beats first-timers had no time to steer
+    ringR: [24, 34], // hoop radius, grows over the flight (was 15, too small for little kids)
+    tutR: 30, // the tutorial hoop
+    slack: 4, // px of grace past the hoop's edge that still counts
+    scroll: 110, // how fast the hoops come at you, internal px/sec
+    magnet: 0.35, // gentle pull toward the next hoop, 0 = none
+    moving: 0, // share of hoops that bob up and down
+    moveAmp: 0, // how far they bob, internal px
+    moveSpeed: 0, // bobs per second
+    stars: [900, 1500], // score for 2 stars, 3 stars. everybody gets at least 1
+    enemies: { cloud: 0, gust: 0, wisp: 0 }, // none on hatchling
+    puffs: 5, // harmless smiling clouds to pop with a fireball, just for fun
+    gusts: 0, // wind gusts that push the dragon
+    gustPush: 0,
+    powerups: ['fireball', 'friend', 'magnet'], // in order, spread over the flight
+  },
+  flier: {
+    label: 'FLIER',
+    hint: 'MOVING HOOPS',
+    fresh: 'NO BEST YET',
+    timeline: 24,
+    hoops: 13,
+    hoopBeats: 3,
+    ringR: [14, 18],
+    tutR: 24,
+    slack: 1,
+    scroll: 150,
+    magnet: 0.05,
+    moving: 0.6,
+    moveAmp: 20,
+    moveSpeed: 0.55,
+    stars: [1760, 3200],
+    enemies: { cloud: 2, gust: 3, wisp: 2 },
+    puffs: 0,
+    gusts: 0,
+    gustPush: 0,
+    powerups: ['shield', 'fireball', 'speed', 'magnet'],
+  },
+  storm: {
+    label: 'STORM RIDER',
+    hint: 'FOR THE BRAVE',
+    fresh: 'NO BEST YET',
+    timeline: 26,
+    hoops: 20,
+    hoopBeats: 2,
+    ringR: [12, 15],
+    tutR: 20,
+    slack: 1,
+    scroll: 170,
+    magnet: 0,
+    moving: 0.8,
+    moveAmp: 24,
+    moveSpeed: 0.6,
+    stars: [2200, 3600],
+    enemies: { cloud: 4, gust: 5, wisp: 3 },
+    puffs: 0,
+    gusts: 4,
+    gustPush: 150, // px/sec shove, fades out over half a second
+    powerups: ['shield', 'fireball', 'magnet', 'friend', 'speed'],
+  },
+};
+export const LEVEL_ORDER = ['hatchling', 'flier', 'storm'];
+
+// enemies are never a fail. a bump makes the dragon tumble for a moment and costs a little score
+// and the streak, then it carries on. the dragon always gets home
+export const ENEMY = {
+  TUMBLE: 0.7, // seconds of tumbling after a bump
+  SAFE: 1.3, // can't be bumped again this soon
+  HIT_R: 13, // how close counts as a bump (internal px)
+  ZAP_AFTER: 0.35, // a grumpy cloud zaps a hoop that slides under it for this long
+  WISP_HIDE: 1.6, // a fog wisp hides a hoop this long, then drifts off
+  GUST_WARN: 0.8, // wind streaks show this long before a gust pushes
+};
+
+// power-ups, collected by flying through them
+export const POWER = {
+  REACH: 12, // how close the dragon has to fly to an orb
+  FIREBALL: 4.0, // seconds of auto-fire
+  FIRE_EVERY: 0.3,
+  FIRE_NEAR: 70, // the dragon shoots at things within this far of the light
+  SPEED: 3.5, // seconds
+  SPEED_STEER: 1.8, // steering that much snappier, and hoops worth double
+  MAGNET: 5.0, // seconds
+  MAGNET_PULL: 0.75,
+  FRIEND: 1.4, // seconds a flock friend takes to swoop across
+};
+
+// what a flight scores. hoops, streaks, popping enemies and flying clean
+export const SCORE = {
+  HOOP: 100,
+  PERFECT: 50, // extra for going through the middle of a hoop
+  PERFECT_ZONE: 0.4, // how much of the radius counts as the middle
+  STREAK: 25, // extra per hoop already in the streak...
+  STREAK_MAX: 8, // ...up to this many
+  POP: 75, // an enemy popped by a fireball or a flock friend
+  PUFF: 40, // a harmless puff cloud popped (hatchling)
+  POWERUP: 25, // flying through a power-up
+  BUMP: -50, // getting bumped by an enemy (never below 0)
+  CLEAN: 300, // no bumps and at most one missed hoop
 };
 
 // the game clock follows real time even when frames drop. a slow frame gets split into

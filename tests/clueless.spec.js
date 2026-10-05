@@ -17,8 +17,13 @@ test('clueless guests: the game teaches, never finishes itself, and everyone get
       const prompts = []; // [scene, prompt, seconds]
       let findDone = null;
       let flight = null;
-      // start the run the way the attract screen asks: light on the lantern
-      for (let i = 0; i < 40 && g.scenes.name === 'attract'; i++) { g.input.feed(372 + (i % 2), 152, 'mouse'); w.step(0.05); }
+      // start the run the way the attract screen asks: light on the hatchling lantern
+      const start = g.scenes.scenes.attract.levelTarget('hatchling');
+      px = start.x;
+      py = start.y;
+      tx = px;
+      ty = py;
+      for (let i = 0; i < 40 && g.scenes.name === 'attract'; i++) { g.input.feed(start.x + (i % 2), start.y, 'mouse'); w.step(0.05); }
       let left = false;
       for (let tick = 0; tick < 120 * 20; tick++) {
         if (pause > 0) pause -= 0.05;

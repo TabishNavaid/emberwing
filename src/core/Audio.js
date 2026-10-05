@@ -1,5 +1,5 @@
 import { noise, pluck, whistle, pad, brass, drum, boom, shimmer, roll, bell, chirp, sneeze } from './synth.js';
-import { playStep, chordAt } from './score.js';
+import { playStep, chordAt } from './tune.js';
 
 // sound is on by default now: an original folk-style score that builds through the flight, a
 // real brass swell, chimes on the hoops, a chord when you find the dragon, chirps. M mutes it
@@ -275,6 +275,30 @@ export class Audio {
       [62, 66, 69, 74].forEach((m, i) => pluck(ac, out, m + 12, t + 0.2 + i * 0.08, 0.1));
     } else if (name === 'sneeze') {
       sneeze(ac, out, t, 0.08);
+    } else if (name === 'power') {
+      // grabbed a power-up: a sparkly run of bells
+      [74, 78, 81, 86].forEach((m, i) => bell(ac, out, m + 12, t + i * 0.05, 0.06));
+    } else if (name === 'fire') {
+      // a little whoosh
+      chirp(ac, out, 62, t, 0.04);
+    } else if (name === 'pop') {
+      pluck(ac, out, 86, t, 0.14);
+      bell(ac, out, 93, t + 0.03, 0.05);
+    } else if (name === 'bump') {
+      // a soft boing, nothing that sounds like pain
+      drum(ac, out, t, 0.2);
+      whistle(ac, out, 79, t, 0.12, 0.05);
+      whistle(ac, out, 74, t + 0.1, 0.18, 0.05);
+    } else if (name === 'shield') {
+      bell(ac, out, 81, t, 0.08);
+      bell(ac, out, 88, t + 0.05, 0.06);
+    } else if (name === 'zap') {
+      for (let i = 0; i < 3; i++) bell(ac, out, 95 - i * 5, t + i * 0.04, 0.04);
+    } else if (name === 'gust') {
+      shimmer(ac, out, t, 0.04, 0.7);
+    } else if (name === 'pick') {
+      // a quick harp roll up when you pick a dragon
+      [57, 62, 66, 69, 74, 78].forEach((m, i) => pluck(ac, out, m, t + i * 0.04, 0.12));
     } else if (name === 'tick') {
       whistle(ac, out, 86, t, 0.12, 0.04);
     }

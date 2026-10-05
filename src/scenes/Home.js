@@ -25,8 +25,11 @@ export class Home {
     this.path = path;
     this.d = g.dragon;
     this.hue = this.d.ribbon % RIBBON_COLORS.length;
-    // saved on enter, not at the end, so leaving early still counts the dragon
-    this.rib = g.store.add(path, this.hue, this.d);
+    // saved on enter, not at the end, so leaving early still counts the dragon. skipping straight
+    // here (S, ?scene=home) means there was no flight to score
+    this.run = data.run ?? { level: g.level, score: 0, stars: 1 };
+    g.lastRun = this.run;
+    this.rib = g.store.add(path, this.hue, this.d, this.run);
     this.d.home = true; // attract picks a new lost dragon after this
     g.audio.section('home');
     this.color = RIBBON_COLORS[this.hue];

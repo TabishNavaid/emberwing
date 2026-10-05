@@ -1,4 +1,4 @@
-import { VIEW, PAL, FLIGHT } from '../config.js';
+import { VIEW, PAL } from '../config.js';
 import { clamp, lerp, invLerp, mix, glow, disc, makeCanvas } from '../core/util.js';
 import { drawSky, SKY, drawStars, drawSea, drawStone, drawStack, drawCloud, drawRays, makeCliff } from './world.js';
 import { drawBaseAurora } from './aurora.js';
@@ -46,7 +46,7 @@ const seaStacks = {
     const { p, conf, rise } = s;
     drawSky(ctx, SKY.storm, 0, H);
     drawSky(ctx, SKY.dusk, 0, H, invLerp(0, 0.35, p));
-    drawSky(ctx, SKY.gold, 0, H, invLerp(0.4, FLIGHT.SWELL_AT + 0.05, p) * (1 - rise));
+    drawSky(ctx, SKY.gold, 0, H, invLerp(0.4, f.swellP + 0.05, p) * (1 - rise));
     climbSky(ctx, f, s);
     drawStars(ctx, f.stars, s.t, clamp(1 - p * 3) + rise);
     windupDim(ctx, s);
@@ -106,7 +106,7 @@ const squall = {
     const clr = this.clearing(p);
     drawSky(ctx, SQUALL, 0, H);
     drawSky(ctx, CLEAR, 0, H, clr * (1 - rise));
-    drawSky(ctx, SKY.gold, 0, H, invLerp(FLIGHT.SWELL_AT - 0.1, FLIGHT.SWELL_AT + 0.1, p) * 0.6 * (1 - rise));
+    drawSky(ctx, SKY.gold, 0, H, invLerp(f.swellP - 0.1, f.swellP + 0.1, p) * 0.6 * (1 - rise));
     climbSky(ctx, f, s);
     drawStars(ctx, f.stars, s.t, rise);
     windupDim(ctx, s);

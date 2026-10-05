@@ -1,4 +1,7 @@
-import { VIEW, DUR, FLIGHT, PAL, MUSIC, MOTION, INPUT } from '../config.js';
+import { VIEW, DUR, FLIGHT, PAL, MUSIC, MOTION, INPUT, LEVELS, SCORE, ENEMY, POWER } from '../config.js';
+import { Points } from '../core/Points.js';
+import { Hazards } from '../core/Hazards.js';
+import { drawPowerIcon, POWER_COLORS } from '../art/critters.js';
 import { clamp, lerp, approach, glow, ease, mix, invLerp, mulberry32 } from '../core/util.js';
 import { drawText, drawTextPop, fitScale } from '../art/font.js';
 import { drawKnotRing, drawKnotBand } from '../art/knotwork.js';
@@ -6,7 +9,7 @@ import { drawDragon, drawSpeck } from '../art/dragon.js';
 import { flockOf, member, chirp, updateMember, drawMember } from '../art/flock.js';
 import { makeStars, drawWind, drawRune } from '../art/world.js';
 import { ROUTES } from '../art/routes.js';
-import { drawHorn, drawSoundLines, drawCursorLight } from '../art/icons.js';
+import { drawHorn, drawSoundLines, drawCursorLight, drawStarIcon } from '../art/icons.js';
 
 // second instruction at the start of the flight (the first one has the dragon's name in it)
 const HOOPS = 'FLY THROUGH THE HOOPS';
@@ -29,6 +32,14 @@ export class Flight {
     this.me = member(this.d);
     this.follows = `${this.d.name} FOLLOWS YOUR LIGHT`;
     const r = mulberry32(g.rng.int(1, 1e6));
+    // the level picked on the attract screen: hoop size, speed, how many move, enemies...
+    this.levelId = LEVELS[g.level] ? g.level : 'hatchling';
+    this.L = LEVELS[this.levelId];
+    this.T = this.L.timeline;
+    // the swell lands on a bar downbeat near 2/3 of the way through (12s on hatchling)
+    const bar = (4 * 60) / MUSIC.BPM;
+    this.swellAt = Math.ceil((FLIGHT.SWELL_AT * this.T) / bar - 1e-6) * bar;
+    this.swellP = this.swellAt / this.T;
     this.ex = REF_X - 30;
     this.ey = data.fromY ? clamp(data.fromY, 80, 200) : 150;
     this.vy = 0;
@@ -58,6 +69,7 @@ export class Flight {
     this.tutorial = true;
     this.tutT = 0;
     this.hits = 0;
+    this.points = new Points(this.levelId);
     this.countPop = 0;
     this.prompt = this.follows;
     this.promptT = 0;
@@ -70,20 +82,27 @@ export class Flight {
 
     // hoop 1 is the tutorial hoop: it parks above or below the dragon and waits to be flown through.
     // the rest are scheduled on the timeline so each one crosses REF_X exactly on a beat.
-    // always FLIGHT.HOOPS in total, so every guest gets the same flight
+    // always the level's hoop count, so every guest on a level gets the same flight
     const beat = 60 / MUSIC.BPM;
+    const L = this.L;
     // kept between 110 and 190: higher and the zoomed-in camera pushes it up into the instruction text
     const tutY = clamp(this.ey >= 150 ? this.ey - 62 : this.ey + 62, 110, 190);
     this.rings = [{ tutorial: true, y: tutY, p: 0, rune: 0, state: 'coming', fx: 0, seenAt: 0 }];
     let y = tutY;
-    for (let i = 1; i < FLIGHT.HOOPS; i++) {
-      const at = FLIGHT.FIRST_RING_AT + (i - 1) * FLIGHT.HOOP_BEATS * beat;
-      const p = at / DUR.FLIGHT;
-      const amp = lerp(40, 65, clamp(p / FLIGHT.SWELL_AT));
+    for (let i = 1; i < L.hoops; i++) {
+      const at = FLIGHT.FIRST_RING_AT + (i - 1) * L.hoopBeats * beat;
+      const p = at / this.T;
+      const amp = lerp(40, 65, clamp(p / this.swellP));
       const ny = 140 + Math.sin(i * 1.15 + r() * 0.6) * amp + Math.sin(i * 0.43) * 18;
       // lerp from the last hoop so consecutive hoops are always reachable
       y = clamp(lerp(y, ny, 0.8), 60, 196);
-      this.rings.push({ at, y, p, rune: i, state: 'coming', fx: 0 });
+      const ring = { at, y, p, rune: i, state: 'coming', fx: 0 };
+      // on the harder levels some hoops bob up and down (kept clear of the top and the sea)
+      if (L.moving > 0 && r() < L.moving) {
+        ring.y = clamp(y, 60 + L.moveAmp * 0.6, 196 - L.moveAmp * 0.6);
+        ring.move = { amp: L.moveAmp, w: L.moveSpeed * Math.PI * 2 * (0.8 + r() * 0.4), ph: r() * Math.PI * 2 };
+      }
+      this.rings.push(ring);
     }
 
     // which of the three routes this guest gets. only the scenery changes, the hoops above are
@@ -91,6 +110,54 @@ export class Flight {
     this.routeIndex = (g.route ?? 0) % ROUTES.length;
     this.route = ROUTES[this.routeIndex];
     this.route.setup(this, r);
+
+    // enemies, power-ups and gusts for this level (none of it can end the run)
+    this.fireT = 0; // seconds of fireball left
+    this.speedT = 0;
+    this.magnetT = 0;
+    this.shield = false;
+    this.tumbleT = 0; // tumbling after a bump
+    this.safeT = 0; // can't be bumped again yet
+    this.push = 0; // a gust's shove, px/sec, fades out
+    this.power = null; // the last power-up, for the corner
+    this.hz = new Hazards(this, g, Math.floor(r() * 1e9));
+  }
+
+  // flew through a power-up orb
+  powerUp(g, kind, x, y) {
+    const at = this.toScreen(x, y);
+    const names = { fireball: 'FIREBALL!', speed: 'SPEED BURST!', shield: 'SHIELD!', magnet: 'MAGNET!', friend: 'FLOCK FRIEND!' };
+    this.points.add(SCORE.POWERUP, at.x, at.y, names[kind], POWER_COLORS[kind]);
+    this.power = { kind, t: 0 };
+    if (kind === 'fireball') this.fireT = POWER.FIREBALL;
+    else if (kind === 'speed') this.speedT = POWER.SPEED;
+    else if (kind === 'magnet') this.magnetT = POWER.MAGNET;
+    else if (kind === 'shield') this.shield = true;
+    else if (kind === 'friend') this.hz.startFriend(g);
+    g.audio.cue('power');
+    g.particles.burst(x, y, 24, { speed: 80, colors: [POWER_COLORS[kind], '#ffffff'], kind: 'spark', size: 2, drag: 2.5, life: 0.7 }, g.rng);
+  }
+
+  // bumped by an enemy: a tumble, the streak and a few points, never the run
+  bump(g, dir, by) {
+    if (this.safeT > 0 || this.p > FLIGHT.RISE_AT) return;
+    this.safeT = ENEMY.SAFE;
+    const at = this.toScreen(this.ex, this.ey);
+    if (this.shield) {
+      // the bubble takes it instead
+      this.shield = false;
+      this.points.add(0, at.x, at.y - 10, 'BLOCKED!', '#8ad8ff');
+      g.audio.cue('shield');
+      g.particles.burst(this.ex, this.ey, 20, { speed: 90, colors: ['#e8f8ff', '#8ad8ff'], kind: 'spark', size: 1, drag: 2, life: 0.6 }, g.rng);
+      return;
+    }
+    this.tumbleT = ENEMY.TUMBLE;
+    this.streak = 0;
+    this.points.bumps++;
+    this.points.add(SCORE.BUMP, at.x, at.y - 10, `WHOA! ${SCORE.BUMP}`);
+    this.push += dir * 110;
+    g.audio.cue('bump');
+    g.cam.shake(2);
   }
 
   // everyone who's home tonight comes out at the swell: near + far is always the count
@@ -99,17 +166,17 @@ export class Flight {
   }
 
   get p() {
-    return clamp(this.tt / DUR.FLIGHT);
+    return clamp(this.tt / this.T);
   }
   get conf() {
-    return ease.inOutSine(clamp(this.p / FLIGHT.SWELL_AT));
+    return ease.inOutSine(clamp(this.p / this.swellP));
   }
   // 0..1 during the wind-up right before the swell
   get windup() {
-    return this.swellFired ? 0 : invLerp(FLIGHT.SWELL_AT - FLIGHT.SWELL_WINDUP, FLIGHT.SWELL_AT, this.p);
+    return this.swellFired ? 0 : invLerp(this.swellAt - FLIGHT.SWELL_WINDUP, this.swellAt, this.tt);
   }
   get zoom() {
-    const base = lerp(FLIGHT.ZOOM_START, FLIGHT.ZOOM_END, ease.inOutSine(invLerp(0.05, FLIGHT.SWELL_AT + 0.08, this.p)));
+    const base = lerp(FLIGHT.ZOOM_START, FLIGHT.ZOOM_END, ease.inOutSine(invLerp(0.05, this.swellP + 0.08, this.p)));
     // lean in during the wind-up, then punch out past normal and settle back
     const st = this.swellT ?? 0;
     const punch = this.swellFired ? ease.outCubic(clamp(st / 0.25)) * Math.exp(-st * 1.6) : 0;
@@ -120,11 +187,16 @@ export class Flight {
   ringX(ring) {
     // the tutorial hoop glides in to the dragon's column and stays there
     if (ring.tutorial) return lerp(W + 40, this.ex, ease.outCubic(clamp(this.tutT / FLIGHT.TUT_SLIDE)));
-    return REF_X + (ring.at - this.tt) * FLIGHT.SCROLL;
+    return REF_X + (ring.at - this.tt) * this.L.scroll;
   }
   ringR(ring) {
-    if (ring.tutorial) return FLIGHT.TUT_R;
-    return lerp(FLIGHT.RING_R_START, FLIGHT.RING_R_END, ease.inOutSine(clamp(ring.p / FLIGHT.RISE_AT)));
+    if (ring.tutorial) return this.L.tutR;
+    const [a, b] = this.L.ringR;
+    return lerp(a, b, ease.inOutSine(clamp(ring.p / FLIGHT.RISE_AT)));
+  }
+  // where a hoop is up and down right now (the moving ones bob on the timeline clock)
+  ringY(ring) {
+    return ring.move ? ring.y + ring.move.amp * Math.sin(ring.move.w * this.tt + ring.move.ph) : ring.y;
   }
   // the pointer is in screen space but the dragon lives in the zoomed world
   toWorld(x, y) {
@@ -140,7 +212,7 @@ export class Flight {
     // screen coords, the playwright "guest" steers toward this
     const z = this.zoom;
     const x = (REF_X - W / 2) * z + W / 2;
-    return { x, y: (r.y - this.camY - H / 2) * z + H / 2 };
+    return { x, y: (this.ringY(r) - this.camY - H / 2) * z + H / 2 };
   }
 
   skip(g) {
@@ -149,7 +221,16 @@ export class Flight {
   finish(g) {
     if (this.done) return;
     this.done = true;
-    g.scenes.go('home', { path: this.path }, { color: '#0a1024' });
+    const pts = this.points;
+    // what the dragon card and the best-flight board need
+    g.lastRun = { flown: true, level: this.levelId, score: pts.score, stars: pts.stars, hits: pts.hits, hoops: this.L.hoops, bumps: pts.bumps, popped: pts.popped };
+    g.scenes.go('home', { path: this.path, run: g.lastRun }, { color: '#0a1024' });
+  }
+
+  // world (zoomed camera) to screen, for the floating score numbers
+  toScreen(x, y) {
+    const z = this.zoom;
+    return { x: (x - W / 2) * z + W / 2, y: (y - this.camY - H / 2) * z + H / 2 };
   }
 
   // one instruction at a time, each readable for PROMPT_MIN, then gone for the rest of the flight
@@ -165,7 +246,7 @@ export class Flight {
     const p = this.p;
     const conf = this.conf;
     // the world drifts slowly during the tutorial so it still feels like flying
-    this.camX += FLIGHT.SCROLL * dt * (this.tutorial ? 0.4 : 1);
+    this.camX += this.L.scroll * dt * (this.tutorial ? 0.4 : 1);
     this.promptT += dt;
     const want = this.wantPrompt();
     if (want !== this.prompt && this.promptT >= DUR.PROMPT_MIN) {
@@ -184,11 +265,13 @@ export class Flight {
     const next = this.nextRing();
     if (next) {
       const dx = this.ringX(next) - this.ex;
-      const pull = next.tutorial ? 0 : FLIGHT.MAGNET * clamp(1 - dx / 120) * (gone ? 0 : 1);
-      ty = lerp(ty, next.y, pull);
+      // a magnet power-up pulls a lot harder and from further out
+      const magnet = this.magnetT > 0 ? POWER.MAGNET_PULL * clamp(1 - dx / 200) : this.L.magnet * clamp(1 - dx / 120);
+      const pull = next.tutorial ? 0 : magnet * (gone ? 0 : 1);
+      ty = lerp(ty, this.ringY(next), pull);
       if (gone) {
         tx = lerp(this.ex, REF_X, 0.5);
-        ty = next.y;
+        ty = this.ringY(next);
       }
     }
     if (p > FLIGHT.RISE_AT) {
@@ -201,9 +284,13 @@ export class Flight {
     this.gentle = g.motion.reduced;
     this.camY = approach(this.camY, this.gentle ? 0 : (this.ey - H / 2) * FLIGHT.CAM_FOLLOW, 2, dt);
 
-    // a little looser at first, snappier as the dragon gets confident
-    const follow = FLIGHT.FOLLOW * lerp(0.85, 1, conf);
-    const ny = approach(this.ey, ty, follow, dt);
+    // a little looser at first, snappier as the dragon gets confident. tumbling it barely
+    // steers, a speed burst makes it snappier still
+    const follow = FLIGHT.FOLLOW * lerp(0.85, 1, conf) * (this.tumbleT > 0 ? 0.3 : 1) * (this.speedT > 0 ? POWER.SPEED_STEER : 1);
+    let ny = approach(this.ey, ty, follow, dt);
+    // a gust (or a bump) shoves it off course for a moment
+    ny = clamp(ny + this.push * dt, 30, 214);
+    this.push = approach(this.push, 0, 3, dt);
     this.vy = (ny - this.ey) / dt;
     this.ex = approach(this.ex, tx, follow * 0.6, dt);
     this.ey = ny;
@@ -221,6 +308,9 @@ export class Flight {
 
     if (this.tutorial) this.updateTutorial(g, dt);
     g.audio.rain(this.route.rain ? this.route.rain(p) : 0);
+    for (const k of ['fireT', 'speedT', 'magnetT', 'tumbleT', 'safeT']) this[k] = Math.max(0, this[k] - dt);
+    if (this.power) this.power.t += dt;
+    this.hz.update(g, dt);
 
     for (const ring of this.rings) {
       if (ring.state !== 'coming') {
@@ -234,7 +324,8 @@ export class Flight {
       if (rx <= REF_X) {
         ring.gateAt = this.t;
         const r = this.ringR(ring);
-        const hit = Math.abs(this.ey - ring.y) < r + 4; // +4 slack so grazing the edge still counts
+        // a little slack so grazing the edge still counts (less of it on the harder levels)
+        const hit = Math.abs(this.ey - this.ringY(ring)) < r + this.L.slack;
         this.resolveRing(g, ring, rx, hit);
       }
     }
@@ -246,7 +337,7 @@ export class Flight {
     ring.state = hit ? 'hit' : 'miss';
     ring.beat = g.beat.beat; // the music test checks these land on the beat
     ring.hitX = rx;
-    ring.hitY = ring.y;
+    ring.hitY = this.ringY(ring);
     const gold = ring.p > FLIGHT.WOBBLY_UNTIL;
     if (hit) {
       this.hits++;
@@ -256,17 +347,20 @@ export class Flight {
       // every 3 in a row earns a barrel roll
       this.streak++;
       if (this.streak % 3 === 0) this.rollT = 0.7;
+      const at = this.toScreen(rx, ring.hitY);
+      this.points.hoop(at.x, at.y, this.streak, Math.abs(this.ey - ring.hitY) < r * SCORE.PERFECT_ZONE, this.speedT > 0 ? 2 : 1);
       g.audio.cue('ring');
       g.cam.shake(1 + ring.p * 2);
-      g.particles.burst(rx, ring.y, 26 + Math.round(ring.p * 20), { speed: 80 + ring.p * 60, colors: gold ? [PAL.gold, PAL.gold2, '#fff6d8'] : ['#bff8ee', PAL.teal, '#ffffff'], kind: 'spark', size: 2, drag: 2.5, life: 0.8 }, g.rng);
+      g.particles.burst(rx, ring.hitY, 26 + Math.round(ring.p * 20), { speed: 80 + ring.p * 60, colors: gold ? [PAL.gold, PAL.gold2, '#fff6d8'] : ['#bff8ee', PAL.teal, '#ffffff'], kind: 'spark', size: 2, drag: 2.5, life: 0.8 }, g.rng);
     } else {
       // a miss is never a fail: the dragon does a loop and the ring's sparkles fly into it anyway
       g.audio.cue('miss');
+      this.points.misses++;
       this.loopT = 0.75;
       this.streak = 0;
       for (let k = 0; k < 14; k++) {
         const a = (k / 14) * Math.PI * 2;
-        g.particles.add({ x: rx + Math.cos(a) * r, y: ring.y + Math.sin(a) * r, vx: (this.ex - rx) * 1.6, vy: (this.ey - ring.y) * 1.6, life: 0.6, color: gold ? PAL.gold2 : '#bff8ee', kind: 'spark', size: 1, drag: 0.5 });
+        g.particles.add({ x: rx + Math.cos(a) * r, y: ring.hitY + Math.sin(a) * r, vx: (this.ex - rx) * 1.6, vy: (this.ey - ring.hitY) * 1.6, life: 0.6, color: gold ? PAL.gold2 : '#bff8ee', kind: 'spark', size: 1, drag: 0.5 });
       }
     }
   }
@@ -279,7 +373,7 @@ export class Flight {
     const parked = this.tutT >= FLIGHT.TUT_SLIDE;
     // counts as soon as the dragon's middle is inside the hoop. at 80% of the radius, the dragon visibly
     // overlapped the hoop and still didn't count, which read as "it's broken"
-    const inside = Math.abs(this.ey - ring.y) < FLIGHT.TUT_R;
+    const inside = Math.abs(this.ey - ring.y) < this.L.tutR;
     if ((parked && inside) || this.tutT >= FLIGHT.TUT_CAP) {
       ring.gateAt = this.t;
       this.resolveRing(g, ring, this.ringX(ring), parked && inside);
@@ -302,8 +396,11 @@ export class Flight {
     if (!this.climbing && p > FLIGHT.RISE_AT) {
       this.climbing = true;
       g.audio.section('climb', { keep: true });
+      // no bumps and at most one missed hoop
+      if (this.points.clean) this.points.add(SCORE.CLEAN, W / 2, 150, `CLEAN FLYING +${SCORE.CLEAN}`, PAL.teal);
     }
-    if (!this.swellFired && p >= FLIGHT.SWELL_AT) {
+    this.points.update(dt);
+    if (!this.swellFired && this.tt >= this.swellAt) {
       this.swellFired = true;
       this.swellT = 0;
       this.swellBeat = g.beat.beat;
@@ -338,15 +435,15 @@ export class Flight {
     if (this.trail.length > 90) this.trail.shift();
     if (!this.tutorial) this.pathT -= dt;
     if (this.pathT <= 0) {
-      this.pathT = DUR.FLIGHT / 48; // ~48 points is plenty for a ribbon and keeps localStorage small
+      this.pathT = this.T / 48; // ~48 points is plenty for a ribbon and keeps localStorage small
       this.path.push([p, clamp(this.ey / H)]);
     }
 
     if (g.rng() < dt * (4 + conf * 10)) {
-      g.particles.add({ x: W / 2 + (g.rng() - 0.5) * W * 1.2, y: g.rng() * H * 0.8, vx: -FLIGHT.SCROLL * 0.6, vy: 0, life: 1.4, color: conf > 0.5 ? PAL.gold2 : '#bfe8ff', kind: 'px', size: 1, layer: 1 });
+      g.particles.add({ x: W / 2 + (g.rng() - 0.5) * W * 1.2, y: g.rng() * H * 0.8, vx: -this.L.scroll * 0.6, vy: 0, life: 1.4, color: conf > 0.5 ? PAL.gold2 : '#bfe8ff', kind: 'px', size: 1, layer: 1 });
     }
 
-    if (this.tt >= DUR.FLIGHT) this.finish(g);
+    if (this.tt >= this.T) this.finish(g);
   }
 
   draw(g, ctx) {
@@ -395,6 +492,7 @@ export class Flight {
     ctx.translate(-W / 2, -H / 2 - this.camY);
     this.drawTrail(ctx, conf);
     for (const ring of this.rings) this.drawRing(g, ctx, ring);
+    this.hz.draw(g, ctx, t);
     for (const f of this.flock) {
       for (let i = 1; i < f.trail.length; i++) {
         const k = i / f.trail.length;
@@ -424,9 +522,12 @@ export class Flight {
     ctx.restore();
     g.particles.draw(ctx, 1);
     route.front(ctx, this, g, s);
+    this.hz.drawGusts(ctx, t);
 
     this.drawJourney(ctx, p, t);
     this.drawCounter(ctx);
+    this.drawScore(ctx);
+    this.points.drawPopups(ctx);
     if (this.prompt) {
       drawText(ctx, this.prompt, W / 2, 30, { scale: fitScale(this.prompt, W - 10), align: 'center', color: PAL.cream, alpha: clamp(this.promptT / 0.25) });
     }
@@ -497,10 +598,29 @@ export class Flight {
     }
   }
 
+  // score in the top left corner, with the stars earned so far filling in as you go, and
+  // whatever power-up is running with a bar for how long it has left
+  drawScore(ctx) {
+    const pts = this.points;
+    const stars = pts.stars;
+    for (let i = 0; i < 3; i++) drawStarIcon(ctx, 10 + i * 12, 12, i < stars, 1);
+    const pop = pts.pop > 0 ? 1 + Math.sin((pts.pop / 0.35) * Math.PI) * 0.25 : 1;
+    drawText(ctx, String(pts.score), 46, 6, { scale: 2, color: PAL.gold2, alpha: 1 });
+    if (pop > 1.01) drawText(ctx, String(pts.score), 46, 6, { scale: 2, color: '#ffffff', alpha: (pop - 1) * 3 });
+    const running = [['fireball', this.fireT, POWER.FIREBALL], ['speed', this.speedT, POWER.SPEED], ['magnet', this.magnetT, POWER.MAGNET], ['shield', this.shield ? 1 : 0, 1]].filter(([, v]) => v > 0);
+    running.forEach(([kind, v, max], i) => {
+      const x = 12 + i * 26;
+      glow(ctx, x, 32, 10, POWER_COLORS[kind], 0.5);
+      drawPowerIcon(ctx, kind, x, 32, this.t);
+      ctx.fillStyle = POWER_COLORS[kind];
+      ctx.fillRect(x - 8, 41, Math.round(16 * (v / max)), 2);
+    });
+  }
+
   // "3 / 8" up in the corner with a little hoop, pops when you get one
   drawCounter(ctx) {
     const pop = this.countPop > 0 ? 1 + Math.sin((this.countPop / 0.4) * Math.PI) * 0.3 : 1;
-    const label = `${this.hits} / ${FLIGHT.HOOPS}`;
+    const label = `${this.hits} / ${this.L.hoops}`;
     drawKnotRing(ctx, 412, 14, 7 * pop, 1, { lobes: 5, amp: 1.5, width: 1, on: PAL.gold });
     drawTextPop(ctx, label, 446, 14, 1, { scale: Math.round(2 * pop) || 2, color: PAL.gold2 });
   }
@@ -561,22 +681,31 @@ export class Flight {
     const x = this.ringX(ring);
     const r = this.ringR(ring);
     if (x > W / 2 + (W / 2) / this.zoom + r + 10) return;
-    const gold = invLerp(FLIGHT.WOBBLY_UNTIL * 0.6, FLIGHT.SWELL_AT, ring.p);
+    const gold = invLerp(FLIGHT.WOBBLY_UNTIL * 0.6, this.swellP, ring.p);
+    const ry = this.ringY(ring);
     const color = mix('#bff8ee', PAL.gold, gold);
+    // a fog wisp sitting on it makes it hard to see for a moment
+    if (ring.hidden) ctx.globalAlpha = 0.2;
     if (ring.state === 'coming') {
       const pulse = 1 + g.beat.pulse * 0.06;
       // the waiting tutorial hoop breathes so it's obviously the thing to aim for
-      if (ring.tutorial) glow(ctx, x, ring.y, r * 2.2, PAL.teal, 0.25 + 0.2 * Math.sin(this.t * 5));
-      glow(ctx, x, ring.y, r * 1.6, gold > 0.5 ? PAL.gold : PAL.teal, 0.25 + 0.15 * g.beat.pulse);
-      drawKnotRing(ctx, x, ring.y, r * pulse, 1, { lobes: 6 + Math.round(gold * 4), amp: 2 + r * 0.08, width: 2, on: color });
-      drawRune(ctx, x, ring.y, Math.max(8, r * 0.55), ring.rune, mix('#e8fffb', PAL.gold2, gold), 1);
+      if (ring.tutorial) glow(ctx, x, ry, r * 2.2, PAL.teal, 0.25 + 0.2 * Math.sin(this.t * 5));
+      glow(ctx, x, ry, r * 1.6, gold > 0.5 ? PAL.gold : PAL.teal, 0.25 + 0.15 * g.beat.pulse);
+      drawKnotRing(ctx, x, ry, r * pulse, 1, { lobes: 6 + Math.round(gold * 4), amp: Math.min(2 + r * 0.08, r * 0.2), width: 2, on: color });
+      drawRune(ctx, x, ry, Math.max(6, r * 0.55), ring.rune, mix('#e8fffb', PAL.gold2, gold), 1);
+      // little up/down ticks on the bobbing ones so it reads as "this one moves"
+      if (ring.move) {
+        ctx.fillStyle = color;
+        for (const dir of [-1, 1]) for (let k = 0; k < 3; k++) ctx.fillRect(Math.round(x - 2 + k), Math.round(ry + dir * (r + 6 + k)), 5 - k * 2, 1);
+      }
     } else if (ring.fx < 0.5) {
       const k = ring.fx / 0.5;
       ctx.globalAlpha = 1 - k;
       const rr = ring.state === 'hit' ? r * (1 + ease.outCubic(k) * 1.2) : r * (1 - k);
-      drawKnotRing(ctx, ring.hitX - ring.fx * FLIGHT.SCROLL, ring.hitY, Math.max(2, rr), 1, { lobes: 8, amp: 2, width: 2, on: color });
-      ctx.globalAlpha = 1;
+      // a zapped hoop goes grey as it shrinks away
+      drawKnotRing(ctx, ring.hitX - ring.fx * this.L.scroll, ring.hitY, Math.max(2, rr), 1, { lobes: 8, amp: 2, width: 2, on: ring.state === 'zapped' ? '#8a96b8' : color });
     }
+    ctx.globalAlpha = 1;
   }
 
   drawTrail(ctx, conf) {
@@ -588,7 +717,8 @@ export class Flight {
       const y = tr[i].y + 3 + Math.sin(i * 0.5 + this.t * 6) * (1 - k) * 2;
       const w = 1 + Math.round(k * 3);
       ctx.globalAlpha = k * (0.45 + conf * 0.45);
-      ctx.fillStyle = mix(PAL.teal, PAL.gold2, clamp(k * 0.5 + conf * 0.6));
+      // a speed burst leaves a rainbow trail
+      ctx.fillStyle = this.speedT > 0 ? ['#ff6a6a', '#ffb04a', '#ffe86a', '#7ae07a', '#5ab0ff', '#9a7aff'][Math.floor(i / 4 + this.t * 10) % 6] : mix(PAL.teal, PAL.gold2, clamp(k * 0.5 + conf * 0.6));
       ctx.fillRect(Math.round(x), Math.round(y - w / 2), 2, w);
     }
     ctx.globalAlpha = 1;
@@ -617,15 +747,34 @@ export class Flight {
     if (this.cheerT > 0) y -= Math.sin((this.cheerT / 0.4) * Math.PI) * 5; // little hop
     // barrel roll: squash the body through zero and out upside down, reads as a roll in 2d
     if (this.rollT > 0) sy *= Math.cos((1 - this.rollT / 0.7) * Math.PI * 2);
+    // bumped: a dizzy tumble (just a wobble in reduced motion)
+    const tumble = this.tumbleT > 0 ? 1 - this.tumbleT / ENEMY.TUMBLE : 0;
+    if (this.tumbleT > 0) rot += this.gentle ? Math.sin(tumble * Math.PI * 4) * 0.35 : tumble * Math.PI * 2;
     let mood = 'fly';
-    if (this.loopT > 0 || this.rollT > 0) mood = 'joy';
+    if (this.tumbleT > 0) mood = 'scared';
+    else if (this.loopT > 0 || this.rollT > 0) mood = 'joy';
     else if (this.cheerT > 0) mood = 'happy';
     const glide = this.vy > 60 && conf > 0.4;
     glow(ctx, x - 6, y - 6, 26, this.d.colors.wingLit, 0.3 + conf * 0.2);
-    // its quirk goes on top, except while it's busy with a hoop trick
-    const busy = this.loopT > 0 || this.rollT > 0;
+    if (this.fireT > 0) {
+      // fired up: a warm glow and little flames at its mouth
+      glow(ctx, x + 6, y - 4, 22, PAL.amber, 0.45);
+      if (Math.floor(t * 12) % 2 === 0) drawPowerIcon(ctx, 'fireball', x + 22 * this.d.size, y - 7, t);
+    }
+    // its quirk goes on top, except while it's busy with a hoop trick or tumbling
+    const busy = this.loopT > 0 || this.rollT > 0 || this.tumbleT > 0;
     const o = { mood, glow: 2, rot, sx: sxw, sy, life: t, ...(glide ? { wing: 'mid' } : { flap: this.flapPh }) };
     if (busy) drawDragon(ctx, x, y, this.d, o);
     else drawMember(ctx, this.me, x, y, o);
+    if (this.shield) {
+      // a bubble that shimmers around it until it takes a hit
+      ctx.fillStyle = '#c8f0ff';
+      for (let a = 0; a < Math.PI * 2; a += 0.12) {
+        ctx.globalAlpha = 0.45 + 0.35 * Math.sin(a * 3 + t * 4);
+        ctx.fillRect(Math.round(x + Math.cos(a) * 22), Math.round(y - 4 + Math.sin(a) * 19), 1, 1);
+      }
+      ctx.globalAlpha = 1;
+      glow(ctx, x - 8, y - 14, 6, '#ffffff', 0.5);
+    }
   }
 }

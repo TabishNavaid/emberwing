@@ -33,5 +33,5 @@ test('live site plays: a scripted guest goes all the way home and back', async (
   console.log(`live run (game clock): ${s.runs[0]}s, dragons: ${s.count}`);
   expect(s.count).toBe(1);
   expect(s.runs[0]).toBeGreaterThan(35);
-  expect(s.runs[0]).toBeLessThan(45);
+  expect(s.runs[0]).toBeLessThan(52); // hatchling, picking a level and a dragon included
 });

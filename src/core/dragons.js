@@ -152,5 +152,15 @@ export function ordinal(n) {
   return `${n}${['TH', 'ST', 'ND', 'RD'][n % 10] ?? 'TH'}`;
 }
 
-// the dragon the next guest will rescue
-export const nextLostDragon = (g) => pickDragon(g.rng, g.store.dragons, g.store.names);
+// three dragons are lost at any time and the guest picks one of them. the other two stay lost
+// for the guests after. names never clash with anyone home or anyone else lost
+export function fillLost(g) {
+  g.lost = g.lost.filter((d) => !d.home);
+  // somebody picked a dragon and walked away: it's still lost, back to the front of the queue
+  if (g.dragon && !g.dragon.home && !g.lost.includes(g.dragon)) g.lost.unshift(g.dragon);
+  while (g.lost.length < 3) {
+    g.lost.push(pickDragon(g.rng, [...g.store.dragons, ...g.lost], [...g.store.names, ...g.lost.map((d) => d.name)]));
+  }
+  g.lost.length = 3;
+  return g.lost;
+}

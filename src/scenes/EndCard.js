@@ -1,11 +1,11 @@
-import { VIEW, DUR, PAL } from '../config.js';
+import { VIEW, DUR, PAL, LEVELS } from '../config.js';
 import { clamp, glow, ease } from '../core/util.js';
 import { Dwell } from '../input/Dwell.js';
 import { drawText, drawTextPop, textWidth, fitScale } from '../art/font.js';
 import { drawKnotFrame, drawKnotRing, drawKnotBand } from '../art/knotwork.js';
 import { drawSky, SKY, makeStars, drawStars } from '../art/world.js';
 import { drawBaseAurora } from '../art/aurora.js';
-import { drawHorn, drawLantern, drawCursorLight, drawSparkle } from '../art/icons.js';
+import { drawHorn, drawLantern, drawCursorLight, drawSparkle, drawStarIcon } from '../art/icons.js';
 import { member, chirp, updateMember, drawMember } from '../art/flock.js';
 import { ordinal, QUIRK_TEXT } from '../core/dragons.js';
 
@@ -29,6 +29,7 @@ export class EndCard {
     // which number it was. home saved it already, so it's the count (or the next one if we got
     // here some other way, like ?scene=end)
     this.nth = this.d.home ? g.store.count : g.store.count + 1;
+    this.run = g.lastRun ?? { level: g.level, score: 0, stars: 1 };
     this.me = member(this.d);
     this.me.q.reset();
     chirp(this.me, 0.35);
@@ -83,17 +84,25 @@ export class EndCard {
     const wing = Math.sin(t * 5) > 0 ? 'mid' : 'down';
     drawMember(ctx, this.me, PORTRAIT.x, PORTRAIT.y, { mood: 'joy', wing, life: t, glow: 2, scale: 2 / d.size });
 
-    // name + which one it was tonight + its quirk
+    // name, which one it was tonight, its quirk, and how the flight went
     const cx = 302;
     const nameScale = fitScale(d.name, 196, 5, 3);
-    drawTextPop(ctx, d.name, cx, 40, clamp((t - 0.25) * 1.3), { scale: nameScale, color: PAL.gold2 });
-    drawText(ctx, `THE ${ordinal(this.nth)} EMBERWING`, cx, 70, { scale: 2, align: 'center', color: PAL.cream });
-    drawText(ctx, 'HOME TONIGHT', cx, 87, { scale: 2, align: 'center', color: PAL.cream });
+    drawTextPop(ctx, d.name, cx, 34, clamp((t - 0.25) * 1.3), { scale: nameScale, color: PAL.gold2 });
+    drawText(ctx, `THE ${ordinal(this.nth)} EMBERWING`, cx, 58, { scale: 2, align: 'center', color: PAL.cream });
+    drawText(ctx, 'HOME TONIGHT', cx, 74, { scale: 2, align: 'center', color: PAL.cream });
     const quirk = QUIRK_TEXT[d.quirk];
     const qw = textWidth(quirk, 2);
-    drawSparkle(ctx, cx - qw / 2 - 9, 115, 3, d.colors.wingLit);
-    drawSparkle(ctx, cx + qw / 2 + 9, 115, 3, d.colors.wingLit);
-    drawText(ctx, quirk, cx, 109, { scale: 2, align: 'center', color: '#bff8ee' });
+    drawSparkle(ctx, cx - qw / 2 - 9, 98, 3, d.colors.wingLit);
+    drawSparkle(ctx, cx + qw / 2 + 9, 98, 3, d.colors.wingLit);
+    drawText(ctx, quirk, cx, 92, { scale: 2, align: 'center', color: '#bff8ee' });
+    // stars pop in one at a time
+    for (let i = 0; i < 3; i++) {
+      const k = clamp((t - 0.6 - i * 0.25) / 0.2);
+      const earned = i < this.run.stars;
+      if (earned && k > 0 && k < 1) glow(ctx, cx - 26 + i * 26, 118, 18, PAL.gold, 1 - k);
+      drawStarIcon(ctx, cx - 26 + i * 26, 118, earned && k > 0, 2);
+    }
+    drawText(ctx, `${LEVELS[this.run.level]?.label ?? ''} ${this.run.score}`, cx, 131, { scale: 2, align: 'center', color: PAL.gold });
 
     drawKnotBand(ctx, x + 20, 150, w - 40, { color: PAL.gold, period: 10, amp: 2 });
 

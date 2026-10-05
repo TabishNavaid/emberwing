@@ -38,6 +38,13 @@ const SHOTS = [
   ['end', 1.6, null, 'flock'], // the dragon card, 6th home
   ['attract', 3, null, 'flock'], // tonight's flock circling, countdown to the next celebration
   ['attract', 1, null, 'gate'], // press any key to start the station
+  ['attract', 0.6, { x: 292, y: 130 }], // holding the light on FLIER
+  ['choose', 1.2, null], // who will you find?
+  ['choose', 1.0, { x: 240, y: 104 }], // holding the light on the middle dragon
+  ['flight', 6, 'follow', 'level=hatchling'], // puffs to pop, a power-up orb
+  ['flight', 8, 'follow', 'level=flier'], // smaller moving hoops, the first enemies
+  ['flight', 9, 'follow', 'level=storm'], // small hoops, enemies, gusts
+  ['end', 2.0, null, 'scored'], // the dragon card with a score and stars
 ];
 const SIZES = [
   ['projector', { width: 1920, height: 1080 }, 1],
@@ -56,7 +63,7 @@ for (const [label, viewport, dpr] of SIZES) {
         Math.random = () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648;
         window.requestAnimationFrame = () => 0;
       });
-      const route = extra?.startsWith('route=') ? `&${extra}` : '';
+      const route = extra?.includes('=') ? `&${extra}` : '';
       await page.goto(`./?seed=3&scene=${scene}${route}`);
       await page.waitForFunction(() => document.body.classList.contains('ready'), null, { polling: 50 });
       await page.evaluate(([scene, t, ptr, extra]) => {
@@ -65,8 +72,9 @@ for (const [label, viewport, dpr] of SIZES) {
         w.pause(true);
         w.game.gate = false; // as if the operator already started the station
         inp.feed(300, 250, 'mouse');
-        // some dragons already home tonight (5), or 7 so this one is the 8th
-        const home = extra === 'flock' ? 5 : extra === 'party' ? 7 : 0;
+        if (extra === 'scored') w.game.lastRun = { flown: true, level: 'flier', score: 2450, stars: 2 };
+        // some dragons already home tonight (5), 7 so this one is the 8th, 8 for the celebration
+        const home = { flock: 5, party: 7, eight: 8, scored: 3 }[extra] ?? 0;
         if (home) {
           for (let i = 0; i < home; i++) w.game.store.add([[0, 0.5], [0.3, 0.3 + i * 0.05], [0.6, 0.6], [1, 0.4]], i % 6);
           w.goto(scene);

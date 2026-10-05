@@ -3,9 +3,9 @@ import { boot, state, startRun, findDragon, fly, watch, waitScene, hover, reload
 
 const MIN = 35;
 const MAX = 50;
-// worst case (guest never finds the dragon). after the live playtest we traded some speed for
-// clarity (title cards, guests do the find themselves), the ok'd ceiling is now ~50s
-const ASSISTED_MAX = 50;
+// worst case (guest never finds the dragon). runs got a bit longer on purpose (picking a level
+// and a dragon), aiming for ~45s on hatchling, so the worst case on hatchling is now ~55s
+const ASSISTED_MAX = 56;
 
 test('a guest who finds the dragon plays a full run in 35-50s and returns to attract', async ({ page }) => {
   const errors = [];
@@ -37,7 +37,7 @@ test('a guest who finds the dragon plays a full run in 35-50s and returns to att
   expect((await state(page)).count).toBe(1);
 });
 
-test('a guest who never finds the dragon is helped and still finishes within 50s', async ({ page }) => {
+test('a guest who never finds the dragon is helped and still finishes within 56s', async ({ page }) => {
   await boot(page);
   await startRun(page);
   await findDragon(page, { neverFind: true });

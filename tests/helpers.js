@@ -38,13 +38,23 @@ export async function hover(page, x, y, seconds) {
   }
 }
 
-export async function startRun(page) {
-  await moveTo(page, 250, 200, 10);
+// holds the light on a level's lantern on the attract screen, the way a guest starts a run,
+// then holds it on one of the three lost dragons (0 = the first, the one the storybook shows)
+export async function startRun(page, { level = 'hatchling', dragon = 0 } = {}) {
+  const at = await page.evaluate((id) => window.__emberwing.game.scenes.scenes.attract.levelTarget(id), level);
+  await moveTo(page, 200, 200, 10);
   await page.waitForTimeout(300);
-  await moveTo(page, 372, 152, 12);
-  await page.waitForFunction(() => window.__emberwing.state().scene === 'find', null, { timeout: 5000, polling: 50 }).catch(() => {});
-  const deadline = Date.now() + 4000;
-  while ((await state(page)).scene !== 'find' && Date.now() < deadline) await hover(page, 372, 152, 0.3);
+  await moveTo(page, at.x, at.y, 12);
+  await page.waitForFunction(() => window.__emberwing.state().scene !== 'attract', null, { timeout: 5000, polling: 50 }).catch(() => {});
+  // deadlines are generous on purpose: on a throttled laptop (lid closed, low power mode) the page
+  // gets few frames and the game clock crawls, which isn't a game bug
+  let deadline = Date.now() + 15_000;
+  while ((await state(page)).scene === 'attract' && Date.now() < deadline) await hover(page, at.x, at.y, 0.3);
+  await waitScene(page, 'choose', 20_000);
+  const pick = await page.evaluate((i) => window.__emberwing.game.scenes.scenes.choose.optionTarget(i), dragon);
+  await moveTo(page, pick.x, pick.y, 8);
+  deadline = Date.now() + 30_000;
+  while ((await state(page)).scene === 'choose' && Date.now() < deadline) await hover(page, pick.x, pick.y, 0.3);
   // wait out the "PIP IS LOST!" title card, the scene doesn't start until it's gone
   await page.waitForFunction(() => !window.__emberwing.state().title, null, { timeout: 10_000, polling: 50 });
 }

@@ -26,9 +26,10 @@ const state = () => page.evaluate(() => {
   };
 });
 
-// start: hold the light on the lantern
+// start: hold the light on the hatchling lantern
+const lantern = await page.evaluate(() => window.__emberwing.game.scenes.scenes.attract.levelTarget('hatchling'));
 for (let i = 0; i < 25; i++) {
-  const p = toCss(372 + (i % 2), 152);
+  const p = toCss(lantern.x + (i % 2), lantern.y);
   await page.mouse.move(p.x, p.y);
   await page.waitForTimeout(60);
 }
@@ -38,7 +39,7 @@ const rand = () => ((rnd = (rnd * 16807) % 2147483647) / 2147483647);
 // from here on the game is stepped by hand (50ms per tick) so screenshots don't slow it down
 // and every shot is exactly one game-second apart
 await page.evaluate(() => window.__emberwing.pause(true));
-let px = 372, py = 152, tx = px, ty = py, pause = 0;
+let px = lantern.x, py = lantern.y, tx = px, ty = py, pause = 0;
 const lines = [];
 let left = false;
 for (let tick = 0; tick < 90 * 20; tick++) {

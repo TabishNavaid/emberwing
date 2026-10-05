@@ -15,7 +15,7 @@ const stand = (i) => dragonFromSeed(7919 * (i + 1), NAMES[i % NAMES.length]);
 export class AuroraStore {
   constructor() {
     this.version = 0; // bumps on every change so the aurora wall and the flock know to redraw
-    this.data = { date: today(), count: 0, ribbons: [] };
+    this.data = { date: today(), count: 0, ribbons: [], best: {} };
     this.load();
   }
   load() {
@@ -30,7 +30,7 @@ export class AuroraStore {
         if (!rib.d) rib.d = stand(i).seed;
         if (!rib.n) rib.n = stand(i).name;
       });
-      this.data = { date: d.date, count: d.count | 0, ribbons: d.ribbons };
+      this.data = { date: d.date, count: d.count | 0, ribbons: d.ribbons, best: d.best && typeof d.best === 'object' ? d.best : {} };
       this.version++;
     } catch (e) {
       console.warn('[emberwing] could not read saved aurora', e);
@@ -60,8 +60,12 @@ export class AuroraStore {
   get names() {
     return this.data.ribbons.map((r) => r.n);
   }
-  // points are [[x, y], ...] in 0..1
-  add(points, hue, dragon = null) {
+  // best flight tonight per level: { hatchling: { score, name, seed }, ... }
+  get best() {
+    return this.data.best;
+  }
+  // points are [[x, y], ...] in 0..1. run = { level, score } from the flight, if there was one
+  add(points, hue, dragon = null, run = null) {
     const p = [];
     for (const [x, y] of points) p.push(Math.round(x * 999), Math.round(y * 999));
     const n = this.data.count;
@@ -76,6 +80,14 @@ export class AuroraStore {
       d: dragon.seed,
       n: dragon.name,
     };
+    if (run) {
+      rib.s = run.score;
+      rib.l = run.level;
+      // kept per level, so a little kid's hatchling run can be a best flight too. only real
+      // flights count (the operator skipping to home doesn't post a 0)
+      const b = this.data.best[run.level];
+      if (run.flown && (!b || run.score > b.score)) this.data.best[run.level] = { score: run.score, name: dragon.name, seed: dragon.seed };
+    }
     this.data.ribbons.push(rib);
     if (this.data.ribbons.length > STORE.MAX_RIBBONS) this.data.ribbons.shift();
     this.data.count++;
@@ -84,7 +96,7 @@ export class AuroraStore {
     return rib;
   }
   clear() {
-    this.data = { date: today(), count: 0, ribbons: [] };
+    this.data = { date: today(), count: 0, ribbons: [], best: {} };
     this.version++;
     this.save();
   }

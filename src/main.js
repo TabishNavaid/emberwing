@@ -1,4 +1,4 @@
-import { VIEW, LOOP } from './config.js';
+import { VIEW, LOOP, LEVELS } from './config.js';
 import { Input } from './input/Input.js';
 import { attachPointer, attachMocap, attachKeys } from './input/adapters.js';
 import { Beat } from './core/Beat.js';
@@ -12,11 +12,12 @@ import { Motion } from './core/Motion.js';
 import { Calibration } from './input/Calibration.js';
 import { SoundButton } from './input/SoundButton.js';
 import { mulberry32 } from './core/util.js';
-import { nextLostDragon } from './core/dragons.js';
+import { fillLost } from './core/dragons.js';
 import { loadSprites } from './art/sprites.js';
 import { AuroraWall } from './art/aurora.js';
 import { Attract } from './scenes/Attract.js';
 import { FindDragon } from './scenes/FindDragon.js';
+import { Choose } from './scenes/Choose.js';
 import { Flight } from './scenes/Flight.js';
 import { Home } from './scenes/Home.js';
 import { EndCard } from './scenes/EndCard.js';
@@ -76,11 +77,16 @@ const game = {
   runStart: 0,
   runs: [], // finished run lengths, the tests read these
 };
-// the dragon that's lost right now. a new one gets picked once this one makes it home
-game.dragon = nextLostDragon(game);
+// the three dragons that are lost right now. the guest picks one of them (Choose), anything that
+// skips the picking (?scene=find, S) gets the first one
+game.lost = [];
+fillLost(game);
+game.dragon = game.lost[0];
 // which flight route the next run gets. they take turns, ?route=0..2 pins one for testing
 game.routePin = params.has('route') ? +params.get('route') : null;
 game.route = game.routePin ?? 0;
+// picked on the attract screen. ?level=flier or storm for testing a scene on its own
+game.level = LEVELS[params.get('level')] ? params.get('level') : 'hatchling';
 game.cal = new Calibration();
 input.cal = game.cal;
 game.motion = new Motion();
@@ -89,6 +95,7 @@ game.audio = new Audio(beat);
 game.wall = new AuroraWall(game.store);
 game.scenes = new SceneManager(game, {
   attract: new Attract(),
+  choose: new Choose(),
   find: new FindDragon(),
   flight: new Flight(),
   home: new Home(),
@@ -186,13 +193,22 @@ function frame(now) {
 // hooks for the playwright tests, guests never touch these
 window.__emberwing = {
   game,
+  LEVELS,
   goto: (name, data) => game.scenes.enter(name, data || {}),
   pause: (p = true) => (paused = p),
+  // fresh random numbers and a fresh beat clock, so a test that steps the game by hand gets the
+  // same hoops at the same moments every time (the real-time frames before it paused have already
+  // used up a different amount of both)
+  reseed: (s) => {
+    game.rng = mulberry32(s);
+    beat.t = 0;
+  },
   toScreen: (x, y) => ({ x: (fit.x + (x / W) * fit.w) / fit.dpr, y: (fit.y + (y / H) * fit.h) / fit.dpr }),
-  step: (seconds, fps = 60) => {
+  // draw = false skips the render, for tests that simulate whole flights frame by frame
+  step: (seconds, fps = 60, draw = true) => {
     const n = Math.round(seconds * fps);
     for (let i = 0; i < n; i++) step(1 / fps);
-    render();
+    if (draw) render();
   },
   state: () => ({
     scene: game.scenes.name,
@@ -200,7 +216,9 @@ window.__emberwing = {
     t: game.scenes.current?.t ?? 0,
     count: game.store.count,
     dragon: game.dragon.name,
+    lost: game.lost.map((d) => d.name),
     route: game.route,
+    level: game.level,
     gate: game.gate,
     sound: game.audio.status,
     runs: game.runs.slice(),

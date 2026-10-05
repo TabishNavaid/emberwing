@@ -157,3 +157,74 @@ export function drawSpeaker(ctx, x, y, state, t, pulse = 0, s = 1) {
   }
   ctx.globalAlpha = 1;
 }
+
+// the three level badges. each is a different shape so they tell apart without color:
+// hatchling = an egg with a crack, flier = a wing, storm rider = a storm cloud with a bolt
+export function drawLevelIcon(ctx, id, x, y, t = 0) {
+  x = Math.round(x);
+  y = Math.round(y);
+  const px = (a, b, w, h, c) => {
+    ctx.fillStyle = c;
+    ctx.fillRect(x + a, y + b, w, h);
+  };
+  if (id === 'hatchling') {
+    // egg, rows from the top: [offset, width]
+    const rows = [[-3, 6], [-4, 8], [-5, 10], [-5, 10], [-6, 12], [-6, 12], [-6, 12], [-6, 12], [-6, 12], [-6, 12], [-5, 10], [-5, 10], [-4, 8], [-3, 6]];
+    rows.forEach(([o, w], i) => px(o - 1, i - 8, w + 2, 1, '#1a1410'));
+    rows.forEach(([o, w], i) => px(o, i - 8, w, 1, i < 5 ? '#fff6e0' : '#ffe9b8'));
+    px(-3, -4, 2, 2, '#e0b878');
+    px(2, 0, 2, 2, '#e0b878');
+    // zigzag crack, and a little glow peeking out of it
+    for (const [a, b] of [[-6, -1], [-5, -2], [-4, -1], [-3, -2], [-2, -1], [-1, -2], [0, -1], [1, -2], [2, -1], [3, -2], [4, -1], [5, -2]]) px(a, b, 1, 1, '#5a3a1a');
+    glow(ctx, x, y - 2, 9, PAL.amber, 0.35 + 0.15 * Math.sin(t * 3));
+  } else if (id === 'flier') {
+    // a bat wing: bone along the top, membrane with a scalloped trailing edge, flapping a little
+    const up = 0.85 + 0.15 * Math.sin(t * 4);
+    for (const [col, grow] of [['#0b0f1a', 1], [PAL.teal, 0]]) {
+      ctx.fillStyle = col;
+      for (let i = -10; i <= 8; i++) {
+        const top = Math.round((4 - ((i + 10) / 18) * 13) * up) - grow;
+        const bottom = Math.round(7 - 5 * Math.abs(Math.sin(((i + 10) * Math.PI) / 6.5))) + grow;
+        if (bottom > top) ctx.fillRect(x + i - grow, y + top, 1 + grow * 2, bottom - top);
+      }
+    }
+    ctx.fillStyle = '#c8fff6';
+    for (let i = -10; i <= 8; i++) ctx.fillRect(x + i, y + Math.round((4 - ((i + 10) / 18) * 13) * up), 1, 2);
+    ctx.fillStyle = PAL.cream;
+    ctx.fillRect(x + 8, y + Math.round(-9 * up) - 2, 2, 2);
+  } else {
+    // storm cloud with a bolt under it (still, never flashing)
+    ctx.fillStyle = '#0b0f1a';
+    disc(ctx, x - 4, y - 2, 6);
+    disc(ctx, x + 3, y - 4, 7);
+    disc(ctx, x + 7, y, 5);
+    ctx.fillRect(x - 10, y - 1, 22, 6);
+    ctx.fillStyle = '#8a96b8';
+    disc(ctx, x - 4, y - 2, 5);
+    disc(ctx, x + 3, y - 4, 6);
+    disc(ctx, x + 7, y, 4);
+    ctx.fillRect(x - 9, y, 20, 4);
+    ctx.fillStyle = '#c4cce0';
+    ctx.fillRect(x - 1, y - 8, 5, 2);
+    for (const [a, b] of [[1, 5], [0, 6], [-1, 7], [0, 8], [1, 8], [0, 9], [-1, 10], [-2, 11]]) px(a, b, 2, 1, PAL.gold2);
+  }
+}
+
+// a chunky 5 point star for the score and the dragon card. filled or just an outline, so earned
+// and not-yet stars differ by shape too, not only color. s = pixel scale
+const STAR = ['...#...', '...#...', '..###..', '#######', '.#####.', '..###..', '.##.##.', '##...##'];
+export function drawStarIcon(ctx, x, y, filled = true, s = 1, color = PAL.gold2) {
+  x = Math.round(x - (STAR[0].length * s) / 2);
+  y = Math.round(y - (STAR.length * s) / 2);
+  ctx.fillStyle = '#0b0f1a';
+  STAR.forEach((row, j) => [...row].forEach((c, i) => c === '#' && ctx.fillRect(x + i * s - 1, y + j * s - 1, s + 2, s + 2)));
+  STAR.forEach((row, j) => [...row].forEach((c, i) => {
+    if (c !== '#') return;
+    // outline-only stars keep just the edge pixels
+    const edge = !filled && (STAR[j - 1]?.[i] !== '#' || STAR[j + 1]?.[i] !== '#' || row[i - 1] !== '#' || row[i + 1] !== '#');
+    if (filled || edge) {
+      ctx.fillStyle = filled ? color : 'rgba(255,243,214,0.55)';
+      ctx.fillRect(x + i * s, y + j * s, s, s);
+    }
+  }));
+}
