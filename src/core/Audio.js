@@ -177,6 +177,7 @@ export class Audio {
       climb: [0.03, 0.02, 0],
       home: [0.04, 0.01, 0],
       card: [0.03, 0.01, 0],
+      party: [0.03, 0, 0],
     }[name] ?? [0, 0, 0];
     this.droneGain.gain.setTargetAtTime(beds[0], t, 0.6);
     this.windGain.gain.setTargetAtTime(beds[1], t, 0.6);
@@ -263,18 +264,35 @@ export class Audio {
     } else if (name === 'home') {
       [62, 66, 69, 74, 78].forEach((m, i) => bell(ac, out, m + 12, t + i * 0.1, 0.07));
       pad(ac, out, [50, 57, 62, 66], t, 2.2, 0.035, 0.2);
-    } else if (name === 'celebrate') {
-      // fanfare: a rising call in the brass, then the full chord, drums underneath
-      [[62, 0], [62, 0.16], [69, 0.32], [74, 0.48]].forEach(([m, dt]) => brass(ac, out, [m - 12, m], t + dt, 0.14, 0.05, { swell: 0.02 }));
-      brass(ac, out, D, t + 0.66, 1.6, 0.07, { swell: 0.3 });
-      boom(ac, out, t + 0.66, 0.4);
-      shimmer(ac, out, t + 0.66, 0.05, 2.4);
-      for (let i = 0; i < 6; i++) drum(ac, out, t + i * 0.08, 0.15 + i * 0.03, i < 5);
     } else if (name === 'card') {
       pad(ac, out, [50, 57, 64, 66], t, 2.6, 0.03, 0.4);
       [62, 66, 69, 74].forEach((m, i) => pluck(ac, out, m + 12, t + 0.2 + i * 0.08, 0.1));
     } else if (name === 'sneeze') {
       sneeze(ac, out, t, 0.08);
+    } else if (name === 'fanfare') {
+      // the celebration, about 6s: a drum roll, a rising call, the whole brass section on D,
+      // the start of the tune in the brass over the drums, and a big last chord
+      roll(ac, out, t, 0.6, 0.25);
+      [[62, 0.6], [62, 0.76], [69, 0.92], [74, 1.08]].forEach(([m, dt]) => brass(ac, out, [m - 12, m], t + dt, 0.14, 0.055, { swell: 0.02 }));
+      brass(ac, out, D, t + 1.3, 1.0, 0.075, { swell: 0.25 });
+      boom(ac, out, t + 1.3, 0.45);
+      shimmer(ac, out, t + 1.3, 0.05, 2.0);
+      const tune = [[69, 0.75], [66, 0.25], [69, 0.5], [74, 0.5], [72, 0.75], [71, 0.25], [69, 0.5], [67, 0.5]];
+      let at = t + 2.4;
+      for (const [m, len] of tune) {
+        brass(ac, out, [m - 12, m], at, len * 0.9, 0.06, { swell: 0.03 });
+        at += len;
+      }
+      for (let b = 0; b < 8; b++) drum(ac, out, t + 2.4 + b * 0.5, b % 2 ? 0.18 : 0.3, b % 2 === 1);
+      brass(ac, out, [38, 50, 57, 62, 66, 69, 74], t + 6.4 - 0.9, 1.4, 0.08, { swell: 0.3 });
+      boom(ac, out, t + 5.5, 0.5);
+      shimmer(ac, out, t + 5.5, 0.06, 2.4);
+    } else if (name === 'boom') {
+      // a firework: a soft thump and a sparkle
+      drum(ac, out, t, 0.12);
+      for (let i = 0; i < 3; i++) bell(ac, out, 88 + i * 4, t + 0.08 + i * 0.05, 0.03);
+    } else if (name === 'star') {
+      [81, 86, 90, 93].forEach((m, i) => bell(ac, out, m, t + i * 0.09, 0.06));
     } else if (name === 'power') {
       // grabbed a power-up: a sparkly run of bells
       [74, 78, 81, 86].forEach((m, i) => bell(ac, out, m + 12, t + i * 0.05, 0.06));

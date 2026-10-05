@@ -34,7 +34,7 @@ export const DUR = {
   // needs to land the ribbon and the counter. 4.6 and not 5 because the flight timeline now snaps
   // to the beat (up to 0.25s later), and the worst-case run has to stay under 50s
   HOME: 4.6,
-  CELEBRATE: 3.6, // every FLOCK.CELEBRATE_EVERY-th dragon, home runs this much longer for the flyover
+  CELEBRATE: 7.6, // every FLOCK.CELEBRATE_EVERY-th dragon gets its own celebration after home
   END: 5.0, // the dragon card, long enough to snap a photo of it
   END_SKIP_DWELL: 1.0,
 

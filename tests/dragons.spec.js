@@ -89,16 +89,17 @@ test('every 8th dragon home gets a celebration, and attract counts down to it', 
       const left = w.game.scenes.current.visibleDragons().partyLeft;
       w.goto('home');
       const h = w.game.scenes.current;
-      w.step(4.6);
-      out[before] = { left, celebrate: h.celebrate, partying: h.partyK > 0 && h.partyK < 1, length: h.length };
+      w.step(5.2); // home is over, on to whatever comes next
+      out[before] = { left, celebrate: h.celebrate, next: g.scenes.name };
+      g.scenes.pending = null;
+      g.scenes.fadeDir = 0;
     }
     return out;
   });
-  expect(r[6]).toMatchObject({ left: 2, celebrate: false, partying: false });
-  expect(r[7]).toMatchObject({ left: 1, celebrate: true, partying: true }); // the 8th
-  expect(r[8]).toMatchObject({ left: 8, celebrate: false });
-  expect(r[15]).toMatchObject({ left: 1, celebrate: true }); // the 16th
-  expect(r[7].length).toBeGreaterThan(r[6].length + 3);
+  expect(r[6]).toMatchObject({ left: 2, celebrate: false, next: 'end' });
+  expect(r[7]).toMatchObject({ left: 1, celebrate: true, next: 'party' }); // the 8th
+  expect(r[8]).toMatchObject({ left: 8, celebrate: false, next: 'end' });
+  expect(r[15]).toMatchObject({ left: 1, celebrate: true, next: 'party' }); // the 16th
 });
 
 test('operator C clears the dragons along with the ribbons', async ({ page }) => {

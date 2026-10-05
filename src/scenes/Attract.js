@@ -8,7 +8,7 @@ import { fillLost } from '../core/dragons.js';
 import { ROUTES } from '../art/routes.js';
 import { drawSky, SKY, makeStars, drawStars, drawSea, drawLighthouse, drawStone, drawCloud, drawWind, drawFog } from '../art/world.js';
 import { drawLantern, drawFeet, drawHorn, drawSoundLines, drawCursorLight, drawSparkle, drawArrowUp, drawLevelIcon } from '../art/icons.js';
-import { drawBaseAurora, drawRibbon, ribbonSkyPoints, RIBBON_COLORS } from '../art/aurora.js';
+import { drawBaseAurora, drawRibbon, ribbonSkyPoints, RIBBON_COLORS, drawPartyStars } from '../art/aurora.js';
 import { drawTree } from '../art/sprites.js';
 
 const { W, H } = VIEW;
@@ -197,6 +197,8 @@ export class Attract {
     drawStars(ctx, this.stars, t);
     drawBaseAurora(ctx, t, 0.9);
     g.wall.draw(ctx, t);
+    // one bright star for every celebration so far tonight
+    drawPartyStars(ctx, Math.floor(g.store.count / FLOCK.CELEBRATE_EVERY), t);
     // your ribbon glows a bit brighter than the rest while the label is up
     if (this.yoursT > 0) drawRibbon(ctx, this.yoursPts, this.yoursColor, 0.45 * clamp(this.yoursT / 1.5), t, 34);
     this.syncFlock(g);

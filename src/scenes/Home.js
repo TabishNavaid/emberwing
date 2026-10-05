@@ -4,14 +4,13 @@ import { drawText, drawTextPop, textWidth, fitScale } from '../art/font.js';
 import { drawSpeck } from '../art/dragon.js';
 import { flockOf, member, chirp, updateMember, drawMember } from '../art/flock.js';
 import { drawSky, SKY, makeStars, drawStars, drawSea, drawStone, makeCliff, drawCliff } from '../art/world.js';
-import { drawBaseAurora, drawRibbon, ribbonSkyPoints, RIBBON_COLORS } from '../art/aurora.js';
+import { drawBaseAurora, drawRibbon, ribbonSkyPoints, RIBBON_COLORS, drawPartyStars } from '../art/aurora.js';
 import { drawSparkle, drawActBanner } from '../art/icons.js';
 
 const { W, H } = VIEW;
 const ORBIT = { x: 240, y: 118 };
 const ARRIVE = 1.6; // the guest's dragon reaches its spot in the circle
 const TICK = 3.1; // the ribbon settles into the aurora and the counter lands on the new number
-const PARTY = 3.3; // celebration starts here (only every FLOCK.CELEBRATE_EVERY-th dragon)
 
 export class Home {
   interactive = false; // people just watch this part, so no idle reset
@@ -56,11 +55,10 @@ export class Home {
     this.skyPts = ribbonSkyPoints(this.rib, g.wall.top, g.wall.height);
     this.flightPts = path.map(([x, y]) => [20 + x * (W - 40), clamp(y, 0.12, 0.85) * H]);
     this.ticked = false;
-    // every 8th dragon home tonight gets the whole flock out
+    // every 8th dragon home tonight gets the big celebration (its own scene, after this one)
     this.celebrate = this.count % FLOCK.CELEBRATE_EVERY === 0;
-    this.partied = false;
-    this.length = DUR.HOME + (this.celebrate ? DUR.CELEBRATE : 0);
-    this.actAt = this.celebrate ? PARTY + DUR.CELEBRATE - 0.3 : 3.5;
+    this.length = DUR.HOME;
+    this.actAt = 3.5;
   }
 
   skip(g) {
@@ -88,25 +86,8 @@ export class Home {
     return { x: lerp(-30, s.x, k), y: lerp(250, s.y, k) - Math.sin(k * Math.PI) * 30, z: s.z + 0.01, k };
   }
 
-  // 0..1 how far into the celebration flyover, or -1 when there isn't one
-  get partyK() {
-    if (!this.celebrate) return -1;
-    return clamp((this.t - PARTY) / DUR.CELEBRATE);
-  }
-
-  // during the flyover the whole circle breaks up and sweeps across the sky in a wave,
-  // then swoops back into the circle
   pos(i, t) {
-    const m = this.flock[i];
-    const base = m === this.mine ? this.minePos(t) : this.slot(i, t);
-    const ct = t - PARTY;
-    if (!this.celebrate || ct <= 0 || ct >= DUR.CELEBRATE) return base;
-    const u = clamp((ct - 0.2 - i * 0.09) / 2.2);
-    const fx = lerp(-50, W + 50, u);
-    // a band under the big "8 DRAGONS HOME!" so they don't fly through the words
-    const fy = 140 - Math.sin(u * Math.PI) * 44 + (i % 3) * 14 - 14 + Math.sin(ct * 3 + i) * 4;
-    const w = ease.inOutSine(clamp(ct / 0.4)) * (1 - ease.inOutSine(clamp((ct - (DUR.CELEBRATE - 0.9)) / 0.9)));
-    return { x: lerp(base.x, fx, w), y: lerp(base.y, fy, w), z: lerp(base.z, 1, w), k: 1, fly: w > 0.5 };
+    return this.flock[i] === this.mine ? this.minePos(t) : this.slot(i, t);
   }
 
   // the tests and the flock-count check read this
@@ -135,41 +116,26 @@ export class Home {
       g.cam.shake(1.5);
       g.particles.burst(W / 2, 214, 40, { speed: 110, colors: [PAL.gold, PAL.gold2, this.color, '#ffffff'], kind: 'spark', size: 2, drag: 2.4, life: 1.1 }, g.rng);
     }
-    if (this.celebrate && !this.partied && t > PARTY) {
-      this.partied = true;
-      g.audio.cue('celebrate');
-      g.cam.shake(2.5);
-      this.flock.forEach((m, i) => chirp(m, 0.3 + i * 0.1));
-    }
-    const pk = this.partyK;
-    if (pk > 0.05 && pk < 0.75 && g.rng() < dt * 70) {
-      // gold confetti drifting down over the flyover
-      g.particles.add({ x: g.rng() * W, y: -6, vx: (g.rng() - 0.5) * 30, vy: 40 + g.rng() * 50, grav: 20, drag: 0.4, life: 2.2, color: [PAL.gold, PAL.gold2, PAL.cream, this.color][Math.floor(g.rng() * 4)], kind: g.rng() < 0.3 ? 'spark' : 'px', size: 2 });
-    }
     this.flock.forEach((m, i) => {
       const p = this.pos(i, t);
-      updateMember(g, m, dt, p.x, p.y, { scale: this.scale, flip: !p.fly && p.z > 0 });
+      updateMember(g, m, dt, p.x, p.y, { scale: this.scale, flip: p.z > 0 });
     });
     this.showingAct = t > this.actAt; // the tests check this
-    if (t >= this.length) g.scenes.go('end', {}, { color: '#070a18' });
+    if (t >= this.length) g.scenes.go(this.celebrate ? 'party' : 'end', {}, { color: '#070a18' });
   }
 
   draw(g, ctx) {
     const t = this.t;
     drawSky(ctx, SKY.aurora, 0, H);
     drawStars(ctx, this.stars, t);
-    // the celebration flares the whole aurora once (soft, never strobing)
-    const pk = this.partyK;
-    const flare = pk > 0 ? Math.sin(clamp(pk / 0.35) * Math.PI) * g.motion.flash : 0;
-    drawBaseAurora(ctx, t, 1 + flare * 1.5, 14);
+    drawBaseAurora(ctx, t, 1, 14);
     const revealed = t > TICK;
-    g.wall.draw(ctx, t, 1 + flare, revealed ? 0 : 1);
-    if (flare > 0) glow(ctx, W / 2, 60, 220, PAL.teal, 0.35 * flare);
+    g.wall.draw(ctx, t, 1, revealed ? 0 : 1);
+    // one bright star for every celebration so far tonight
+    drawPartyStars(ctx, Math.floor(this.count / FLOCK.CELEBRATE_EVERY) - (this.celebrate ? 1 : 0), t);
     for (const f of this.far) {
       const a = f.a + t * 0.25;
-      // the far ones stream across with the flyover too
-      const sweep = pk > 0 && pk < 1 ? Math.sin(pk * Math.PI) * 120 : 0;
-      drawSpeck(ctx, ORBIT.x + Math.cos(a) * W * 0.42 * f.r + sweep, f.y + Math.sin(a * 2) * 6, f.d, t + f.a);
+      drawSpeck(ctx, ORBIT.x + Math.cos(a) * W * 0.42 * f.r, f.y + Math.sin(a * 2) * 6, f.d, t + f.a);
     }
 
     // the flight path draws in across the sky, then lifts up and turns into a curtain
@@ -219,7 +185,7 @@ export class Home {
         const bounce = mine && t > ARRIVE && t < ARRIVE + 0.5 ? Math.sin(((t - ARRIVE) / 0.5) * Math.PI) * 0.2 : 0;
         drawMember(ctx, m, p.x, p.y, {
           mood: mine && t > ARRIVE ? 'happy' : 'joy', flap: t * 2.4 + i * 0.2, life: t, glow: 2, scale: s,
-          flip: !p.fly && (!mine || p.k >= 1) && p.z > 0, sx: 1 + bounce, sy: 1 - bounce * 0.8,
+          flip: (!mine || p.k >= 1) && p.z > 0, sx: 1 + bounce, sy: 1 - bounce * 0.8,
         });
       } };
     });
@@ -234,11 +200,6 @@ export class Home {
     // the counter only shows up once it's on the new number. starting on the old one for a
     // moment read like "0 DRAGONS", like you hadn't made it
     if (this.ticked) this.drawCounter(ctx, t - TICK);
-    if (pk > 0 && pk < 1) {
-      const msg = `${this.count} DRAGONS HOME!`;
-      const a = clamp((1 - pk) * DUR.CELEBRATE * 3);
-      drawTextPop(ctx, msg, W / 2, 34, (t - PARTY) * 1.4, { scale: fitScale(msg, W - 16, 5), color: PAL.gold2, alpha: a });
-    }
     if (t > this.actAt) {
       const k = ease.outCubic(clamp((t - this.actAt) / 0.4));
       drawActBanner(ctx, W / 2, Math.round(-30 + k * 42), t, g.beat.pulse, k);

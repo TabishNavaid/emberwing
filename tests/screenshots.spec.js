@@ -44,6 +44,8 @@ const SHOTS = [
   ['flight', 6, 'follow', 'level=hatchling'], // puffs to pop, a power-up orb
   ['flight', 8, 'follow', 'level=flier'], // smaller moving hoops, the first enemies
   ['flight', 9, 'follow', 'level=storm'], // small hoops, enemies, gusts
+  ['party', 3, null, 'eight'], // the celebration: every dragon, fireworks, names
+  ['party', 6.6, null, 'eight'], // the new star flies up into the sky
   ['end', 2.0, null, 'scored'], // the dragon card with a score and stars
 ];
 const SIZES = [

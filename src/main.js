@@ -18,6 +18,7 @@ import { AuroraWall } from './art/aurora.js';
 import { Attract } from './scenes/Attract.js';
 import { FindDragon } from './scenes/FindDragon.js';
 import { Choose } from './scenes/Choose.js';
+import { Celebration } from './scenes/Celebration.js';
 import { Flight } from './scenes/Flight.js';
 import { Home } from './scenes/Home.js';
 import { EndCard } from './scenes/EndCard.js';
@@ -99,6 +100,7 @@ game.scenes = new SceneManager(game, {
   find: new FindDragon(),
   flight: new Flight(),
   home: new Home(),
+  party: new Celebration(),
   end: new EndCard(),
 });
 game.op = new Operator(game);
