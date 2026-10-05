@@ -1,8 +1,10 @@
 # Emberwing: The Way Home
 
-A 40-second lobby interactive for the Walla Walla Symphony's **Symphonicon** (Nov 5, Cordiner Hall), paired with *From the Motion Picture How to Train Your Dragon* (John Powell), played in Act II by the Walla Walla Symphony Youth Orchestra.
+A 45-second lobby interactive for the Walla Walla Symphony's **Symphonicon** (Nov 5, Cordiner Hall), paired with *From the Motion Picture How to Train Your Dragon* (John Powell), played in Act II by the Walla Walla Symphony Youth Orchestra.
 
-Emberwings are a kind of small dragon. Every guest rescues a different one: a young emberwing with its own name, colors, wings, horns, tail and personality (Pip sneezes sparks, Juniper loves loops, Bramble is shy at first...) is blown off course in a storm. The guest is the lighthouse keeper. Their light finds the dragon in the fog, teaches it to fly, and guides it home. Every dragon that makes it home joins the flock for the rest of the evening, and its flight path becomes a ribbon in the aurora. The flock on screen is always exactly the dragons people brought home tonight, and every 8th one gets a celebration.
+Emberwings are a kind of small dragon. Every guest rescues a different one: a young emberwing with its own name, colors, wings, horns, tail and personality (Pip sneezes sparks, Juniper loves loops, Bramble is shy at first...) is blown off course in a storm. The guest is the lighthouse keeper. Their light finds the dragon in the fog, teaches it to fly, and guides it home. Every dragon that makes it home joins the flock for the rest of the evening, and its flight path becomes a ribbon in the aurora. The flock on screen is always exactly the dragons people brought home tonight, and every 8th one sets off a celebration that leaves a new star in the sky.
+
+Three levels bring different ages together: **HATCHLING** (big slow hoops, for little kids and first-timers), **FLIER** (smaller, faster, moving hoops and a few silly enemies) and **STORM RIDER** (small moving hoops, tight timing, more enemies, wind gusts). Guests pick which lost dragon they'll find, fly through power-ups (fireball, speed burst, shield, magnet, a flock friend), and get a score with 1 to 3 stars. Nobody ever loses: on every level the dragon always gets home.
 
 - **One pointer, no clicks.** Mouse, touch, or a motion-capture prop all work. Every "button" is *hover and hold* (a knotwork ring fills in about 1 second).
 - **Sound on, but never needed.** An original folk-style score builds through the flight, with a real brass swell. Every cue is also visual, so the game plays and reads the same muted.
@@ -40,6 +42,7 @@ npm run build && npm run preview
 | `?mocapFlipX=1` / `?mocapFlipY=1` | Mirror mocap axes (camera facing the guest) |
 | `?debug` | Start with the debug overlay on |
 | `?scene=flight` | Jump straight to a scene (`attract`, `find`, `flight`, `home`, `end`) |
+| `?level=storm` | Play a scene on one level (`hatchling`, `flier`, `storm`) when you jump straight to it |
 | `?route=1` | Pin one flight route (`0` sea stacks, `1` rain squall, `2` standing stones) instead of taking turns |
 | `?seed=5` | Deterministic randomness, including which dragons get picked (for testing) |
 
@@ -69,22 +72,48 @@ Sound is on by default: an original folk-style tune in D mixolydian (harp, tin w
 
 - **Start the station with any key.** Browsers block sound until someone presses a key or clicks. When that's the case the laptop shows **PRESS ANY KEY TO START** and the lantern waits. That first key only starts the station (it doesn't also skip or reset), except **M**, which starts it muted.
 - **Phones** don't get that screen. The first touch turns the sound on.
-- **Speaker icon** in the bottom left corner: waves = sound running, an **X** = muted with **M**, slowly blinking waves = waiting for a key or a touch. The **D** overlay also shows the audio state.
+- **The speaker button** in the bottom left corner is a real control: **click or tap** it, or **hold the light on it** for 1.5 s (the mocap prop can't click). Holding only works on the screens where nobody is steering (attract, choosing a dragon, home, the card), so a guest's light wandering into the corner mid-flight can't mute the game; clicking works everywhere. It shows waves when sound is on, an **X** when it's off, and slowly blinking waves while the browser is still waiting for a key or a touch. The **D** overlay also shows the audio state.
 - Everything you hear has a visual version (hoop bursts, the found burst, the horn icon and rays at the swell, little chirp marks at each dragon's mouth), so a muted run is the same game.
+
+## Levels, enemies, power-ups and score (all in `src/config.js`)
+
+![The three levels](design/11-three-levels.png)
+
+Picking a level on the attract screen is how a run starts: hold the light on a row (the ring, the name or the hint all count). Someone who just holds the light still anywhere near the middle for 2 s gets HATCHLING. Every number below is in `LEVELS`, `ENEMY`, `POWER` and `SCORE`.
+
+| | HATCHLING | FLIER | STORM RIDER |
+|---|---|---|---|
+| hint on attract | FIRST TIME? | MOVING HOOPS | FOR THE BRAVE |
+| hoops | 8, one every 2 s | 13, one every 1.5 s | 20, one every 1 s |
+| hoop size | big (24-34 px) | smaller (14-18) | small (12-15) |
+| speed | 110 | 150 | 170 |
+| moving hoops | none | 60% bob up and down | 80%, further and faster |
+| enemies | none (smiling puffs to pop) | 2 clouds, 3 gust sprites, 2 fog wisps | 4 clouds, 5 gust sprites, 3 fog wisps |
+| wind gusts | no | no | 4, with arrows first |
+| power-ups | fireball, flock friend, magnet | shield, fireball, speed, magnet | shield, fireball, magnet, flock friend, speed |
+| 2 / 3 stars at | 900 / 1500 | 1760 / 3200 | 2200 / 3600 |
+
+**Enemies** are soft and silly, never scary: a *grumpy storm cloud* either parks in front of a hoop (go through the hoop's edge, or bump it) or sits on one and zaps it away with a small spark (that hoop isn't counted as your miss); a *gust sprite* shoves the dragon off course; a *fog wisp* sits on the next hoop and fades it out for a moment. A bump makes the dragon tumble for 0.7 s, costs 50 points and the streak, and then it can't be bumped again for a moment. There's no health and no game over.
+
+**Power-ups** are orbs you fly through, each with its own icon: *fireball* (4 s of the dragon popping whatever the light points near), *speed burst* (snappier steering, a rainbow trail, hoops worth double), *shield* (a bubble that takes one bump), *magnet* (pulls the dragon into the next hoops), *flock friend* (one of tonight's saved dragons swoops across and pops everything; it only shows up if somebody is home, so the numbers still match).
+
+**Score:** 100 a hoop, +50 through the middle, +25 per hoop already in the streak, +75 an enemy popped (+40 a puff), +25 a power-up, -50 a bump, +300 for clean flying (no bumps, at most one miss). The score and the stars earned so far are in the top left corner. The dragon card shows the score and 1 to 3 stars. The attract screen shows tonight's best flight for each level with the dragon's name, so a little kid's hatchling run can be a best flight too. **C** clears the bests with everything else.
 
 ## Timing (all in `src/config.js`)
 
 | Scene | Target | Notes |
 |---|---|---|
-| Attract | loop | 1 s hold on the lantern starts a run. Tonight's flock circles above the lantern, and a countdown shows how many more dragons until the next celebration |
+| Attract | loop | 1 s hold on a level starts a run (or a 2 s hold anywhere near the middle = HATCHLING). Tonight's flock loops through the sky, one bright star per celebration so far, a countdown to the next one, and the best flight per level |
+| Choose | up to 5 s | "WHO WILL YOU FIND?": three lost dragons with names and quirks, hold the light on one for 1.2 s. Picks the nearest one by itself after 5 s (`DUR.CHOOSE`). The other two stay lost for the next guests |
 | Title card | 1.3 s | "PIP IS LOST!" before Find, "NOW FLY HOME!" before the flight. The next scene is paused underneath (`DUR.TITLE`) |
 | Find | ~5-15 s | One instruction at a time, each up at least 2 s: MOVE YOUR LIGHT, FIND THE EYES, HOLD STILL (with a tiny framed demo). The hold ring sits on the eyes and pauses (never resets) when the light slips off. Hints get stronger with active pointing time: bigger eyes at 4 s, a dotted trail to the eyes at 6.5 s, the beam leaning toward them at 9 s. The dragon only comes to the light as a last resort at 10.5 s, and the guest still does the hold. Then a 1.6 s "YOU FOUND PIP!" moment |
-| Flight | ~2-5 s tutorial + 18 s | PIP FOLLOWS YOUR LIGHT (with an arrow), then FLY THROUGH THE HOOPS. Hoop 1 waits next to the dragon until you fly through it (5 s cap), then the timeline starts on the next beat: 7 more hoops, one every 2 s on the beat, always 8 in total with a "3 / 8" counter. Brass swell 12 s into the timeline (on a downbeat), where everyone already home tonight flies out to join you. Climb at 90%. Autopilot only after 3 s of a still pointer. Three routes take turns (sea stacks at dusk, a rain squall into clearing sky, low over standing stones under early aurora): only the scenery changes |
-| Home | 4.6 s | The guest's dragon lands in the circle with the rest of tonight's flock, its path lifts into the aurora, and the counter appears once it's on the new number. Every 8th dragon adds a 3.6 s celebration (`DUR.CELEBRATE`): the whole flock does a flyover, the aurora flares, "8 DRAGONS HOME!" |
-| Dragon card | 5 s | The rescued dragon's portrait and name, "THE 9TH EMBERWING HOME TONIGHT", its quirk, and "HEAR IT LIVE IN ACT II / LISTEN FOR THE BRASS!". Hold the small lantern to skip |
+| Flight | ~2-5 s tutorial + 18 / 24 / 26 s | PIP FOLLOWS YOUR LIGHT (with an arrow), then FLY THROUGH THE HOOPS. Hoop 1 waits next to the dragon until you fly through it (5 s cap), then the timeline snaps to the beat and the level's hoops come on the beat with a "3 / 8" counter. Brass swell 12 s into the timeline (on a downbeat), where everyone already home tonight flies out to join you. Climb at 90%. Autopilot only after 3 s of a still pointer. Three routes take turns (sea stacks at dusk, a rain squall into clearing sky, low over standing stones under early aurora): only the scenery changes |
+| Home | 4.6 s | The guest's dragon lands in the circle with the rest of tonight's flock, its path lifts into the aurora, and the counter appears once it's on the new number |
+| Celebration | 7.6 s, every 8th dragon | Every dragon saved tonight floods the screen in a spiral, fireworks in their colors, the aurora fills the whole sky, a full brass fanfare, a huge "8 DRAGONS HOME!" and this round's 8 names rolling past. Then a new star is born and flies up into the sky, where it stays for the night (`DUR.CELEBRATE`) |
+| Dragon card | 5 s | The rescued dragon's portrait and name, "THE 9TH EMBERWING HOME TONIGHT", its quirk, its stars and score, and "HEAR IT LIVE IN ACT II / LISTEN FOR THE BRASS!". Hold the small lantern to skip |
 | Scene fades | 0.4 s | `DUR.FADE` |
 
-Measured by the Playwright suite: **~40 s** for a guest who knows what to do, **~49 s** for one who never finds the dragon on their own (the test fails above 50 s), and about 49 s for a completely clueless guest who wanders the whole time (`tests/clueless.spec.js`, `tools/clueless.mjs`). The 8th, 16th, 24th... guest gets 3.6 s more for the celebration. Muted runs take exactly as long. **Idle reset:** 10 s without input during Find or Flight returns to attract. The assists only count time while someone is actually pointing, so an abandoned game resets instead of playing itself. Notes on this round of changes are in `notes/phase3.md`.
+Measured by the Playwright suite, a guest who knows what to do: **~43 s on HATCHLING, ~49 s on FLIER, ~51 s on STORM RIDER**. A guest who never finds the dragon on their own: ~52 s on HATCHLING, ~60 s on STORM RIDER. The 8th, 16th, 24th... guest gets 7.6 s more for the celebration. Muted runs take exactly as long. **Idle reset:** 10 s without input during Find or Flight returns to attract. The assists only count time while someone is actually pointing, so an abandoned game resets instead of playing itself. Notes on the last two rounds of changes are in `notes/phase3.md` and `notes/phase4.md`.
 
 **Slow laptops:** the game clock follows real time even when frames drop (it catches up in small steps, `LOOP` in `config.js`), so a choppy laptop doesn't make runs longer. Below about 4 fps it starts to slow down, and a frozen or backgrounded tab only moves the game forward a quarter second when it comes back. The YOURS! label after a run lasts `DUR.YOURS_LABEL` (15 s).
 
@@ -170,7 +199,7 @@ npm test
 
 This builds the site, serves it, and runs Playwright:
 
-- **`tests/fullrun.spec.js`**: a scripted guest plays a whole run by pointer only. It asserts 35-50 s, that the ribbon persists across a refresh, that a guest who never finds the dragon still finishes within 50 s, and that the dragon card can be skipped.
+- **`tests/fullrun.spec.js`**: a scripted guest plays a whole run by pointer only. It asserts 35-50 s, that the ribbon persists across a refresh, that a guest who never finds the dragon still finishes within 56 s (picking a level and a dragon included), and that the dragon card can be skipped.
 - **`tests/idle.spec.js`**: walking away during Find or Flight resets to attract after about 10 s.
 - **`tests/input.spec.js`**: the mocap pointer path, the clear confirmation, the portrait "rotate your phone" hint, and the touch offset.
 - **`tests/runs.spec.js`**: three flights in a row on one page all reach Home, and a cold first run and a second run both get all 8 hoops, each on screen at least 1.5 s before it arrives.
@@ -179,6 +208,13 @@ This builds the site, serves it, and runs Playwright:
 - **`tests/dragons.spec.js`**: 70 dragons in a row: no name repeats until the list runs out, and each looks different from the one before. The flock on attract, at the swell and at home always adds up to the saved dragons (0, 1, 3, 12, 13 and 20 home), the counter stays hidden until it lands, the 8th and 16th dragons get a celebration, **C** clears the flock, a cold first run of the night ends with exactly one dragon home, and the dragon card shows the right dragon and number.
 - **`tests/sound.spec.js`**: sound is on by default and **M** is remembered, a browser that blocks audio gets "press any key" and that key does nothing else, phones skip it and unlock on the first touch, a whole run works muted, and every hoop and the swell land on the beat.
 - **`tests/routes.spec.js`**: guests in a row get the three routes in turn with identical hoops, and every route plays all the way home.
+- **`tests/soundbutton.spec.js`**: the speaker button toggles sound by click, by tap (the first tap on a phone turns sound on), by holding the light on it (once per hold, never mid-flight), and by **M**.
+- **`tests/levels.spec.js`**: each lantern starts its level, holding still near the middle starts HATCHLING but a resting light never does, each level uses its numbers from `config.js` and really gets harder, every level always gets home, and how long a whole run takes on each level.
+- **`tests/choose.spec.js`**: three lost dragons, holding the light picks one and the other two stay lost for the next guest, it picks by itself after 5 s, and a walk-away puts the picked dragon back.
+- **`tests/score.spec.js`**: hoops, perfect hoops, streaks and clean flying score; stars follow the score; the card shows them; the best flight is kept per level, survives a refresh and **C** clears it.
+- **`tests/hazards.spec.js`**: no enemies on HATCHLING (puffs instead, plus a fireball and a flock friend), bumps tumble and cost a little but every run gets home, clouds zap hoops, wisps hide them, and each power-up does its job (a flock friend only when somebody is home).
+- **`tests/celebration.spec.js`**: the 8th dragon gets a 7-8 s celebration with every saved dragon and this round's names, it leaves a star that survives a refresh until **C**, and it plays calmer in reduced motion.
+- **`tests/ages.spec.js`**: a slow kid, a decent teen and a sharp player fly every level; it prints their scores and stars and checks the levels are really different (STORM RIDER gives the decent player one star).
 - **`tests/framerate.spec.js`**: at 8 fps the game clock still keeps real time, a frozen tab only nudges the game forward, and a full run at ~8 fps lands within 2 s of a normal one.
 - **`tests/motion.spec.js`**: reduced motion follows the OS setting, **G** cycles and is remembered, no shake and a calmer camera when reduced.
 - **`tests/calibration.spec.js`**: a deliberately misaligned pretend rig is fixed by **K**, the calibration survives a refresh, Delete clears it, and a mouse isn't affected.
@@ -191,12 +227,13 @@ The tests press a key right after loading, the same way the operator starts the 
 ```
 src/config.js          every tunable number (durations, tempo, thresholds, palette)
 src/main.js            loop, letterbox scaling, test hooks
-src/input/             Input (one pointer), adapters (mouse/touch/mocap/keys), OneEuroFilter, Dwell
-src/core/              SceneManager, Beat (120 BPM), Camera, Particles, AuroraStore (ribbons + dragons), Operator,
-                       dragons (seeded dragon parts + names), Audio (mixing, unlock, scheduler), synth (instruments), score (the tune)
+src/input/             Input (one pointer), adapters (mouse/touch/mocap/keys), OneEuroFilter, Dwell, SoundButton
+src/core/              SceneManager, Beat (120 BPM), Camera, Particles, AuroraStore (ribbons + dragons + bests), Operator,
+                       dragons (seeded dragon parts, names, the lost pool), Points (score + stars), Hazards (enemies,
+                       power-ups, gusts), Audio (mixing, unlock, scheduler), synth (instruments), tune (the music)
 src/art/               font (pixel font), knotwork, dragon (parts-based dragon drawing), quirks, flock, routes (the 3 flights),
-                       world, aurora, icons, sprites
-src/scenes/            Attract, FindDragon, Flight, Home, EndCard (the dragon card)
+                       critters (enemies + power-ups), world, aurora (+ celebration stars), icons, sprites
+src/scenes/            Attract (level picker), Choose, FindDragon, Flight, Home, Celebration, EndCard (the dragon card)
 ```
 
 Everything renders into a 480×270 buffer that is scaled up with nearest-neighbor (4× on a 1080p projector), so it stays crisp from across the lobby.

@@ -8,21 +8,23 @@ const errs = [];
 
 // one game frame: scene at t seconds, with `home` dragons already saved tonight.
 // ptr: 'follow' (steer at the hoops), 'target' (aim at the dragon), 'wander', or [x, y]
-async function frame({ scene, t, home = 0, ptr = null, route = 0, size = [960, 540] }) {
+async function frame({ scene, t, home = 0, ptr = null, route = 0, level = 'hatchling', run = null, size = [960, 540] }) {
   const page = await b.newPage({ viewport: { width: size[0], height: size[1] } });
   page.on('pageerror', (e) => errs.push(e.message));
-  await page.goto(`${URL}?seed=3&scene=attract&route=${route}`);
+  await page.goto(`${URL}?seed=3&scene=attract&route=${route}&level=${level}`);
   await page.waitForFunction(() => document.body.classList.contains('ready'));
   await page.keyboard.press('Enter'); // start the station like the operator, so the speaker icon shows sound on
-  await page.evaluate(([scene, t, home, ptr]) => {
+  await page.evaluate(([scene, t, home, ptr, run]) => {
     const w = window.__emberwing;
     const g = w.game;
     w.pause(true);
     g.gate = false;
     g.store.clear();
-    for (let i = 0; i < home; i++) g.store.add([[0, 0.5], [0.25, 0.3 + (i % 4) * 0.1], [0.55, 0.62], [0.8, 0.35], [1, 0.45]], i % 6);
-    g.dragon = null;
+    for (let i = 0; i < home; i++) g.store.add([[0, 0.5], [0.25, 0.3 + (i % 4) * 0.1], [0.55, 0.62], [0.8, 0.35], [1, 0.45]], i % 6, null, i === 2 ? { flown: true, level: 'hatchling', score: 2280 } : i === 4 ? { flown: true, level: 'storm', score: 3460 } : null);
+    if (run) g.lastRun = run;
+    const lvl = g.level;
     w.goto('attract');
+    g.level = lvl;
     if (scene !== 'attract') w.goto(scene);
     const inp = g.input;
     inp.feed(300, 250, 'mouse');
@@ -33,7 +35,7 @@ async function frame({ scene, t, home = 0, ptr = null, route = 0, size = [960, 5
       else if (Array.isArray(ptr)) inp.feed(ptr[0] + (i % 2), ptr[1], 'mouse');
       w.step(0.05);
     }
-  }, [scene, t, home, ptr]);
+  }, [scene, t, home, ptr, run]);
   const png = await page.screenshot();
   await page.close();
   return png;
@@ -55,7 +57,7 @@ async function sheet(name, frames, cols, labels = []) {
   const h = w * 9 / 16;
   await page.setContent(`<body style="margin:0;background:#05070d;width:960px;height:540px;display:flex;flex-wrap:wrap;align-content:center">
     ${imgs.map((src, i) => `<div style="position:relative;width:${w}px;height:${h}px"><img src="${src}" style="width:100%;height:100%;image-rendering:pixelated">
-    ${labels[i] ? `<div style="position:absolute;left:8px;bottom:6px;font:700 15px system-ui;color:#ffe28a;text-shadow:0 2px 0 #000">${labels[i]}</div>` : ''}</div>`).join('')}</body>`);
+    ${labels[i] ? `<div style="position:absolute;right:8px;bottom:6px;font:700 15px system-ui;color:#ffe28a;text-shadow:0 2px 0 #000">${labels[i]}</div>` : ''}</div>`).join('')}</body>`);
   await page.screenshot({ path: `design/${name}` });
   await page.close();
   console.log('design/' + name);
@@ -66,8 +68,15 @@ await save('02-find-the-eyes.png', await frame({ scene: 'find', t: 7.5, ptr: 'wa
 await save('03-wing-glow-burst.png', await frame({ scene: 'find', t: 2.8, ptr: 'target' }));
 await save('04-brass-swell.png', await frame({ scene: 'flight', t: 15.6, home: 5, ptr: 'follow' }));
 await save('05-your-path-in-the-aurora.png', await frame({ scene: 'home', t: 4.6, home: 9 }));
-await save('06-end-card.png', await frame({ scene: 'end', t: 1.8, home: 8 }));
-await save('07-celebration.png', await frame({ scene: 'home', t: 5.2, home: 7 }));
+await save('06-end-card.png', await frame({ scene: 'end', t: 1.8, home: 8, run: { flown: true, level: 'flier', score: 2875, stars: 2 } }));
+await save('07-celebration.png', await frame({ scene: 'party', t: 3.2, home: 16 }));
+await save('10-who-will-you-find.png', await frame({ scene: 'choose', t: 1.2, home: 5, ptr: [240, 104] }));
+await sheet('11-three-levels.png', [
+  await frame({ scene: 'attract', t: 0.7, home: 5, ptr: [292, 132] }),
+  await frame({ scene: 'flight', t: 6, home: 3, ptr: 'follow', level: 'hatchling' }),
+  await frame({ scene: 'flight', t: 8, home: 3, ptr: 'follow', level: 'flier' }),
+  await frame({ scene: 'flight', t: 9, home: 3, ptr: 'follow', level: 'storm' }),
+], 2, ['PICK A LEVEL', 'HATCHLING: BIG HOOPS, PUFFS TO POP', 'FLIER: MOVING HOOPS, GUSTS', 'STORM RIDER: SMALL HOOPS, CLOUDS, WIND']);
 await sheet('08-three-routes.png', [
   await frame({ scene: 'flight', t: 15.4, home: 3, ptr: 'follow', route: 0 }),
   await frame({ scene: 'flight', t: 4, home: 3, ptr: 'follow', route: 1 }),

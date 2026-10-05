@@ -17,8 +17,9 @@ We also reviewed **Sprout Lands** by Cup Nooble ("Assets from Sprout Lands, by C
 
 ## Original work (made for this project)
 - **The dragons:** original emberwing designs built from parts in code (`src/core/dragons.js`, `src/art/dragon.js`): body colors, wing shapes, horns, frills, antlers, crests, tail tips, markings and personality quirks. The 56 names are our own list, picked to avoid anything from the films.
+- **The critters and power-ups:** grumpy storm clouds, gust sprites, fog wisps, smiling puff clouds and the power-up orbs, all drawn in code (`src/art/critters.js`).
 - **World art:** cliffs, lighthouse, sea stacks, standing stones, invented rune glyphs (not a real alphabet), clouds, fog, aurora, knotwork, icons.
 - **Pixel font:** a hand-made 5×7 font drawn in code (`src/art/font.js`).
-- **Music and sound effects:** an original folk-style tune in D mixolydian and every sound effect (harp, tin whistle, drone, hand drum, strings, brass, bells, chirps, wind and rain), composed for this project and synthesized live with Web Audio (`src/core/score.js`, `src/core/synth.js`). No recordings or samples are used.
+- **Music and sound effects:** an original folk-style tune in D mixolydian and every sound effect (harp, tin whistle, drone, hand drum, strings, brass, bells, chirps, wind and rain), composed for this project and synthesized live with Web Audio (`src/core/tune.js`, `src/core/synth.js`). No recordings or samples are used.
 
 No characters, names, places, logos, dragon designs or music from the *How to Train Your Dragon* films are used.
