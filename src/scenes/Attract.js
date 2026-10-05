@@ -172,8 +172,9 @@ export class Attract {
   // how many are home (always the same number as dragons in the circle) and how close the next
   // celebration is. the line reads this while they wait
   drawTally(ctx, n, t) {
-    const s = n === 0 ? 'NO DRAGONS HOME YET' : `${n} ${n === 1 ? 'DRAGON' : 'DRAGONS'} HOME TONIGHT`;
-    drawText(ctx, s, BOOK.x + BOOK.w / 2, 246, { scale: 2, align: 'center', color: '#bff8ee' });
+    // clear of the sound button in the bottom left corner
+    const s = n === 0 ? 'NO DRAGONS HOME YET' : `${n} ${n === 1 ? 'DRAGON' : 'DRAGONS'} HOME`;
+    drawText(ctx, s, BOOK.x + BOOK.w / 2 + 12, 246, { scale: 2, align: 'center', color: '#bff8ee' });
     const every = FLOCK.CELEBRATE_EVERY;
     const done = n % every;
     const left = partyLeft(n);

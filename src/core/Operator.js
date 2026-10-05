@@ -1,7 +1,6 @@
 import { VIEW, PAL, INPUT } from '../config.js';
 import { drawText } from '../art/font.js';
 import { drawKnotRing } from '../art/knotwork.js';
-import { drawSpeaker } from '../art/icons.js';
 import { ROUTES } from '../art/routes.js';
 import { glow } from './util.js';
 import { CAL_TARGETS, CAL_NAMES } from '../input/Calibration.js';
@@ -142,8 +141,6 @@ export class Operator {
       drawText(ctx, `${g.store.count} DRAGONS WILL BE ERASED`, W / 2, H / 2 + 40, { scale: 1, align: 'center', color: '#9fb4d0' });
     }
     if (this.cal) this.drawCal(ctx);
-    // sound state, always in the bottom left corner
-    drawSpeaker(ctx, 3, 263, g.audio.status, g.time, g.beat.pulse);
     if (this.toastT > 0) {
       drawText(ctx, this.toast, W - 8, 8, { scale: 2, align: 'right', color: PAL.gold, alpha: Math.min(1, this.toastT * 2) });
     }

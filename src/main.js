@@ -10,6 +10,7 @@ import { Audio } from './core/Audio.js';
 import { Operator } from './core/Operator.js';
 import { Motion } from './core/Motion.js';
 import { Calibration } from './input/Calibration.js';
+import { SoundButton } from './input/SoundButton.js';
 import { mulberry32 } from './core/util.js';
 import { nextLostDragon } from './core/dragons.js';
 import { loadSprites } from './art/sprites.js';
@@ -94,6 +95,16 @@ game.scenes = new SceneManager(game, {
   end: new EndCard(),
 });
 game.op = new Operator(game);
+game.soundBtn = new SoundButton(game);
+
+// clicking or tapping the speaker toggles sound. registered before the gate below, so while
+// "press any key" is up a click only starts the station. touches use the real finger spot,
+// not the light (which sits above the fingertip)
+window.addEventListener('pointerdown', (e) => {
+  if (game.gate) return;
+  const p = toView(e.clientX, e.clientY);
+  if (game.soundBtn.contains(p.x, p.y)) game.soundBtn.press();
+});
 
 // browsers keep sound locked until someone presses a key or touches the screen. on the lobby
 // laptop the operator presses any key once to start the station (M starts it silent instead).
@@ -134,6 +145,7 @@ function step(dt) {
     game.cam.update(dt);
   }
   game.audio.update();
+  game.soundBtn.update(dt);
   game.op.update(dt);
 }
 
@@ -144,6 +156,7 @@ function render() {
   ctx.fillStyle = '#05070d';
   ctx.fillRect(0, 0, W, H);
   game.scenes.draw(ctx);
+  game.soundBtn.draw(ctx);
   game.op.draw(ctx);
   // a short delay so a browser that starts audio a moment late doesn't flash the gate
   if (game.gate && game.time > 0.5) game.op.drawGate(ctx);

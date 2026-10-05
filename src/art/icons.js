@@ -118,44 +118,42 @@ export function drawActBanner(ctx, cx, y, t, pulse, alpha = 1) {
   ctx.restore();
 }
 
-// little speaker in the corner so the operator can see at a glance whether sound is running.
-// on = waves pulsing on the beat, muted = an x, locked = waves blinking slowly (waiting for a
-// key press or a touch). shape, not color, tells them apart
-export function drawSpeaker(ctx, x, y, state, t, pulse = 0) {
+// the speaker on the sound button. on = waves pulsing on the beat, muted = an x, locked = waves
+// blinking slowly (waiting for a key press or a touch). shape, not color, tells them apart.
+// x is the left edge, y the middle, s = pixel scale
+export function drawSpeaker(ctx, x, y, state, t, pulse = 0, s = 1) {
   if (state === 'none') return;
   x = Math.round(x);
   y = Math.round(y);
-  ctx.fillStyle = 'rgba(5,7,13,0.55)';
-  ctx.fillRect(x - 2, y - 6, 19, 12);
-  const col = state === 'on' ? PAL.cream : 'rgba(255,243,214,0.7)';
-  ctx.fillStyle = col;
-  ctx.fillRect(x, y - 2, 2, 4);
-  ctx.fillRect(x + 2, y - 3, 1, 6);
-  ctx.fillRect(x + 3, y - 4, 1, 8);
+  const px = (a, b, w, h) => ctx.fillRect(x + a * s, y + b * s, w * s, h * s);
+  ctx.fillStyle = state === 'on' ? PAL.cream : 'rgba(255,243,214,0.75)';
+  px(0, -2, 2, 4);
+  px(2, -3, 1, 6);
+  px(3, -4, 1, 8);
   if (state === 'muted') {
     ctx.fillStyle = PAL.rose;
     for (let i = 0; i < 5; i++) {
-      ctx.fillRect(x + 7 + i, y - 2 + i, 1, 1);
-      ctx.fillRect(x + 11 - i, y - 2 + i, 1, 1);
+      px(6 + i, -2 + i, 1, 1);
+      px(10 - i, -2 + i, 1, 1);
     }
     return;
   }
   // locked: blinks once a second, well under the flash limit
   if (state === 'locked' && Math.floor(t) % 2 === 1) return;
-  ctx.fillStyle = state === 'on' ? PAL.gold2 : col;
+  ctx.fillStyle = state === 'on' ? PAL.gold2 : 'rgba(255,243,214,0.75)';
   ctx.globalAlpha = state === 'on' ? 0.6 + 0.4 * pulse : 1;
   // two arcs, ")" shaped
-  ctx.fillRect(x + 6, y - 2, 1, 1);
-  ctx.fillRect(x + 7, y - 1, 1, 2);
-  ctx.fillRect(x + 6, y + 1, 1, 1);
-  ctx.fillRect(x + 9, y - 4, 1, 1);
-  ctx.fillRect(x + 10, y - 3, 1, 1);
-  ctx.fillRect(x + 11, y - 2, 1, 4);
-  ctx.fillRect(x + 10, y + 2, 1, 1);
-  ctx.fillRect(x + 9, y + 3, 1, 1);
+  px(5, -2, 1, 1);
+  px(6, -1, 1, 2);
+  px(5, 1, 1, 1);
+  px(8, -4, 1, 1);
+  px(9, -3, 1, 1);
+  px(10, -2, 1, 4);
+  px(9, 2, 1, 1);
+  px(8, 3, 1, 1);
   if (state === 'locked') {
-    ctx.fillRect(x + 14, y - 3, 1, 4);
-    ctx.fillRect(x + 14, y + 2, 1, 1);
+    px(12, -3, 1, 4);
+    px(12, 2, 1, 1);
   }
   ctx.globalAlpha = 1;
 }
