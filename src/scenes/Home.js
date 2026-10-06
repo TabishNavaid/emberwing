@@ -4,7 +4,7 @@ import { drawText, drawTextPop, textWidth, fitScale } from '../art/font.js';
 import { drawSpeck } from '../art/dragon.js';
 import { flockOf, member, chirp, updateMember, drawMember } from '../art/flock.js';
 import { drawSky, SKY, makeStars, drawStars, drawSea, drawStone, makeCliff, drawCliff } from '../art/world.js';
-import { drawBaseAurora, drawRibbon, ribbonSkyPoints, RIBBON_COLORS, drawPartyStars } from '../art/aurora.js';
+import { drawBaseAurora, drawRibbon, ribbonSkyPoints, RIBBON_COLORS, drawCelebrationStars } from '../art/aurora.js';
 import { drawSparkle, drawActBanner } from '../art/icons.js';
 
 const { W, H } = VIEW;
@@ -121,7 +121,7 @@ export class Home {
       updateMember(g, m, dt, p.x, p.y, { scale: this.scale, flip: p.z > 0 });
     });
     this.showingAct = t > this.actAt; // the tests check this
-    if (t >= this.length) g.scenes.go(this.celebrate ? 'party' : 'end', {}, { color: '#070a18' });
+    if (t >= this.length) g.scenes.go(this.celebrate ? 'celebration' : 'end', {}, { color: '#070a18' });
   }
 
   draw(g, ctx) {
@@ -132,7 +132,7 @@ export class Home {
     const revealed = t > TICK;
     g.wall.draw(ctx, t, 1, revealed ? 0 : 1);
     // one bright star for every celebration so far tonight
-    drawPartyStars(ctx, Math.floor(this.count / FLOCK.CELEBRATE_EVERY) - (this.celebrate ? 1 : 0), t);
+    drawCelebrationStars(ctx, Math.floor(this.count / FLOCK.CELEBRATE_EVERY) - (this.celebrate ? 1 : 0), t);
     for (const f of this.far) {
       const a = f.a + t * 0.25;
       drawSpeck(ctx, ORBIT.x + Math.cos(a) * W * 0.42 * f.r, f.y + Math.sin(a * 2) * 6, f.d, t + f.a);

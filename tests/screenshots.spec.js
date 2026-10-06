@@ -33,7 +33,7 @@ const SHOTS = [
   ['home', 3.6, null, 'flock'], // counter lands, flock circling
   ['home', 4.2, null], // first guest: one dragon, an empty sky
   ['home', 4.8, null], // act II banner
-  ['home', 5.4, null, 'party'], // the 8th dragon: celebration flyover
+  ['home', 5.4, null, 'seven'], // 7 already home, so this is the 8th: on to the celebration
   ['end', 1.2, null], // the dragon card, first guest of the night
   ['end', 1.6, null, 'flock'], // the dragon card, 6th home
   ['attract', 3, null, 'flock'], // tonight's flock circling, countdown to the next celebration
@@ -44,8 +44,8 @@ const SHOTS = [
   ['flight', 6, 'follow', 'level=hatchling'], // puffs to pop, a power-up orb
   ['flight', 8, 'follow', 'level=flier'], // smaller moving hoops, the first enemies
   ['flight', 9, 'follow', 'level=storm'], // small hoops, enemies, gusts
-  ['party', 3, null, 'eight'], // the celebration: every dragon, fireworks, names
-  ['party', 6.6, null, 'eight'], // the new star flies up into the sky
+  ['celebration', 3, null, 'eight'], // the celebration: every dragon, fireworks, names
+  ['celebration', 6.6, null, 'eight'], // the new star flies up into the sky
   ['end', 2.0, null, 'scored'], // the dragon card with a score and stars
 ];
 const SIZES = [
@@ -76,7 +76,7 @@ for (const [label, viewport, dpr] of SIZES) {
         inp.feed(300, 250, 'mouse');
         if (extra === 'scored') w.game.lastRun = { flown: true, level: 'flier', score: 2450, stars: 2 };
         // some dragons already home tonight (5), 7 so this one is the 8th, 8 for the celebration
-        const home = { flock: 5, party: 7, eight: 8, scored: 3 }[extra] ?? 0;
+        const home = { flock: 5, seven: 7, eight: 8, scored: 3 }[extra] ?? 0;
         if (home) {
           for (let i = 0; i < home; i++) w.game.store.add([[0, 0.5], [0.3, 0.3 + i * 0.05], [0.6, 0.6], [1, 0.4]], i % 6);
           w.goto(scene);

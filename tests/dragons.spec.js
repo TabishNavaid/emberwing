@@ -86,7 +86,7 @@ test('every 8th dragon home gets a celebration, and attract counts down to it', 
       g.store.clear();
       for (let i = 0; i < before; i++) g.store.add([[0, 0.5], [1, 0.4]], i % 6);
       w.goto('attract');
-      const left = w.game.scenes.current.visibleDragons().partyLeft;
+      const left = w.game.scenes.current.visibleDragons().untilCelebration;
       w.goto('home');
       const h = w.game.scenes.current;
       w.step(5.2); // home is over, on to whatever comes next
@@ -97,9 +97,9 @@ test('every 8th dragon home gets a celebration, and attract counts down to it', 
     return out;
   });
   expect(r[6]).toMatchObject({ left: 2, celebrate: false, next: 'end' });
-  expect(r[7]).toMatchObject({ left: 1, celebrate: true, next: 'party' }); // the 8th
+  expect(r[7]).toMatchObject({ left: 1, celebrate: true, next: 'celebration' }); // the 8th
   expect(r[8]).toMatchObject({ left: 8, celebrate: false, next: 'end' });
-  expect(r[15]).toMatchObject({ left: 1, celebrate: true, next: 'party' }); // the 16th
+  expect(r[15]).toMatchObject({ left: 1, celebrate: true, next: 'celebration' }); // the 16th
 });
 
 test('operator C asks first: N keeps the night, Y clears the ribbons and the dragons', async ({ page }) => {

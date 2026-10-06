@@ -173,7 +173,7 @@ export class Audio {
       climb: [0.03, 0.02, 0],
       home: [0.04, 0.01, 0],
       card: [0.03, 0.01, 0],
-      party: [0.03, 0, 0],
+      celebration: [0.03, 0, 0],
     }[name] ?? [0, 0, 0];
     this.droneGain.gain.setTargetAtTime(beds[0], t, 0.6);
     this.windGain.gain.setTargetAtTime(beds[1], t, 0.6);

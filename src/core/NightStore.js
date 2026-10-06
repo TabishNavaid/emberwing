@@ -9,7 +9,7 @@ const today = () => {
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 };
 
-export class AuroraStore {
+export class NightStore {
   constructor() {
     this.version = 0; // bumps on every change so the aurora wall and the flock know to redraw
     this.data = { date: today(), count: 0, ribbons: [], best: {} };

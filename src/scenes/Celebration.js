@@ -4,7 +4,7 @@ import { drawText, drawTextPop, textWidth, fitScale } from '../art/font.js';
 import { drawDragon } from '../art/dragon.js';
 import { flockOf, member, chirp, updateMember, drawMember } from '../art/flock.js';
 import { drawSky, SKY, makeStars, drawStars } from '../art/world.js';
-import { drawBaseAurora, drawFullAurora, drawPartyStar, drawPartyStars, partyStarSpot } from '../art/aurora.js';
+import { drawBaseAurora, drawFullAurora, drawCelebrationStar, drawCelebrationStars, celebrationStarSpot } from '../art/aurora.js';
 
 const { W, H } = VIEW;
 const C = { x: 240, y: 118 }; // middle of the spiral
@@ -34,7 +34,7 @@ export class Celebration {
     this.booms = 0;
     this.born = false;
     this.round.forEach((r, i) => chirp(this.dragons[this.dragons.length - this.round.length + i], 1 + i * 0.25));
-    g.audio.section('party');
+    g.audio.section('celebration');
     g.audio.cue('fanfare');
     g.cam.shake(2.5);
   }
@@ -94,7 +94,7 @@ export class Celebration {
     drawBaseAurora(ctx, t, 1 + fill, 14);
     drawFullAurora(ctx, t, fill * (this.gentle ? 0.7 : 1));
     g.wall.draw(ctx, t, 1);
-    drawPartyStars(ctx, this.nth - 1, t);
+    drawCelebrationStars(ctx, this.nth - 1, t);
 
     // everyone tonight, far side of the spiral first
     const drawers = this.dragons.map((m, i) => {
@@ -140,11 +140,11 @@ export class Celebration {
   // a sparkle gathers in the middle, then flies up to its place in the sky and stays
   drawNewStar(ctx, t) {
     if (t < STAR_AT) return;
-    const spot = partyStarSpot(this.nth - 1); // same spot attract, home and the card draw it in
+    const spot = celebrationStarSpot(this.nth - 1); // same spot attract, home and the card draw it in
     if (t < STAR_UP) {
       const k = (t - STAR_AT) / (STAR_UP - STAR_AT);
       glow(ctx, C.x, C.y, 10 + k * 30, PAL.gold2, 0.4 + k * 0.5);
-      drawPartyStar(ctx, C.x, C.y, t, 0.6 + k * 1.2, this.nth);
+      drawCelebrationStar(ctx, C.x, C.y, t, 0.6 + k * 1.2, this.nth);
       return;
     }
     const k = ease.inOutSine(clamp((t - STAR_UP) / 0.7));
@@ -154,7 +154,7 @@ export class Celebration {
       const kk = Math.max(0, k - i * 0.04);
       glow(ctx, lerp(C.x, spot.x, kk), lerp(C.y, spot.y, kk) - Math.sin(kk * Math.PI) * 30, 6, PAL.gold2, 0.3 * (1 - i / 8));
     }
-    drawPartyStar(ctx, x, y, t, lerp(1.8, 1, k), this.nth);
+    drawCelebrationStar(ctx, x, y, t, lerp(1.8, 1, k), this.nth);
     if (k >= 1) drawText(ctx, 'A NEW STAR!', spot.x, spot.y + 12, { scale: 2, align: 'center', color: PAL.gold2, alpha: clamp((DUR.CELEBRATE - t) * 3) });
   }
 }

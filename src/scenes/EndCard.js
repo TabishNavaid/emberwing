@@ -3,7 +3,7 @@ import { clamp, glow, ease, dist, dwell } from '../core/util.js';
 import { drawText, drawTextPop, textWidth, fitScale } from '../art/font.js';
 import { drawKnotFrame, drawKnotRing, drawKnotBand } from '../art/knotwork.js';
 import { drawSky, SKY, makeStars, drawStars } from '../art/world.js';
-import { drawBaseAurora, drawPartyStars } from '../art/aurora.js';
+import { drawBaseAurora, drawCelebrationStars } from '../art/aurora.js';
 import { drawHorn, drawLantern, drawCursorLight, drawSparkle, drawStarIcon } from '../art/icons.js';
 import { member, chirp, updateMember, drawMember } from '../art/flock.js';
 import { ordinal, QUIRK_TEXT } from '../core/dragons.js';
@@ -70,7 +70,7 @@ export class EndCard {
     drawStars(ctx, this.stars, t);
     drawBaseAurora(ctx, t, 0.8, 10);
     g.wall.draw(ctx, t, 0.6);
-    drawPartyStars(ctx, Math.floor(g.store.count / FLOCK.CELEBRATE_EVERY), t);
+    drawCelebrationStars(ctx, Math.floor(g.store.count / FLOCK.CELEBRATE_EVERY), t);
 
     const { x, y, w, h } = CARD;
     // slides up into place

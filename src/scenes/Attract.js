@@ -8,7 +8,7 @@ import { fillLost } from '../core/dragons.js';
 import { ROUTES } from '../art/routes.js';
 import { drawSky, SKY, makeStars, drawStars, drawSea, drawWind } from '../art/world.js';
 import { drawFeet, drawCursorLight, drawSparkle, drawArrowUp, drawLevelIcon } from '../art/icons.js';
-import { drawBaseAurora, drawRibbon, ribbonSkyPoints, RIBBON_COLORS, drawPartyStars } from '../art/aurora.js';
+import { drawBaseAurora, drawRibbon, ribbonSkyPoints, RIBBON_COLORS, drawCelebrationStars } from '../art/aurora.js';
 import { Storybook, BOOK } from '../art/storybook.js';
 
 // storybook on the left, the level picker on the right. picking a level is how a run starts
@@ -26,7 +26,7 @@ const HOLD_ANYWHERE = 2.0;
 const MIDDLE = { x0: 60, x1: 420, y0: 50, y1: 230 };
 
 // how many more dragons until the next celebration
-const partyLeft = (n) => FLOCK.CELEBRATE_EVERY - (n % FLOCK.CELEBRATE_EVERY);
+const untilCelebration = (n) => FLOCK.CELEBRATE_EVERY - (n % FLOCK.CELEBRATE_EVERY);
 
 export class Attract {
   interactive = false;
@@ -105,7 +105,7 @@ export class Attract {
   }
 
   visibleDragons() {
-    return { near: this.flock.length, far: this.far.length, names: this.flock.map((m) => m.d.name), partyLeft: partyLeft(this.flock.length + this.far.length) };
+    return { near: this.flock.length, far: this.far.length, names: this.flock.map((m) => m.d.name), untilCelebration: untilCelebration(this.flock.length + this.far.length) };
   }
 
   update(g, dt) {
@@ -169,7 +169,7 @@ export class Attract {
     drawBaseAurora(ctx, t, 0.9);
     g.wall.draw(ctx, t);
     // one bright star for every celebration so far tonight
-    drawPartyStars(ctx, Math.floor(g.store.count / FLOCK.CELEBRATE_EVERY), t);
+    drawCelebrationStars(ctx, Math.floor(g.store.count / FLOCK.CELEBRATE_EVERY), t);
     // your ribbon glows a bit brighter than the rest while the label is up
     if (this.yoursT > 0) drawRibbon(ctx, this.yoursPts, this.yoursColor, 0.45 * clamp(this.yoursT / 1.5), t, 34);
     this.syncFlock(g);
@@ -264,7 +264,7 @@ export class Attract {
       if (on) glow(ctx, x0 + i * 15, 224, 9, PAL.gold, 0.6);
       drawKnotRing(ctx, x0 + i * 15, 224, r, on ? 1 : 0, { lobes: 3, amp: 1, width: 1, on: PAL.gold, off: next ? 'rgba(191,248,238,0.9)' : 'rgba(191,248,238,0.35)' });
     }
-    drawText(ctx, `${partyLeft(n)} MORE TO THE`, cx, 234, { scale: 2, align: 'center', color: '#bff8ee' });
+    drawText(ctx, `${untilCelebration(n)} MORE TO THE`, cx, 234, { scale: 2, align: 'center', color: '#bff8ee' });
     drawText(ctx, 'NEXT CELEBRATION', cx, 250, { scale: 2, align: 'center', color: '#bff8ee' });
   }
 

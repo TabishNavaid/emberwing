@@ -5,8 +5,8 @@ import { Beat } from './core/Beat.js';
 import { Particles } from './core/Particles.js';
 import { SceneManager } from './core/SceneManager.js';
 import { Camera } from './core/Camera.js';
-import { AuroraStore } from './core/AuroraStore.js';
-import { Audio } from './core/Audio.js';
+import { NightStore } from './core/NightStore.js';
+import { Audio } from './audio/Audio.js';
 import { Operator } from './core/Operator.js';
 import { Motion } from './core/Motion.js';
 import { Calibration } from './input/Calibration.js';
@@ -72,7 +72,7 @@ const game = {
   beat,
   particles: new Particles(),
   cam: new Camera(),
-  store: new AuroraStore(),
+  store: new NightStore(),
   rng: mulberry32(seed),
   time: 0,
   runStart: 0,
@@ -100,7 +100,7 @@ game.scenes = new SceneManager(game, {
   find: new FindDragon(),
   flight: new Flight(),
   home: new Home(),
-  party: new Celebration(),
+  celebration: new Celebration(),
   end: new EndCard(),
 });
 game.op = new Operator(game);

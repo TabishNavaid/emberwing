@@ -13,18 +13,18 @@ test('the 8th dragon home: every saved dragon in the spiral, the names from this
     for (let i = 0; i < 15; i++) g.store.add([[0, 0.5], [1, 0.4]], i % 6);
     w.goto('home'); // the 16th
     w.step(5.2);
-    const party = g.scenes.name;
+    const scene = g.scenes.name;
     const c = g.scenes.current;
     const seen = c.visibleDragons();
     const saved = g.store.dragons.map((d) => d.name);
     let t = 0;
-    while (g.scenes.name === 'party' && t < 12) {
+    while (g.scenes.name === 'celebration' && t < 12) {
       w.step(0.1);
       t += 0.1;
     }
-    return { party, seen, saved, count: g.store.count, length: +t.toFixed(1), after: g.scenes.name, nth: c.nth };
+    return { scene, seen, saved, count: g.store.count, length: +t.toFixed(1), after: g.scenes.name, nth: c.nth };
   });
-  expect(r.party).toBe('party');
+  expect(r.scene).toBe('celebration');
   expect(r.seen.near + r.seen.far).toBe(r.count); // every dragon saved tonight is in it
   expect(r.seen.names).toEqual(r.saved.slice(-8)); // this round's eight roll past
   expect(r.length).toBeGreaterThanOrEqual(6.8);
@@ -64,7 +64,7 @@ test('reduced motion: the celebration still plays, calmer', async ({ page }) => 
     w.step(3);
     return { scene: g.scenes.name, gentle: c.gentle, booms: c.booms, shake: g.cam.shakeAmt };
   });
-  expect(r.scene).toBe('party');
+  expect(r.scene).toBe('celebration');
   expect(r.gentle).toBe(true);
   expect(r.booms).toBeLessThanOrEqual(4); // fewer fireworks
   expect(r.shake).toBe(0);

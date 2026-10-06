@@ -117,8 +117,8 @@ export function drawBaseAurora(ctx, t, alpha = 1, top = 20) {
 // every celebration leaves a bright star in the sky for the rest of the night, so the sky shows
 // how many there have been. same spots in every scene, in the strip of sky the attract screen
 // leaves open between the title and NEXT FLYER
-const PARTY_STARS = [[196, 12], [226, 30], [254, 8], [284, 26], [208, 40], [240, 18], [270, 42], [298, 10], [186, 28], [260, 32], [218, 6], [292, 40]];
-export function drawPartyStar(ctx, x, y, t, k = 1, i = 0) {
+const STAR_SPOTS = [[196, 12], [226, 30], [254, 8], [284, 26], [208, 40], [240, 18], [270, 42], [298, 10], [186, 28], [260, 32], [218, 6], [292, 40]];
+export function drawCelebrationStar(ctx, x, y, t, k = 1, i = 0) {
   const tw = 0.75 + 0.25 * Math.sin(t * 1.3 + i * 1.7); // slow twinkle
   glow(ctx, x, y, 14 * k, PAL.gold2, 0.55 * tw * k);
   ctx.fillStyle = '#fff6d8';
@@ -130,15 +130,15 @@ export function drawPartyStar(ctx, x, y, t, k = 1, i = 0) {
   ctx.globalAlpha = 1;
 }
 // where star i sits. past 12 they start a second layer just below the first
-export function partyStarSpot(i) {
-  const [x, y] = PARTY_STARS[i % PARTY_STARS.length];
-  const layer = Math.floor(i / PARTY_STARS.length);
+export function celebrationStarSpot(i) {
+  const [x, y] = STAR_SPOTS[i % STAR_SPOTS.length];
+  const layer = Math.floor(i / STAR_SPOTS.length);
   return { x: x + layer * 7, y: y + layer * 5 };
 }
-export function drawPartyStars(ctx, n, t) {
+export function drawCelebrationStars(ctx, n, t) {
   for (let i = 0; i < n; i++) {
-    const { x, y } = partyStarSpot(i);
-    drawPartyStar(ctx, x, y, t, 1, i);
+    const { x, y } = celebrationStarSpot(i);
+    drawCelebrationStar(ctx, x, y, t, 1, i);
   }
 }
 

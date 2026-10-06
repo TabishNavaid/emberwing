@@ -25,7 +25,7 @@ test('first two guests of the night: 35-50s, the first dragon flies home alone, 
   await boot(page);
   const first = (await state(page)).dragon;
   const empty = await seen(page);
-  expect(empty).toMatchObject({ near: 0, far: 0, partyLeft: 8 });
+  expect(empty).toMatchObject({ near: 0, far: 0, untilCelebration: 8 });
 
   const hoops = [];
   for (let guest = 0; guest < 2; guest++) {
@@ -48,7 +48,7 @@ test('first two guests of the night: 35-50s, the first dragon flies home alone, 
     expect(s.runs[guest]).toBeLessThanOrEqual(MAX);
     expect(s.count).toBe(guest + 1);
     if (guest === 0) {
-      expect(await seen(page)).toMatchObject({ near: 1, far: 0, names: [first], partyLeft: 7 });
+      expect(await seen(page)).toMatchObject({ near: 1, far: 0, names: [first], untilCelebration: 7 });
       expect(s.dragon).not.toBe(first); // a new dragon is lost for the next guest
     }
   }
