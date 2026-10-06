@@ -1,3 +1,4 @@
+// whole runs in real time, with a scripted guest who only ever moves the pointer
 import { test, expect } from '@playwright/test';
 import { boot, state, startRun, findDragon, fly, watch, waitScene, hover, reload } from './helpers.js';
 

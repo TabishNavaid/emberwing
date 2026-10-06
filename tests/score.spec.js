@@ -1,8 +1,7 @@
-import { test, expect } from '@playwright/test';
-import { boot, reload } from './helpers.js';
-
 // a score for hoops, streaks, popping enemies and clean flying, 1 to 3 stars, the best flight
 // per level on attract
+import { test, expect } from '@playwright/test';
+import { boot, reload } from './helpers.js';
 
 // flies a whole flight by hand. aim = how far off the middle of each hoop to aim (px)
 const flyIt = (aim) => {

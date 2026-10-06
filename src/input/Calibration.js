@@ -1,7 +1,7 @@
+// mocap calibration (K): maps where the rig *thinks* it's pointing to where it really points on the
+// wall. 4 corners give a full perspective fix, so a keystoned projector gets fixed too
 import { VIEW, INPUT } from '../config.js';
 
-// maps where the mocap rig *thinks* it's pointing to where it's actually pointing on the wall.
-// 4 corners give a full perspective mapping, so it also fixes a keystoned projector.
 // only applies to the input source it was captured with, so a desk mouse stays normal
 const KEY = 'emberwing.cal.v1';
 const I = INPUT.CAL_INSET;

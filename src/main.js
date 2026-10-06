@@ -1,3 +1,5 @@
+// the entry point: builds the game, scales the tiny 480x270 picture up to the screen, runs the
+// loop, and hangs a few hooks on window for the tests
 import { VIEW, LOOP, LEVELS } from './config.js';
 import { Input } from './input/Input.js';
 import { attachPointer, attachMocap, attachKeys } from './input/adapters.js';

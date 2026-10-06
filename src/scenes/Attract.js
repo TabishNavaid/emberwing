@@ -1,3 +1,5 @@
+// the attract screen: tonight's flock and aurora, the storybook, and the level picker. holding the
+// light on a level is how a run starts
 import { DUR, PAL, FLOCK, LEVELS, LEVEL_ORDER } from '../config.js';
 import { glow, clamp, dwell } from '../core/util.js';
 import { drawText } from '../art/font.js';
@@ -11,7 +13,7 @@ import { drawFeet, drawCursorLight, drawSparkle, drawArrowUp, drawLevelIcon } fr
 import { drawBaseAurora, drawRibbon, ribbonSkyPoints, RIBBON_COLORS, drawCelebrationStars } from '../art/aurora.js';
 import { Storybook, BOOK } from '../art/storybook.js';
 
-// storybook on the left, the level picker on the right. picking a level is how a run starts
+// the level picker is the right column (the storybook on the left is art/storybook.js)
 const COL = 374; // middle of the right column
 const ROW_H = 58;
 // each row is a big target: the ring, the name, the hint and tonight's best all count

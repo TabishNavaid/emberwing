@@ -1,7 +1,7 @@
-import { MOTION } from '../config.js';
-
 // reduced motion: follows the OS "reduce motion" setting unless the operator forces it with G.
 // saved so a refresh keeps whatever the operator picked
+import { MOTION } from '../config.js';
+
 const KEY = 'emberwing.motion.v1';
 const MODES = ['auto', 'on', 'off'];
 

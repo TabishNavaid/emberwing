@@ -1,4 +1,6 @@
-// the few crops from the licensed packs (see CREDITS.md). BASE_URL so it works under /<repo>/ on pages
+// loads and draws the few sprites we cropped from the licensed art packs (see CREDITS.md)
+
+// BASE_URL so it still works under /<repo>/ on github pages
 const BASE = import.meta.env.BASE_URL;
 const files = {
   gull: 'sprites/gull.png', // 4 frames 18x18: idle a, idle b, peck a, peck b

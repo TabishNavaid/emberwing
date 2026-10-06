@@ -1,3 +1,5 @@
+// the aurora: one ribbon for every guest who made it home, the curtains that are always there, and
+// the stars each celebration leaves in the sky
 import { VIEW, PAL } from '../config.js';
 import { makeCanvas, rgba, clamp, glow } from '../core/util.js';
 

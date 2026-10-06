@@ -1,8 +1,8 @@
+// walking away mid-game sends it back to attract after INPUT.IDLE_RESET (10s). stepped by hand on
+// the game clock: waiting it out in real time took 20s a test and got flaky on a busy laptop
 import { test, expect } from '@playwright/test';
 import { boot } from './helpers.js';
 
-// walking away mid-game sends it back to attract after INPUT.IDLE_RESET (10s). stepped by hand on
-// the game clock: waiting it out in real time took 20s a test and got flaky on a busy laptop
 const walkAway = (page, scene) => page.evaluate((scene) => {
   const w = window.__emberwing;
   const g = w.game;

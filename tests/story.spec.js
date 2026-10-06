@@ -1,7 +1,7 @@
+// the story beats show up when they should: the act II line, one instruction at a time, the
+// brass swell, YOURS!, and the title cards between scenes
 import { test, expect } from '@playwright/test';
 import { boot } from './helpers.js';
-
-// phase 2 story/clarity bits, checked through the scene state
 
 test('home shows the act II line before the end card', async ({ page }) => {
   await boot(page, '&scene=home');

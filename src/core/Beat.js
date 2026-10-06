@@ -1,7 +1,7 @@
+// the 120 bpm clock. the music is scheduled off it, and the wind, hoops and stones pulse on it
+// too, so the tempo still shows with the sound off
 import { MUSIC } from '../config.js';
 
-// 120 bpm clock. the music is scheduled off it, and it's also what makes the wind, rings and
-// stones pulse together, so the tempo still shows with the sound off
 export class Beat {
   constructor() {
     this.t = 0;

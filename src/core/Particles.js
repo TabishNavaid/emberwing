@@ -1,6 +1,6 @@
+// sparks, glows and confetti. kinds: 'px' plain square, 'spark' square + glow, 'glow' soft blob
 import { glow } from './util.js';
 
-// kinds: 'px' plain square, 'spark' square + glow, 'glow' soft blob.
 // layer lets flight draw some particles inside the zoomed camera and some outside
 export class Particles {
   constructor() {

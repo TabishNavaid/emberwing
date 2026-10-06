@@ -1,7 +1,7 @@
+// the speaker in the corner is a real control: click, tap, or hold the light on it
 import { test, expect } from '@playwright/test';
 import { boot, state, toScreen } from './helpers.js';
 
-// the speaker in the corner is a real control: click, tap, hold the light on it, or press M
 const BTN = { x: 17, y: 256 };
 const soundIs = (page, v) => page.waitForFunction((v) => window.__emberwing.state().sound === v, v, { polling: 50, timeout: 3000 });
 

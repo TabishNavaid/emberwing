@@ -1,7 +1,7 @@
-import { makeCanvas } from '../core/util.js';
-
 // hand-made 5x7 pixel font so there's no font download (can't trust lobby wifi).
 // scale 2 = 56px tall on a 1080p projector, which reads fine from 15ft
+import { makeCanvas } from '../core/util.js';
+
 const G = {
   A: ['.###.', '#...#', '#...#', '#####', '#...#', '#...#', '#...#'],
   B: ['####.', '#...#', '#...#', '####.', '#...#', '#...#', '####.'],

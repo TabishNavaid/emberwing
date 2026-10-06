@@ -1,7 +1,7 @@
+// the score for one flight, plus the little "+150" numbers that float up where it happened
 import { SCORE, LEVELS, PAL } from '../config.js';
 import { drawText } from '../art/font.js';
 
-// the score for one flight, plus the little "+150" numbers that float up where it happened
 export class Points {
   constructor(level) {
     this.level = level;

@@ -1,7 +1,6 @@
+// every 8th dragon: a real celebration, and a star that stays in the sky all night
 import { test, expect } from '@playwright/test';
 import { boot, reload } from './helpers.js';
-
-// every 8th dragon: a real celebration, and a star that stays in the sky all night
 
 test('the 8th dragon home: every saved dragon in the spiral, the names from this round, about 7-8s, then the card', async ({ page }) => {
   await boot(page);

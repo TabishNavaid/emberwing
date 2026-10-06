@@ -1,6 +1,6 @@
+// screen shake. it's applied when the low-res buffer gets scaled up, so every scene gets it for free
 import { approach } from './util.js';
 
-// screen shake, applied when the low-res buffer gets blitted so every scene gets it
 export class Camera {
   constructor() {
     this.t = 0;

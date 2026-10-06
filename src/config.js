@@ -29,10 +29,10 @@ export const DUR = {
   FIND_HARD_CAP: 13.0, // truly stuck (light parked off in a corner), the ring fills anyway
   FIND_BURST: 1.6, // the "YOU FOUND PIP!" moment, everything holds still for this long
 
-  // (how long the flight's timeline runs is per level now, see LEVELS)
-  // home was 6.5. the dragon card at the end now carries the act II line for 5s, so home only
-  // needs to land the ribbon and the counter. 4.6 and not 5 because the flight timeline now snaps
-  // to the beat (up to 0.25s later), and the worst-case run has to stay under 50s
+  // (how long the flight runs is set per level, see LEVELS)
+  // home was 6.5. the dragon card carries the act II line for 5s, so home only has to land the
+  // ribbon and the counter. 4.6 and not 5 because the flight snaps to the beat (up to 0.25s
+  // later) and the worst-case run has to stay under 50s
   HOME: 4.6,
   CELEBRATE: 7.6, // every FLOCK.CELEBRATE_EVERY-th dragon gets its own celebration after home
   END: 5.0, // the dragon card, long enough to snap a photo of it
@@ -65,9 +65,9 @@ export const FLIGHT = {
   CAM_FOLLOW: 0.12, // how much the camera drifts toward the dragon vertically, 0 = locked
 };
 
-// three levels, and picking one on the attract screen is how a run starts. hatchling is the
-// game as it was (big slow hoops, for little kids and first-timers). everything that makes the
-// other two harder is in here so it can be tuned after playtesting
+// three levels, and picking one on the attract screen is how a run starts. hatchling is big slow
+// hoops for little kids and first-timers. everything that makes the other two harder is in here
+// so it can be tuned after playtesting
 export const LEVELS = {
   hatchling: {
     label: 'HATCHLING',

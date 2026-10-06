@@ -1,6 +1,6 @@
+// npm run shots -> tests/screens/, every scene at projector and phone size
 import { test } from '@playwright/test';
 
-// npm run shots -> tests/screens/, every scene at projector and phone size
 const SHOTS = [
   ['attract', 2, null],
   ['attract', 10.4, null],

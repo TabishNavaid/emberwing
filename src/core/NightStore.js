@@ -1,9 +1,9 @@
+// everything saved about tonight: each guest's ribbon, the dragon they brought home and the best
+// flight per level. it's in localStorage so a refresh or a crashed tab doesn't wipe the wall
 import { STORE } from '../config.js';
 import { dragonFromSeed, standIn } from './dragons.js';
 
-// every guest's ribbon and the dragon they brought home, saved to localStorage so a refresh or
-// crashed tab doesn't wipe the wall. storage can throw (private mode, blocked site data), then
-// we just keep it in memory
+// storage can throw (private mode, blocked site data), then we just keep it in memory
 const today = () => {
   const d = new Date();
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;

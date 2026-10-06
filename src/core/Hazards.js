@@ -1,3 +1,5 @@
+// everything in the flight that isn't a hoop: enemies, hatchling's puffs, power-up orbs, fireballs,
+// the flock friend and storm rider's gusts. none of it can end a run, a bump is just a tumble
 import { VIEW, PAL, ENEMY, POWER, SCORE, FLIGHT } from '../config.js';
 import { clamp, lerp, mulberry32, approach, dist } from './util.js';
 import { drawGrumpyCloud, drawGustSprite, drawFogWisp, drawPuff, drawOrb, drawFireball } from '../art/critters.js';
@@ -6,10 +8,7 @@ import { drawMember, chirp } from '../art/flock.js';
 const { W, H } = VIEW;
 const SPAWN_X = W + 40;
 
-// everything in the flight that isn't a hoop: enemies (flier and storm rider only), the harmless
-// puffs on hatchling, power-up orbs, fireballs, the flock friend and storm rider's wind gusts.
-// lives in the same world coordinates as the hoops. nothing in here can end a run, the worst a
-// bump does is a tumble and a few points
+// lives in the same world coordinates as the hoops
 export class Hazards {
   constructor(f, seed) {
     this.f = f;

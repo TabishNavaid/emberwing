@@ -1,10 +1,10 @@
+// the three flight routes, one per guest in turn. only the scenery changes: the hoops, the timing
+// and the brass swell are exactly the same on every route
 import { VIEW, PAL } from '../config.js';
 import { clamp, lerp, invLerp, mix, glow, disc, makeCanvas } from '../core/util.js';
 import { drawSky, SKY, drawStars, drawSea, drawStone, drawStack, drawCloud, drawRays, makeCliff } from './world.js';
 import { drawBaseAurora } from './aurora.js';
 
-// three flights that take turns, one per guest. they only change the scenery: the hoops,
-// the timing and the brass swell are exactly the same on every route.
 // each route draws in layers so the flight scene can slot the gameplay in between:
 //   sky (unzoomed) -> ground (unzoomed, drops away in the climb) -> mid (zoomed world) -> front
 // s = { t, p, conf, rise, swell, windup } from the flight

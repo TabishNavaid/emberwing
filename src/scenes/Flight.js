@@ -1,3 +1,5 @@
+// the flight: the dragon follows the light through the level's hoops, past enemies and power-ups,
+// with the brass swell 2/3 of the way in and a climb into the aurora at the end
 import { VIEW, DUR, FLIGHT, PAL, MUSIC, MOTION, INPUT, LEVELS, SCORE, ENEMY, POWER } from '../config.js';
 import { Points } from '../core/Points.js';
 import { Hazards } from '../core/Hazards.js';
@@ -122,7 +124,6 @@ export class Flight {
     this.hz = new Hazards(this, Math.floor(r() * 1e9));
   }
 
-  // flew through a power-up orb
   powerUp(g, kind, x, y) {
     const at = this.toScreen(x, y);
     const names = { fireball: 'FIREBALL!', speed: 'SPEED BURST!', shield: 'SHIELD!', magnet: 'MAGNET!', friend: 'FLOCK FRIEND!' };

@@ -1,7 +1,6 @@
+// enemies and power-ups. nothing can end a run: bumps are a tumble and a few points
 import { test, expect } from '@playwright/test';
 import { boot } from './helpers.js';
-
-// enemies and power-ups. nothing can end a run: bumps are a tumble and a few points
 
 // starts a flight on a level and steps through the tutorial hoop so the timeline is running
 const SETUP = `

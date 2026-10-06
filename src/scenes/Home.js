@@ -1,3 +1,5 @@
+// home: the dragon lands with tonight's flock, its flight path lifts into the aurora and becomes a
+// ribbon, and the counter ticks up
 import { VIEW, DUR, PAL, FLOCK } from '../config.js';
 import { clamp, lerp, ease, invLerp, glow } from '../core/util.js';
 import { drawText, drawTextPop, textWidth, fitScale } from '../art/font.js';

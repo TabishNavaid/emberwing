@@ -1,3 +1,5 @@
+// the dragon card at the end: portrait, name, which one home it was tonight, its quirk, the score,
+// and the act II line to take into the hall
 import { VIEW, DUR, PAL, LEVELS, FLOCK } from '../config.js';
 import { clamp, glow, ease, dist, dwell } from '../core/util.js';
 import { drawText, drawTextPop, textWidth, fitScale } from '../art/font.js';
@@ -15,8 +17,6 @@ const CARD = { x: 60, y: 10, w: 360, h: 226 };
 const PORTRAIT = { x: 122, y: 100 }; // body center, the head and wings sit up inside the ring
 const RING = { x: 126, y: 80, r: 58 };
 
-// the guest's dragon gets a little trading card: portrait, name, which one home it was tonight,
-// its quirk, and the act II line to take into the hall
 export class EndCard {
   interactive = false;
 

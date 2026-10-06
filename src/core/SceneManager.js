@@ -1,11 +1,11 @@
+// one scene at a time with fades between them. also the idle watchdog: interactive
+// scenes bail back to attract after INPUT.IDLE_RESET seconds of nobody pointing
 import { DUR, INPUT, VIEW, PAL } from '../config.js';
 import { clamp, ease } from './util.js';
 import { drawTextPop, fitScale } from '../art/font.js';
 import { drawKnotBand } from '../art/knotwork.js';
 import { drawDragon } from '../art/dragon.js';
 
-// one scene at a time with fades between them. also the idle watchdog: interactive
-// scenes bail back to attract after INPUT.IDLE_RESET seconds of nobody pointing
 export class SceneManager {
   constructor(game, scenes) {
     this.game = game;

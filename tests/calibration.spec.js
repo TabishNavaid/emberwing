@@ -1,3 +1,5 @@
+// mocap calibration (K): 4 corners fix a misaligned rig, it survives a refresh, and it can be
+// cancelled or cleared
 import { test, expect } from '@playwright/test';
 import { boot, reload } from './helpers.js';
 

@@ -1,3 +1,5 @@
+// find the dragon: it's hiding in the fog and the guest's lighthouse beam has to find its eyes and
+// hold still on them. one instruction at a time, and the hints get stronger the longer it takes
 import { VIEW, DUR, INPUT, PAL } from '../config.js';
 import { clamp, dist, lerp, approach, glow, ease } from '../core/util.js';
 import { drawText, drawTextPop, fitScale } from '../art/font.js';

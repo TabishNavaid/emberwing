@@ -1,3 +1,4 @@
+// reduced motion: follows the OS setting, G cycles it, and the flight camera calms down
 import { test, expect } from '@playwright/test';
 import { boot, reload } from './helpers.js';
 

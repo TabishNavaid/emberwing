@@ -1,3 +1,4 @@
+// input: the mocap pointer, the touch offset, and the rotate hint on portrait phones
 import { test, expect } from '@playwright/test';
 import { boot } from './helpers.js';
 

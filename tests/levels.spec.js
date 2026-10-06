@@ -1,7 +1,6 @@
+// three levels on the attract screen, and picking one is how you start
 import { test, expect } from '@playwright/test';
 import { boot, state, startRun } from './helpers.js';
-
-// three levels on the attract screen, and picking one is how you start
 
 // stepped by hand so it's quick. the real-mouse version of this is every full run below and in
 // fullrun.spec.js, which all start by holding the light on a level

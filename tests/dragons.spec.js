@@ -1,8 +1,7 @@
-import { test, expect } from '@playwright/test';
-import { boot, reload } from './helpers.js';
-
 // every guest rescues a different dragon, and the flock on screen is always exactly the
 // dragons people brought home tonight
+import { test, expect } from '@playwright/test';
+import { boot, reload } from './helpers.js';
 
 test('every guest gets a different dragon, and no name repeats until the list runs out', async ({ page }) => {
   await boot(page);

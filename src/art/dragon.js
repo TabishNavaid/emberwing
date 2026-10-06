@@ -1,10 +1,9 @@
+// draws a dragon from its parts (core/dragons.js picks them). normal canvas paths, then the alpha gets
+// cut hard so the edges come out as crisp pixels, plus a 1px outline. way easier than hand pixels
 import { makeCanvas, TAU, glow } from '../core/util.js';
 import { PAL } from '../config.js';
 
-// dragons are drawn with normal canvas paths, then the alpha gets hard-thresholded so the
-// edges come out as crisp pixels, then a 1px outline goes around it. way easier to tweak
-// than hand-placing pixels. every dragon + pose combo gets cached after the first draw.
-// the parts (wings, head, tail tip, markings) come from src/core/dragons.js
+// every dragon + pose combo gets cached after the first draw
 
 const SPRITE_W = 76;
 const SPRITE_H = 72;

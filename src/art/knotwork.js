@@ -1,7 +1,6 @@
-import { makeCanvas, TAU } from '../core/util.js';
-
 // celtic/nordic interlace for rings, meters and frames (the folk influence from the program notes).
 // canvas strokes go blurry at 480x270 so everything is stamped square by square
+import { makeCanvas, TAU } from '../core/util.js';
 
 function stamp(ctx, x, y, w) {
   const o = Math.floor(w / 2);

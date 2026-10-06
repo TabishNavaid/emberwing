@@ -1,8 +1,7 @@
+// the enemies, puffs and power-up orbs in the flight. soft and silly on purpose: nothing here looks
+// like it hurts anyone, they just get in the way and go pop
 import { PAL } from '../config.js';
 import { glow, disc } from '../core/util.js';
-
-// the things that get in the dragon's way, and the power-ups. all soft and silly on purpose:
-// nothing here looks like it hurts anyone, they just get in the way and go pop
 
 const OUT = '#0b0f1a';
 

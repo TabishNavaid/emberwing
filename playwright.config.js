@@ -1,6 +1,6 @@
+// playwright setup for npm test. the tests hit the production build, same files github pages serves
 import { defineConfig } from '@playwright/test';
 
-// tests hit the production build, same files github pages serves
 export default defineConfig({
   testDir: 'tests',
   timeout: 300_000, // scripted full runs are ~40s of game time, a lot longer if the machine is busy

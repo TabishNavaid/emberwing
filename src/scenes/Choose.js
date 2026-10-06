@@ -1,3 +1,4 @@
+// "who will you find?": three lost dragons side by side, hold the light on one to pick it
 import { VIEW, DUR, PAL, LEVELS } from '../config.js';
 import { clamp, glow, ease, dwell } from '../core/util.js';
 import { drawText, drawTextPop, textWidth } from '../art/font.js';
@@ -13,7 +14,6 @@ const CARD_X = [86, 240, 394];
 const CARD = { y0: 46, y1: 236, w: 144 };
 const RING = { dy: 104, r: 42 }; // the dwell ring sits around each dragon
 
-// "who will you find?": three lost dragons side by side, hold the light on one to pick it.
 // the other two stay lost for the guests after you. picks one by itself after DUR.CHOOSE so the
 // line keeps moving
 export class Choose {
@@ -44,7 +44,6 @@ export class Choose {
     this.picked = opt;
     this.pickT = 0;
     g.dragon = opt.d;
-    // the other two stay in the pool for the next guests
     g.lost = g.lost.filter((d) => d !== opt.d);
     chirp(opt.me, 0.1);
     opt.me.q.reset();

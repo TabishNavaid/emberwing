@@ -1,9 +1,8 @@
+// the sound engine: mixing, unlocking, mute, the one-shot cues, and the scheduler that keeps the music
+// on the game's beat. sound is on by default but nothing needs it, every cue is also visual
 import { noise, pluck, whistle, pad, brass, drum, boom, shimmer, roll, bell, chirp, sneeze } from './synth.js';
 import { playStep, chordAt } from './tune.js';
 
-// sound is on by default now: an original folk-style score that builds through the flight, a
-// real brass swell, chimes on the hoops, a chord when you find the dragon, chirps. M mutes it
-// and that's remembered. nothing in the game depends on hearing it, every cue is also visual.
 // browsers keep audio locked until someone presses a key or touches the screen, see unlock()
 
 const KEY = 'emberwing.sound.v1';

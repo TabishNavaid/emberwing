@@ -1,12 +1,12 @@
+// the speaker button in the bottom left corner: click it, tap it, or hold the light on it (the mocap
+// prop can't click). M does the same
 import { PAL } from '../config.js';
 import { glow } from '../core/util.js';
 import { drawKnotRing } from '../art/knotwork.js';
 import { drawText, textWidth } from '../art/font.js';
 import { drawSpeaker } from '../art/icons.js';
 
-// the speaker in the bottom left corner. it used to be just a picture, people clicked it and
-// nothing happened. now it's a real control: click it, tap it, or hold the light on it (the
-// mocap prop can't click). M still works too
+// it used to be just a picture. people clicked it and nothing happened
 const SOUND_BTN = { x: 17, y: 256, w: 30, h: 24 };
 const HOLD = 1.5; // a bit longer than the lanterns, so brushing past doesn't mute anything
 

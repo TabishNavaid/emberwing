@@ -1,3 +1,4 @@
+// the one pointer the whole game reads. every adapter (mouse, touch, mocap, keys) just calls feed()
 import { VIEW, INPUT } from '../config.js';
 
 // one-euro filter (casiez et al. 2012). smooths a lot when the pointer is slow
@@ -28,8 +29,7 @@ class OneEuroFilter {
   }
 }
 
-// the one pointer the whole game reads. every adapter (mouse, touch, mocap, keys)
-// just calls feed(). x/y are internal pixels (0..480, 0..270)
+// x/y are internal pixels (0..480, 0..270)
 export class Input {
   constructor() {
     this.x = VIEW.W * 0.5;

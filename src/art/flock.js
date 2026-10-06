@@ -1,3 +1,4 @@
+// tonight's flock: the dragons people brought home, each one with its own quirk and chirp
 import { FLOCK, PAL } from '../config.js';
 import { drawDragon, drawChirp, noseOffset } from './dragon.js';
 import { Quirk } from './quirks.js';

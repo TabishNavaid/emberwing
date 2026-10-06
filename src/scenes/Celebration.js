@@ -1,3 +1,5 @@
+// every 8th dragon home: everyone saved tonight floods the screen, fireworks, a fanfare, this round's
+// names, and a new star that stays in the sky for the rest of the night
 import { VIEW, DUR, PAL, FLOCK } from '../config.js';
 import { clamp, lerp, ease, glow } from '../core/util.js';
 import { drawText, drawTextPop, textWidth, fitScale } from '../art/font.js';
@@ -11,9 +13,6 @@ const C = { x: 240, y: 118 }; // middle of the spiral
 const STAR_AT = 5.6; // the new star starts gathering
 const STAR_UP = 6.3; // ...and flies up to its spot in the sky
 
-// every 8th dragon home: every dragon saved tonight floods the screen in a spiral, fireworks in
-// their colors, the aurora fills the whole sky, a full fanfare, and the names of this round's 8
-// roll past. then a new star is born and stays in the sky for the rest of the night.
 // nobody does anything here, the whole line just gets to watch (and cheer)
 export class Celebration {
   interactive = false;
@@ -104,7 +103,6 @@ export class Celebration {
     drawers.sort((a, b) => a.z - b.z).forEach((d) => d.f());
     g.particles.draw(ctx);
 
-    // the big number
     const msg = `${this.count} DRAGONS HOME!`;
     const a = clamp((DUR.CELEBRATE - 0.3 - t) * 3);
     if (t > 0.3) drawTextPop(ctx, msg, W / 2, 34, (t - 0.3) * 1.2, { scale: fitScale(msg, W - 12, 6, 4), color: PAL.gold2, alpha: a });

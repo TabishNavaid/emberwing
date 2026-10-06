@@ -1,7 +1,6 @@
-import { mulberry32 } from './util.js';
-
 // every guest rescues a different emberwing. a dragon is just a seed: the seed picks the parts,
 // so storing { seed, name } is enough to draw the same dragon again later in the night
+import { mulberry32 } from './util.js';
 
 // short (7 letters max, so "JUNIPER FOLLOWS YOUR LIGHT" still fits at scale 3), all made up for this
 const NAMES = [

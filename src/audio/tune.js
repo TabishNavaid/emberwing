@@ -1,7 +1,7 @@
+// the music: an original folk-style tune in D mixolydian (the flattened 7th gives it the scottish/irish
+// lilt the program notes talk about). nothing here is taken from the film score
 import { pluck, whistle, pad, brass, drum, bell } from './synth.js';
 
-// the music. an original folk-style tune in D mixolydian (the flattened 7th gives it that
-// scottish/irish lilt the program notes talk about). nothing here is taken from the film score.
 // 120 bpm, one bar = 4 beats = 2s = one hoop. everything is counted in eighth notes ("steps")
 
 // 8 bars of chords, the tune loops over them

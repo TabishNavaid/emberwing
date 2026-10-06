@@ -1,8 +1,8 @@
+// each dragon's little personality: sneezes sparks, loves loops, wobbly, shy or bouncy
 import { TAU } from '../core/util.js';
 
-// each dragon's little personality. scenes call update() every step and add pose() on top of
-// whatever they're already doing. it only ever changes how the dragon is drawn, never where
-// the game thinks it is, so a loop never makes you miss a hoop
+// scenes call update() every step and add pose() on top of whatever they're already doing. it only
+// changes how the dragon is drawn, never where the game thinks it is, so a loop never costs a hoop
 const SNEEZE = 0.55;
 const LOOP = 0.8;
 

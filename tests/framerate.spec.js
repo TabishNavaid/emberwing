@@ -1,7 +1,6 @@
+// a slow lobby laptop shouldn't make runs longer, the game clock has to keep up with real time
 import { test, expect } from '@playwright/test';
 import { boot, startRun, findDragon, fly, watch, waitScene } from './helpers.js';
-
-// a slow lobby laptop shouldn't make runs longer, the game clock has to keep up with real time
 
 // replaces requestAnimationFrame with one we drive by hand: __tick(ms) = one frame, ms after the last
 const manualFrames = () => {

@@ -1,7 +1,6 @@
+// sound is on by default, but the game has to work exactly the same with it off
 import { test, expect } from '@playwright/test';
 import { boot, state, startRun, findDragon, fly, watch, waitScene, hover, reload } from './helpers.js';
-
-// sound is on by default, but the game has to work exactly the same with it off
 
 // pretend to be a browser that blocks audio until a real key press or touch (playwright's
 // chromium allows autoplay, the lobby laptop's chrome won't)

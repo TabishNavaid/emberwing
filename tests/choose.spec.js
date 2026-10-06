@@ -1,7 +1,6 @@
+// "who will you find?": three lost dragons, the guest holds the light on one
 import { test, expect } from '@playwright/test';
 import { boot } from './helpers.js';
-
-// "who will you find?": three lost dragons, the guest holds the light on one
 
 const choose = (page, fn) => page.evaluate(fn);
 

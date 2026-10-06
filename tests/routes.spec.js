@@ -1,7 +1,6 @@
+// three flight routes take turns. only the scenery changes, every guest gets the same flight
 import { test, expect } from '@playwright/test';
 import { boot } from './helpers.js';
-
-// three flight routes take turns. only the scenery changes, every guest gets the same flight
 
 test('guests in a row get the three routes in turn, each with the same 8 hoops at the same times', async ({ page }) => {
   await boot(page);

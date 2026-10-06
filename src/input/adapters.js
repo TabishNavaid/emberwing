@@ -1,3 +1,5 @@
+// the input adapters: mouse/touch/pen, the mocap rig (websocket or postMessage) and the arrow keys.
+// they all just feed one x/y into Input
 import { VIEW, INPUT } from '../config.js';
 
 // mouse, touch and pen all come in as pointer events. pressing only sets `holding`,

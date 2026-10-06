@@ -1,3 +1,5 @@
+// the hidden operator keys (F fullscreen, R reset, S skip, D debug, C clear, M sound, G motion,
+// K calibrate) and what they put on screen: debug overlay, clear dialog, calibration, press any key
 import { VIEW, PAL, INPUT } from '../config.js';
 import { drawText } from '../art/font.js';
 import { drawKnotRing } from '../art/knotwork.js';
@@ -5,8 +7,6 @@ import { ROUTES } from '../art/routes.js';
 import { glow } from './util.js';
 import { CAL_TARGETS, CAL_NAMES } from '../input/Calibration.js';
 
-// hidden operator keys: F fullscreen, R reset, S skip, D debug, C clear sky (asks first), M sound,
-// G reduced motion (auto / on / off), K calibrate the mocap rig
 export class Operator {
   constructor(game) {
     this.game = game;

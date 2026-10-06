@@ -1,3 +1,4 @@
+// small pixel-art bits used all over: the lantern, footprints, horn, speaker, level badges, stars
 import { PAL } from '../config.js';
 import { makeCanvas, glow, disc } from '../core/util.js';
 import { drawText, textWidth } from './font.js';
@@ -99,8 +100,8 @@ export function drawCursorLight(ctx, x, y, t, size = 1) {
   disc(ctx, x, y, r * size);
 }
 
-// "HEAR IT LIVE IN ACT II" plaque. home shows it after the counter so the key line is up for
-// ~5s total instead of only the 3s end card (people couldn't read the old card in time)
+// "HEAR IT LIVE IN ACT II" plaque. home shows it too, not just the card, because people
+// couldn't read it in time when it was only on the card
 export function drawActBanner(ctx, cx, y, t, pulse, alpha = 1) {
   const label = 'HEAR IT LIVE IN ACT II';
   const w = textWidth(label, 2) + 44;

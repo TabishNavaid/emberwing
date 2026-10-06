@@ -1,8 +1,8 @@
+// a first-timer who doesn't know the game: the light wanders to random spots, pauses, never aims.
+// three of them in a row on the same page, the way the lobby runs. stepped by hand so it's exact
 import { test, expect } from '@playwright/test';
 import { boot } from './helpers.js';
 
-// a first-timer who doesn't know the game: the light wanders to random spots, pauses, never aims.
-// three of them in a row on the same page, the way the lobby runs. stepped by hand so it's exact
 test('clueless guests: the game teaches, never finishes itself, and everyone gets the same flight', async ({ page }) => {
   await boot(page);
   const runs = await page.evaluate(() => {

@@ -1,3 +1,5 @@
+// scenery every scene shares, all drawn in code: sky, stars, sea, cliffs, the lighthouse, standing
+// stones, sea stacks, clouds, wind, rays and fog
 import { VIEW, PAL } from '../config.js';
 import { makeCanvas, mix, mulberry32, clamp, TAU, glow, stampLine, disc, rgba } from '../core/util.js';
 

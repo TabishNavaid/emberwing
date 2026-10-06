@@ -1,8 +1,8 @@
+// mixed ages: three scripted guests fly every level, so we can see the levels are actually
+// different. stepped by hand (30 steps a game-second) so it's exact and the same every time
 import { test, expect } from '@playwright/test';
 import { boot } from './helpers.js';
 
-// mixed ages: three scripted guests fly every level, so we can see the levels are actually
-// different. stepped by hand (30 steps a game-second) so it's exact and the same every time.
 //   kid:   slow and imprecise, reacts late, wobbly aim, ignores power-ups and enemies
 //   teen:  decent, a bit of lag, goes for power-ups that are close
 //   sharp: quick and precise, reads moving hoops ahead, dodges enemies, grabs power-ups

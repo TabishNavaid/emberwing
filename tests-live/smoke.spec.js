@@ -1,7 +1,7 @@
+// smoke test for the live site: does the deployed build load from its subpath, and can a guest
+// actually play it?
 import { test, expect } from '@playwright/test';
 import { boot, state, startRun, findDragon, fly, watch, waitScene } from '../tests/helpers.js';
-
-// does the deployed build load from its subpath, and can a guest actually play it?
 
 test('live site loads: no errors, every file found, sprites under the right base path', async ({ page, baseURL }) => {
   const errors = [];
