@@ -3,13 +3,30 @@ import { boot, state, startRun } from './helpers.js';
 
 // three levels on the attract screen, and picking one is how you start
 
+// stepped by hand so it's quick. the real-mouse version of this is every full run below and in
+// fullrun.spec.js, which all start by holding the light on a level
 for (const level of ['hatchling', 'flier', 'storm']) {
   test(`holding the light on ${level} starts a ${level} run`, async ({ page }) => {
     await boot(page);
-    await startRun(page, { level });
-    const s = await state(page);
-    expect(s.scene).toBe('find');
-    expect(s.level).toBe(level);
+    const r = await page.evaluate((id) => {
+      const w = window.__emberwing;
+      const g = w.game;
+      w.pause(true);
+      w.goto('attract');
+      const at = g.scenes.current.levelTarget(id);
+      // raise the light from the bottom of the screen, then hold it on the level
+      for (let i = 0; i <= 20; i++) {
+        g.input.feed(200 + ((at.x - 200) * i) / 20, 250 + ((at.y - 250) * i) / 20, 'mouse');
+        w.step(0.05);
+      }
+      for (let i = 0; i < 40 && !g.scenes.pending; i++) {
+        g.input.feed(at.x + (i % 2), at.y, 'mouse');
+        w.step(0.05);
+      }
+      return { next: g.scenes.pending?.name ?? g.scenes.name, level: g.level };
+    }, level);
+    expect(r.next).toBe('choose');
+    expect(r.level).toBe(level);
   });
 }
 
@@ -104,7 +121,7 @@ test('every level always gets the dragon home', async ({ page }) => {
       // a guest who mostly flies the wrong way
       while (g.scenes.name === 'flight' && !g.scenes.pending && t < 60) {
         g.input.feed(240 + Math.sin(t * 0.7) * 200, 135 + Math.cos(t * 1.9) * 120, 'mouse');
-        w.step(0.1);
+        w.step(0.1, 60, false);
         t += 0.1;
       }
       out[id] = { home: g.scenes.pending?.name === 'home' || g.scenes.name === 'home', t: +t.toFixed(1) };
@@ -118,11 +135,12 @@ test('every level always gets the dragon home', async ({ page }) => {
 // never-finds checks are in fullrun.spec.js). aiming for ~45s easy and up to ~60s hard
 test.describe.serial('run times per level', () => {
   const times = {};
-  for (const [level, max] of [['hatchling', 50], ['flier', 56], ['storm', 62]]) {
+  for (const [level, max] of [['flier', 56], ['storm', 62]]) {
     test(`a guest who knows what to do: ${level} in under ${max}s`, async ({ page }) => {
       const { findDragon, fly, watch, waitScene } = await import('./helpers.js');
       await boot(page);
       await startRun(page, { level });
+      expect((await state(page)).level).toBe(level);
       await findDragon(page);
       await waitScene(page, 'flight', 60_000);
       await fly(page);

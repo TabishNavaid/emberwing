@@ -7,34 +7,63 @@ const MAX = 50;
 // and a dragon), aiming for ~45s on hatchling, so the worst case on hatchling is now ~55s
 const ASSISTED_MAX = 56;
 
-test('a guest who finds the dragon plays a full run in 35-50s and returns to attract', async ({ page }) => {
+const seen = (page) => page.evaluate(() => window.__emberwing.game.scenes.current.visibleDragons());
+// when each hoop showed up on screen and when it reached the gate
+const flightReport = (page) => page.evaluate(() => {
+  const f = window.__emberwing.game.scenes.scenes.flight;
+  return f.rings.map((r) => ({ seen: r.seenAt, gate: r.gateAt }));
+});
+
+// one cold page, fresh night, two guests in a row, all real time. the bug report this started
+// from: on a fresh page the first flight only had one hoop, and every later flight never got home
+test('first two guests of the night: 35-50s, the first dragon flies home alone, every hoop gets a real chance', async ({ page }) => {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   await boot(page);
   await page.evaluate(() => localStorage.clear());
   await boot(page);
-  const wall0 = Date.now();
-  await startRun(page);
-  expect((await state(page)).scene).toBe('find');
-  await findDragon(page);
-  await waitScene(page, 'flight');
-  await fly(page);
-  await waitScene(page, 'home');
-  await watch(page, 'end');
-  await watch(page, 'attract');
-  const wall = (Date.now() - wall0) / 1000;
-  const s = await state(page);
-  console.log(`run (game clock): ${s.runs[0]}s   wall clock: ${wall.toFixed(1)}s`);
-  expect(s.runs.length).toBe(1);
-  expect(s.runs[0]).toBeGreaterThanOrEqual(MIN);
-  expect(s.runs[0]).toBeLessThanOrEqual(MAX);
-  expect(s.count).toBe(1);
+  const first = (await state(page)).dragon;
+  const empty = await seen(page);
+  expect(empty).toMatchObject({ near: 0, far: 0, partyLeft: 8 });
+
+  const hoops = [];
+  for (let guest = 0; guest < 2; guest++) {
+    const wall0 = Date.now();
+    await startRun(page);
+    expect((await state(page)).scene).toBe('find');
+    if (guest === 0) expect((await state(page)).dragon).toBe(first);
+    await findDragon(page);
+    await waitScene(page, 'flight');
+    const swell = await seen(page);
+    expect(swell.near + swell.far).toBe(guest); // the swell brings out whoever is already home
+    await fly(page);
+    await waitScene(page, 'home');
+    hoops.push(await flightReport(page));
+    if (guest === 0) expect(await seen(page)).toMatchObject({ near: 1, far: 0, names: [first] });
+    await watch(page, 'attract');
+    const s = await state(page);
+    console.log(`guest ${guest + 1} run (game clock): ${s.runs[guest]}s   wall clock: ${((Date.now() - wall0) / 1000).toFixed(1)}s`);
+    expect(s.runs[guest]).toBeGreaterThanOrEqual(MIN);
+    expect(s.runs[guest]).toBeLessThanOrEqual(MAX);
+    expect(s.count).toBe(guest + 1);
+    if (guest === 0) {
+      expect(await seen(page)).toMatchObject({ near: 1, far: 0, names: [first], partyLeft: 7 });
+      expect(s.dragon).not.toBe(first); // a new dragon is lost for the next guest
+    }
+  }
+
+  // every hoop on screen 1.5s+ before it reaches the gate, and both guests get the same flight
+  const warn = hoops.map((rings) => rings.map((r) => +(r.gate - r.seen).toFixed(2)));
+  console.log('hoop warning (s):', JSON.stringify(warn));
+  expect(hoops[0].length).toBe(8);
+  expect(hoops[1].length).toBe(hoops[0].length);
+  for (const rings of hoops) for (const r of rings) expect(r.gate - r.seen).toBeGreaterThanOrEqual(1.5);
   expect(errors).toEqual([]);
 
-  // ribbon has to survive a refresh
+  // the ribbons have to survive a refresh
   await reload(page);
-  expect((await state(page)).count).toBe(1);
+  expect((await state(page)).count).toBe(2);
 });
 
 test('a guest who never finds the dragon is helped and still finishes within 56s', async ({ page }) => {

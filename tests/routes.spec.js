@@ -46,7 +46,7 @@ test('every route plays all the way home without errors', async ({ page }) => {
       let t = 0;
       while (g.scenes.name === 'flight' && t < 40) {
         g.input.feed(200 + Math.sin(t) * 80, 135 + Math.cos(t * 1.3) * 60, 'mouse');
-        w.step(0.1);
+        w.step(0.1, 60, false);
         t += 0.1;
       }
       out.push({ route, home: g.scenes.name === 'home' || !!g.scenes.pending, t: +t.toFixed(1) });

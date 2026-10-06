@@ -21,7 +21,7 @@ const SETUP = `
     for (let i = 0; i < 200 && f.tutorial; i++) {
       const s = w.state();
       if (s.target) g.input.feed(s.target.x, s.target.y, 'mouse');
-      w.step(0.05);
+      w.step(0.05, 60, false);
     }
     return f;
   };
@@ -29,7 +29,7 @@ const SETUP = `
     for (let i = 0; i < secs * 20 && g.scenes.name === 'flight' && !g.scenes.pending; i++) {
       const s = w.state();
       if (aim && s.target) g.input.feed(s.target.x, s.target.y, 'mouse');
-      w.step(0.05);
+      w.step(0.05, 60, false);
     }
   };
   // drops a critter right where it'll meet the dragon
@@ -120,7 +120,7 @@ test('fireball: the dragon pops whatever the light points near', async ({ page }
     f.powerUp(g, 'fireball', f.ex, f.ey);
     const target = put(f, 'gust', { x: f.ex + 120, y: f.ey - 10 });
     const at = f.toScreen(target.x, target.y);
-    for (let i = 0; i < 20; i++) { g.input.feed(at.x, at.y, 'mouse'); w.step(0.05); }
+    for (let i = 0; i < 20; i++) { g.input.feed(at.x, at.y, 'mouse'); w.step(0.05, 60, false); }
     return { popped: target.popT !== undefined, count: f.points.popped, bumps: f.points.bumps };
   `);
   expect(r.popped).toBe(true);
@@ -157,7 +157,7 @@ test('magnet pulls the dragon into the next hoop, speed burst doubles hoop point
       if (magnet) f.powerUp(g, 'magnet', f.ex, f.ey);
       const ring = f.rings.find((x) => !x.tutorial && x.state === 'coming');
       ring.y = 70;
-      for (let i = 0; i < 80 && ring.state === 'coming'; i++) { g.input.feed(200, 262, 'mouse'); w.step(0.05); }
+      for (let i = 0; i < 80 && ring.state === 'coming'; i++) { g.input.feed(200, 262, 'mouse'); w.step(0.05, 60, false); }
       return Math.abs(ring.hitY - f.ey);
     };
     const without = offBy(false);
@@ -169,7 +169,7 @@ test('magnet pulls the dragon into the next hoop, speed burst doubles hoop point
       for (let i = 0; i < 80 && f.points.hits === h; i++) {
         const s = w.state();
         if (s.target) g.input.feed(s.target.x, s.target.y, 'mouse');
-        w.step(0.05);
+        w.step(0.05, 60, false);
       }
       return f.points.score - s0;
     };

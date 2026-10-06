@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, state, startRun, findDragon, fly, watch, waitScene } from './helpers.js';
+import { boot, startRun, findDragon, fly, watch, waitScene } from './helpers.js';
 
 // a slow lobby laptop shouldn't make runs longer, the game clock has to keep up with real time
 

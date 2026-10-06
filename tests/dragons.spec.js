@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, state, startRun, findDragon, fly, watch, waitScene, reload } from './helpers.js';
+import { boot, reload } from './helpers.js';
 
 // every guest rescues a different dragon, and the flock on screen is always exactly the
 // dragons people brought home tonight
@@ -102,12 +102,16 @@ test('every 8th dragon home gets a celebration, and attract counts down to it', 
   expect(r[15]).toMatchObject({ left: 1, celebrate: true, next: 'party' }); // the 16th
 });
 
-test('operator C clears the dragons along with the ribbons', async ({ page }) => {
+test('operator C asks first: N keeps the night, Y clears the ribbons and the dragons', async ({ page }) => {
   await boot(page);
   await page.evaluate(() => {
     const g = window.__emberwing.game;
     for (let i = 0; i < 3; i++) g.store.add([[0, 0.5], [1, 0.4]], i);
   });
+  await page.keyboard.press('c');
+  expect(await page.evaluate(() => window.__emberwing.game.op.confirm > 0)).toBe(true);
+  await page.keyboard.press('n');
+  expect(await page.evaluate(() => window.__emberwing.game.store.count)).toBe(3);
   await page.keyboard.press('c');
   await page.keyboard.press('y');
   const r = await page.evaluate(() => {
@@ -118,39 +122,6 @@ test('operator C clears the dragons along with the ribbons', async ({ page }) =>
   expect(r.count).toBe(0);
   expect(r.saved).toBe(0);
   expect(r.seen.near + r.seen.far).toBe(0);
-});
-
-test('cold first run of the night: nobody home yet, the first dragon flies home alone', async ({ page }) => {
-  await boot(page);
-  await page.evaluate(() => localStorage.clear());
-  await boot(page);
-  const start = await page.evaluate(() => {
-    const w = window.__emberwing;
-    return { count: w.game.store.count, seen: w.game.scenes.current.visibleDragons(), name: w.game.dragon.name };
-  });
-  expect(start.count).toBe(0);
-  expect(start.seen.near + start.seen.far).toBe(0);
-  expect(start.seen.partyLeft).toBe(8);
-
-  await startRun(page);
-  expect((await state(page)).dragon).toBe(start.name);
-  await findDragon(page);
-  await waitScene(page, 'flight');
-  const swellFlock = await page.evaluate(() => window.__emberwing.game.scenes.current.visibleDragons());
-  expect(swellFlock.near + swellFlock.far).toBe(0);
-  await fly(page);
-  await waitScene(page, 'home');
-  const home = await page.evaluate(() => window.__emberwing.game.scenes.current.visibleDragons());
-  expect(home).toMatchObject({ near: 1, far: 0, names: [start.name] });
-  await watch(page, 'attract');
-  const after = await page.evaluate(() => {
-    const w = window.__emberwing;
-    return { count: w.game.store.count, seen: w.game.scenes.current.visibleDragons(), next: w.game.dragon.name, saved: w.game.store.dragons.map((d) => d.name) };
-  });
-  expect(after.count).toBe(1);
-  expect(after.saved).toEqual([start.name]);
-  expect(after.seen).toMatchObject({ near: 1, far: 0, names: [start.name], partyLeft: 7 });
-  expect(after.next).not.toBe(start.name); // a new dragon is lost for the next guest
 });
 
 test('a saved night comes back after a refresh: dragons, ribbons, best flights, celebration stars', async ({ page }) => {

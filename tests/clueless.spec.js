@@ -23,7 +23,7 @@ test('clueless guests: the game teaches, never finishes itself, and everyone get
       py = start.y;
       tx = px;
       ty = py;
-      for (let i = 0; i < 40 && g.scenes.name === 'attract'; i++) { g.input.feed(start.x + (i % 2), start.y, 'mouse'); w.step(0.05); }
+      for (let i = 0; i < 40 && g.scenes.name === 'attract'; i++) { g.input.feed(start.x + (i % 2), start.y, 'mouse'); w.step(0.05, 60, false); }
       let left = false;
       for (let tick = 0; tick < 120 * 20; tick++) {
         if (pause > 0) pause -= 0.05;
@@ -37,7 +37,7 @@ test('clueless guests: the game teaches, never finishes itself, and everyone get
           py += (ty - py) * 0.12;
           g.input.feed(px, py, 'mouse');
         }
-        w.step(0.05);
+        w.step(0.05, 60, false);
         const name = g.scenes.name;
         const s = g.scenes.current;
         if (name !== 'attract') left = true;

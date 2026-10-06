@@ -13,7 +13,7 @@ const flyIt = (aim) => {
   for (let i = 0; i < 40 * 20 && g.scenes.name === 'flight' && !g.scenes.pending; i++) {
     const s = w.state();
     if (s.target) g.input.feed(s.target.x, s.target.y + aim, 'mouse');
-    w.step(0.05);
+    w.step(0.05, 60, false);
   }
   return f;
 };

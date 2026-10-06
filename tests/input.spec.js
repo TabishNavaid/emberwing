@@ -19,18 +19,6 @@ test('motion-capture pointer (normalized 0..1) drives the same cursor', async ({
   expect(Math.abs(q - 360)).toBeLessThan(6);
 });
 
-test('operator C asks before clearing the night sky', async ({ page }) => {
-  await boot(page);
-  await page.evaluate(() => window.__emberwing.game.store.add([[0, 0.5], [1, 0.5]], 0));
-  await page.keyboard.press('c');
-  expect(await page.evaluate(() => window.__emberwing.game.op.confirm > 0)).toBe(true);
-  await page.keyboard.press('n');
-  expect(await page.evaluate(() => window.__emberwing.game.store.count)).toBe(1);
-  await page.keyboard.press('c');
-  await page.keyboard.press('y');
-  expect(await page.evaluate(() => window.__emberwing.game.store.count)).toBe(0);
-});
-
 test('portrait phones see the rotate hint', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();

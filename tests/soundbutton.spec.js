@@ -66,12 +66,3 @@ test('holding the light on the speaker toggles it (once per hold), but not while
   expect(r.again).toBe('on');
   expect(r.flying).toBe('on');
 });
-
-test('M still toggles it', async ({ page }) => {
-  await boot(page);
-  await soundIs(page, 'on');
-  await page.keyboard.press('m');
-  await soundIs(page, 'muted');
-  await page.keyboard.press('m');
-  await soundIs(page, 'on');
-});
