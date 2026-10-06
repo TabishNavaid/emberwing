@@ -1,20 +1,14 @@
 # Emberwing: The Way Home
 
-A 45-second lobby interactive for the Walla Walla Symphony's **Symphonicon** (Nov 5, Cordiner Hall), paired with *From the Motion Picture How to Train Your Dragon* (John Powell), played in Act II by the Walla Walla Symphony Youth Orchestra.
+A lobby game we made for the Walla Walla Symphony's Symphonicon (Nov 5, Cordiner Hall). In Act II the youth orchestra plays music from *How to Train Your Dragon*, so while people wait for the concert they get to rescue a lost baby dragon of their own. You're the lighthouse keeper: point your light to find the dragon in the fog, then guide it home through a string of hoops. A run takes about 45 seconds and nobody can lose. Every dragon that gets home joins tonight's flock and leaves a ribbon in the aurora. It's built for a 10 ft projector and a motion-capture lantern prop, but a mouse or a phone works too. There are three levels so little kids, teens and grandparents can all have a go.
 
-Emberwings are a kind of small dragon. Every guest rescues a different one: a young emberwing with its own name, colors, wings, horns, tail and personality (Pip sneezes sparks, Juniper loves loops, Bramble is shy at first...) is blown off course in a storm. The guest is the lighthouse keeper. Their light finds the dragon in the fog, teaches it to fly, and guides it home. Every dragon that makes it home joins the flock for the rest of the evening, and its flight path becomes a ribbon in the aurora. The flock on screen is always exactly the dragons people brought home tonight, and every 8th one sets off a celebration that leaves a new star in the sky.
+![The attract screen](screenshots/attract.png)
 
-Three levels bring different ages together: **HATCHLING** (big slow hoops, for little kids and first-timers), **FLIER** (smaller, faster, moving hoops and a few silly enemies) and **STORM RIDER** (small moving hoops, tight timing, more enemies, wind gusts). Guests pick which lost dragon they'll find, fly through power-ups (fireball, speed burst, shield, magnet, a flock friend), and get a score with 1 to 3 stars. Nobody ever loses: on every level the dragon always gets home.
+![The brass swell, with tonight's flock flying in](screenshots/brass-swell.png)
 
-- **One pointer, no clicks.** Mouse, touch, or a motion-capture prop all work. Every "button" is *hover and hold* (a knotwork ring fills in about 1 second).
-- **Sound on, but never needed.** An original folk-style score builds through the flight, with a real brass swell. Every cue is also visual, so the game plays and reads the same muted.
-- **Static site.** Vite plus vanilla JS and Canvas. No server code, no sound files. Runs on GitHub Pages or any static host.
+## Running it
 
-![Attract screen](design/01-attract-next-flyer.png)
-
----
-
-## Run it
+You need Node 22.
 
 ```bash
 npm install
@@ -24,134 +18,71 @@ npm install
 npm run dev
 ```
 
-This opens http://localhost:5173. Move the mouse onto the lantern and hold it there to start.
-
-Production build + local static server (use this on the lobby laptop):
+Then open http://localhost:5173. On the lobby laptop use the real build instead:
 
 ```bash
 npm run build && npm run preview
 ```
 
-`npm run preview` serves `dist/` at http://localhost:4173 and on your LAN IP.
+That serves `dist/` at http://localhost:4173 (and on the LAN).
 
-### URL options
+Browsers won't play sound until someone presses a key, so on a laptop the game first says PRESS ANY KEY TO START. That key only starts the station, it doesn't skip anything (M starts it muted). Phones skip this step and the first touch turns the sound on.
 
-| Parameter | Effect |
+Handy URL options:
+
+| Option | What it does |
 |---|---|
-| `?mocap=wss://host:port` | Connect a motion-capture WebSocket (see below) |
-| `?mocapFlipX=1` / `?mocapFlipY=1` | Mirror mocap axes (camera facing the guest) |
+| `?mocap=ws://host:port` | Connect a mocap WebSocket (see below) |
+| `?mocapFlipX=1`, `?mocapFlipY=1` | Mirror a mocap axis |
 | `?debug` | Start with the debug overlay on |
-| `?scene=flight` | Jump straight to a scene (`attract`, `find`, `flight`, `home`, `end`) |
-| `?level=storm` | Play a scene on one level (`hatchling`, `flier`, `storm`) when you jump straight to it |
-| `?route=1` | Pin one flight route (`0` sea stacks, `1` rain squall, `2` standing stones) instead of taking turns |
-| `?seed=5` | Deterministic randomness, including which dragons get picked (for testing) |
+| `?scene=flight` | Jump to a scene: `attract`, `choose`, `find`, `flight`, `home`, `celebration`, `end` |
+| `?level=storm` | Pick the level when jumping to a scene: `hatchling`, `flier`, `storm` |
+| `?route=1` | Always use one flight route (0, 1 or 2) instead of taking turns |
+| `?seed=5` | Same random dragons and hoops every time, for testing |
+
+## How to play
+
+Nothing needs a click. Every button is "hold the light on it" and a ring fills up.
+
+1. Hold your light on a level on the right: HATCHLING (big slow hoops), FLIER (smaller moving hoops, a few silly enemies) or STORM RIDER (small hoops, more enemies, wind). Holding still near the middle for 2 seconds also starts HATCHLING.
+2. Pick which lost dragon you'll find. If nobody picks, one gets picked after 5 seconds.
+3. Find the dragon's two glowing eyes in the fog and hold still on them until the ring fills.
+4. Fly. The dragon follows your light. Steer through the hoops, fly through power-ups (fireball, speed, shield, magnet, flock friend) and around the grumpy clouds. A bump only makes it tumble.
+5. It lands home with everyone else from tonight and you get its card, with your score and 1 to 3 stars.
+
+Every 8th dragon home sets off a celebration and leaves a new star in the sky. If someone walks away mid-game it goes back to the start after 10 seconds. All the numbers we tuned in playtesting (levels, timings, scoring, enemies) are in `src/config.js`.
 
 ## Operator hotkeys
 
-Hidden from guests. Nothing on screen mentions them.
+Guests never see these.
 
-| Key | Action |
+| Key | What it does |
 |---|---|
-| **F** | Toggle fullscreen |
-| **R** | Reset to attract |
-| **S** | Skip to the next scene |
-| **D** | Debug overlay (FPS, scene timer, pointer x/y, speed, idle time, mocap status) |
-| **C** | Clear tonight's aurora and flock (every saved dragon). Asks on screen first: **Y** clears, anything else keeps |
-| **M** | Sound on/off. On by default, remembered across refreshes |
-| **K** | Calibrate the mocap rig: point at the 4 corner rings and hold still (see below). In the calibration screen **Space** grabs a corner, **Esc** cancels, **Delete** clears the saved calibration |
-| **G** | Reduced motion: AUTO (follows the OS setting), FORCED REDUCED, FORCED FULL. Reduced = no shake, softer flashes, calmer flight camera. Remembered across refreshes |
-| Arrows / Space | Move the pointer / "hold" (desk testing only) |
+| F | Fullscreen |
+| R | Back to the start screen |
+| S | Skip to the next scene |
+| D | Debug overlay: FPS, scene timer, pointer, idle time, sound, mocap status |
+| C | Clear tonight's dragons, ribbons and best flights. It asks first: Y clears, anything else keeps |
+| M | Sound on/off, remembered after a refresh |
+| G | Reduced motion: auto (follows the OS), forced on, forced off. Also remembered |
+| K | Calibrate the mocap rig (see below) |
+| Arrows, Space | Move the light and "hold", for testing at a desk |
 
-Before a shift, run through [PLAYTEST.md](PLAYTEST.md) on the real projector.
+The speaker in the bottom left corner also turns sound on and off: click it, tap it, or hold the light on it. The night is saved in `localStorage`, so a refresh or a crashed tab doesn't lose the flock. It starts over by itself on a new day.
 
-The night (every rescued dragon's seed and name, its ribbon, and the "N dragons home tonight" count) is saved to `localStorage`, so a refresh or a crashed tab doesn't wipe the wall or the flock. It starts fresh automatically on a new calendar day. Use **C** to clear it by hand.
+## Hooking up the mocap cursor
 
-## Sound
+The game only needs one x/y point. Any of these works:
 
-Sound is on by default: an original folk-style tune in D mixolydian (harp, tin whistle, drone, hand drum, strings, brass), all synthesized live with Web Audio, so there are no sound files. It's gentle on the attract screen, sparse and windy while you search the fog, builds layer by layer through the flight, and the brass takes the tune at the swell. Hoops chime in key, on the beat; finding the dragon gets a warm chord; every dragon chirps (smaller ones higher). None of it is taken from the film score.
+1. **The rig moves the OS mouse.** Nothing to set up.
+2. **WebSocket.** Open the game with `?mocap=ws://localhost:8765` and send one message per frame, either `{"x": 0.52, "y": 0.38}` or just `0.52,0.38`. Both go from 0 to 1 across the game picture, starting top left. It reconnects on its own and the D overlay shows whether it's connected.
+3. **Same page or a parent frame.** Call `window.emberwingPointer(x, y)` or `postMessage({ type: 'emberwing-pointer', x, y }, '*')`.
 
-- **Start the station with any key.** Browsers block sound until someone presses a key or clicks. When that's the case the laptop shows **PRESS ANY KEY TO START** and the lantern waits. That first key only starts the station (it doesn't also skip or reset), except **M**, which starts it muted.
-- **Phones** don't get that screen. The first touch turns the sound on.
-- **The speaker button** in the bottom left corner is a real control: **click or tap** it, or **hold the light on it** for 1.5 s (the mocap prop can't click). Holding only works on the screens where nobody is steering (attract, choosing a dragon, home, the card), so a guest's light wandering into the corner mid-flight can't mute the game; clicking works everywhere. It shows waves when sound is on, an **X** when it's off, and slowly blinking waves while the browser is still waiting for a key or a touch. The **D** overlay also shows the audio state.
-- Everything you hear has a visual version (hoop bursts, the found burst, the horn icon and rays at the swell, little chirp marks at each dragon's mouth), so a muted run is the same game.
+**Calibrating.** If the light doesn't land where the prop points, press K, point at each of the 4 corner rings and hold still until it fills. The pink cross shows where the rig thinks it's pointing. The fix gets saved and only applies to the mocap input, so a mouse still works normally. K then Delete clears it.
 
-## Levels, enemies, power-ups and score (all in `src/config.js`)
+**HTTPS.** GitHub Pages is HTTPS, and browsers block a plain `ws://` connection to another machine from an HTTPS page. Use `wss://`, or run the bridge on the same laptop (`ws://localhost` is allowed). For the lobby the easiest setup is `npm run preview` on the lobby laptop with the bridge on the same machine: http://localhost:4173/?mocap=ws://localhost:8765
 
-![The three levels](design/11-three-levels.png)
-
-Picking a level on the attract screen is how a run starts: hold the light on a row (the ring, the name or the hint all count). Someone who just holds the light still anywhere near the middle for 2 s gets HATCHLING. Every number below is in `LEVELS`, `ENEMY`, `POWER` and `SCORE`.
-
-| | HATCHLING | FLIER | STORM RIDER |
-|---|---|---|---|
-| hint on attract | FIRST TIME? | MOVING HOOPS | FOR THE BRAVE |
-| hoops | 8, one every 2 s | 13, one every 1.5 s | 20, one every 1 s |
-| hoop size | big (24-34 px) | smaller (14-18) | small (12-15) |
-| speed | 110 | 150 | 170 |
-| moving hoops | none | 60% bob up and down | 80%, further and faster |
-| enemies | none (smiling puffs to pop) | 2 clouds, 3 gust sprites, 2 fog wisps | 4 clouds, 5 gust sprites, 3 fog wisps |
-| wind gusts | no | no | 4, with arrows first |
-| power-ups | fireball, flock friend, magnet | shield, fireball, speed, magnet | shield, fireball, magnet, flock friend, speed |
-| 2 / 3 stars at | 900 / 1500 | 1760 / 3200 | 2200 / 3600 |
-
-**Enemies** are soft and silly, never scary: a *grumpy storm cloud* either parks in front of a hoop (go through the hoop's edge, or bump it) or sits on one and zaps it away with a small spark (that hoop isn't counted as your miss); a *gust sprite* shoves the dragon off course; a *fog wisp* sits on the next hoop and fades it out for a moment. A bump makes the dragon tumble for 0.7 s, costs 50 points and the streak, and then it can't be bumped again for a moment. There's no health and no game over.
-
-**Power-ups** are orbs you fly through, each with its own icon: *fireball* (4 s of the dragon popping whatever the light points near), *speed burst* (snappier steering, a rainbow trail, hoops worth double), *shield* (a bubble that takes one bump), *magnet* (pulls the dragon into the next hoops), *flock friend* (one of tonight's saved dragons swoops across and pops everything; it only shows up if somebody is home, so the numbers still match).
-
-**Score:** 100 a hoop, +50 through the middle, +25 per hoop already in the streak, +75 an enemy popped (+40 a puff), +25 a power-up, -50 a bump, +300 for clean flying (no bumps, at most one miss). The score and the stars earned so far are in the top left corner. The dragon card shows the score and 1 to 3 stars. The attract screen shows tonight's best flight for each level with the dragon's name, so a little kid's hatchling run can be a best flight too. **C** clears the bests with everything else.
-
-## Timing (all in `src/config.js`)
-
-| Scene | Target | Notes |
-|---|---|---|
-| Attract | loop | 1 s hold on a level starts a run (or a 2 s hold anywhere near the middle = HATCHLING). Tonight's flock loops through the sky, one bright star per celebration so far, a countdown to the next one, and the best flight per level |
-| Choose | up to 5 s | "WHO WILL YOU FIND?": three lost dragons with names and quirks, hold the light on one for 1.2 s. Picks the nearest one by itself after 5 s (`DUR.CHOOSE`). The other two stay lost for the next guests |
-| Title card | 1.3 s | "PIP IS LOST!" before Find, "NOW FLY HOME!" before the flight. The next scene is paused underneath (`DUR.TITLE`) |
-| Find | ~5-15 s | One instruction at a time, each up at least 2 s: MOVE YOUR LIGHT, FIND THE EYES, HOLD STILL (with a tiny framed demo). The hold ring sits on the eyes and pauses (never resets) when the light slips off. Hints get stronger with active pointing time: bigger eyes at 4 s, a dotted trail to the eyes at 6.5 s, the beam leaning toward them at 9 s. The dragon only comes to the light as a last resort at 10.5 s, and the guest still does the hold. Then a 1.6 s "YOU FOUND PIP!" moment |
-| Flight | ~2-5 s tutorial + 18 / 24 / 26 s | PIP FOLLOWS YOUR LIGHT (with an arrow), then FLY THROUGH THE HOOPS. Hoop 1 waits next to the dragon until you fly through it (5 s cap), then the timeline snaps to the beat and the level's hoops come on the beat with a "3 / 8" counter. Brass swell 12 s into the timeline (on a downbeat), where everyone already home tonight flies out to join you. Climb at 90%. Autopilot only after 3 s of a still pointer. Three routes take turns (sea stacks at dusk, a rain squall into clearing sky, low over standing stones under early aurora): only the scenery changes |
-| Home | 4.6 s | The guest's dragon lands in the circle with the rest of tonight's flock, its path lifts into the aurora, and the counter appears once it's on the new number |
-| Celebration | 7.6 s, every 8th dragon | Every dragon saved tonight floods the screen in a spiral, fireworks in their colors, the aurora fills the whole sky, a full brass fanfare, a huge "8 DRAGONS HOME!" and this round's 8 names rolling past. Then a new star is born and flies up into the sky, where it stays for the night (`DUR.CELEBRATE`) |
-| Dragon card | 5 s | The rescued dragon's portrait and name, "THE 9TH EMBERWING HOME TONIGHT", its quirk, its stars and score, and "HEAR IT LIVE IN ACT II / LISTEN FOR THE BRASS!". Hold the small lantern to skip |
-| Scene fades | 0.4 s | `DUR.FADE` |
-
-Measured by the Playwright suite, a guest who knows what to do: **~43 s on HATCHLING, ~49 s on FLIER, ~51 s on STORM RIDER**. A guest who never finds the dragon on their own: ~52 s on HATCHLING, ~60 s on STORM RIDER. The 8th, 16th, 24th... guest gets 7.6 s more for the celebration. Muted runs take exactly as long. **Idle reset:** 10 s without input during Find or Flight returns to attract. The assists only count time while someone is actually pointing, so an abandoned game resets instead of playing itself. Notes on the last two rounds of changes are in `notes/phase3.md` and `notes/phase4.md`.
-
-**Slow laptops:** the game clock follows real time even when frames drop (it catches up in small steps, `LOOP` in `config.js`), so a choppy laptop doesn't make runs longer. Below about 4 fps it starts to slow down, and a frozen or backgrounded tab only moves the game forward a quarter second when it comes back. The YOURS! label after a run lasts `DUR.YOURS_LABEL` (15 s).
-
-## Connecting a motion-capture cursor
-
-The game only needs one x/y point. Pick whichever is easiest for your rig:
-
-1. **The rig drives the OS mouse cursor.** Nothing to configure. It works like a mouse. Clicking is never required.
-2. **WebSocket.** Open the game with `?mocap=<url>`. Send one message per frame, either as JSON or as plain text:
-   ```json
-   {"x": 0.52, "y": 0.38}
-   ```
-   or `0.52,0.38`. Coordinates are **normalized 0..1 across the game image** (origin top-left). An optional `"hold": true` is accepted but not needed. The adapter reconnects automatically. Status shows on the **D** overlay.
-3. **Same page / parent frame:**
-   `window.emberwingPointer(x, y)` or `window.postMessage({ type: 'emberwing-pointer', x, y }, '*')`.
-
-Motion-capture input goes through a One-Euro jitter filter tuned heavier than the mouse filter (`INPUT.FILTER.mocap` in `config.js`).
-
-### Calibration (K)
-
-If the light doesn't land where the prop points (offset, squashed, or a keystoned projector), press **K** with the rig connected. Point the prop at each corner ring and hold it still until the ring fills (about 1 s); the pink cross shows where the rig *thinks* it's pointing. After the 4th corner the mapping is saved to `localStorage` and shows up in the debug overlay (**D**) as `CAL MOCAP <date>`. It only applies to the input source you calibrated with, so a desk mouse keeps working normally. Press **K** then **Delete** to clear it.
-
-### Phones
-
-On touch screens the light sits about 40 px above your fingertip (`INPUT.TOUCH_LIFT`), so your finger doesn't cover it or the dragon.
-
-### HTTPS and WebSockets (important for GitHub Pages)
-
-GitHub Pages is served over **HTTPS**. Browsers block a plain `ws://` connection from an HTTPS page to another machine (mixed content). Your options:
-
-| Where the game runs | Mocap URL that works |
-|---|---|
-| GitHub Pages (HTTPS) | `wss://…` (a TLS WebSocket), **or** `ws://localhost:PORT` / `ws://127.0.0.1:PORT` with the bridge on the same laptop |
-| `npm run preview` on the lobby laptop (HTTP) | Anything, including `ws://192.168.x.x:PORT` on the LAN |
-
-If you pass a remote `ws://` URL while on HTTPS, the adapter switches it to `wss://` and prints the reason on the debug overlay. For the lobby, the most reliable setup is **Chrome on the lobby laptop, running `npm run preview`, with the mocap bridge on the same machine** (`http://localhost:4173/?mocap=ws://localhost:8765`). It needs no internet and has no certificate trouble.
-
-A minimal test bridge (Python, `pip install websockets`) that sends a slowly circling point:
+A tiny test bridge (Python, `pip install websockets`) that sends a point going around in a circle:
 
 ```python
 import asyncio, json, math, time, websockets
@@ -169,27 +100,19 @@ async def main():
 asyncio.run(main())
 ```
 
-Replace the circle with your tracker's prop position mapped to 0..1.
+Swap the circle for your tracker's prop position, mapped to 0..1.
 
-## Deploy to GitHub Pages
+## Deploying
 
-The repo includes `.github/workflows/pages.yml`, which builds and deploys `dist/` on every push to `main`.
+Every push to `main` runs `.github/workflows/pages.yml`, which builds the game and puts it on GitHub Pages at https://tabishnavaid.github.io/emberwing/. On a new copy of the repo, set Settings > Pages > Source to GitHub Actions once first.
 
-1. Create an empty repo on GitHub (no README or license, so the first push is clean), or from the project folder: `gh repo create <repo-name> --public --source . --remote origin`
-2. Push: `git push -u origin main`
-3. In **Settings → Pages**, set **Build and deployment → Source** to **GitHub Actions** (one time). Or: `gh api -X POST repos/<user>/<repo-name>/pages -f build_type=workflow`
-4. If the first workflow run happened before step 3 and failed, re-run it from the **Actions** tab (or push again).
-5. The site appears at `https://<user>.github.io/<repo-name>/`. Check it plays:
+To check the live site actually plays:
 
 ```bash
-LIVE_URL=https://<user>.github.io/<repo-name>/ npm run smoke
+LIVE_URL=https://tabishnavaid.github.io/emberwing/ npm run smoke
 ```
 
-The smoke test (`tests-live/`) loads the live site, checks for errors and missing files, checks the sprites load from the repo's subpath, and plays one full scripted run.
-
-The workflow sets `BASE_PATH=/<repo-name>/` for Vite. Locally the default base is `./` (relative paths), so `dist/` also works from any other static host or subfolder, including Heroku static hosting.
-
-**Licensed art:** `./assets` (the purchased pixel-art packs) is in `.gitignore` because the licenses forbid redistributing the packs. Only the four cropped sprites in `public/sprites/` are committed. Re-crop them with `npm run sprites` (needs Python + Pillow and the packs in `./assets`). See [CREDITS.md](CREDITS.md).
+The build uses relative paths, so `dist/` also works on any other static host.
 
 ## Tests
 
@@ -197,43 +120,10 @@ The workflow sets `BASE_PATH=/<repo-name>/` for Vite. Locally the default base i
 npm test
 ```
 
-This builds the site, serves it, and runs Playwright:
+This builds the site and runs the Playwright tests, about 10 minutes since a lot of them play whole runs in real time. `npm run shots` saves a screenshot of every scene to `tests/screens/`. Keep the laptop plugged in and awake while it runs, long runs stall on battery or with the lid closed.
 
-- **`tests/fullrun.spec.js`**: a scripted guest plays a whole run by pointer only. It asserts 35-50 s, that the ribbon persists across a refresh, that a guest who never finds the dragon still finishes within 56 s (picking a level and a dragon included), and that the dragon card can be skipped.
-- **`tests/idle.spec.js`**: walking away during Find or Flight resets to attract after about 10 s.
-- **`tests/input.spec.js`**: the mocap pointer path, the clear confirmation, the portrait "rotate your phone" hint, and the touch offset.
-- **`tests/runs.spec.js`**: three flights in a row on one page all reach Home, and a cold first run and a second run both get all 8 hoops, each on screen at least 1.5 s before it arrives.
-- **`tests/clueless.spec.js`**: three wandering guests in a row: Find never finishes before 10 s, every instruction is up at least 2 s, every run gets the same 8 hoops.
-- **`tests/story.spec.js`**: the story beats show up when they should: the title card first, the Act II line during Home, the brass swell's wind-up, firing and flock join, and "YOURS!" on attract after a finished run (but not after an idle reset).
-- **`tests/dragons.spec.js`**: 70 dragons in a row: no name repeats until the list runs out, and each looks different from the one before. The flock on attract, at the swell and at home always adds up to the saved dragons (0, 1, 3, 12, 13 and 20 home), the counter stays hidden until it lands, the 8th and 16th dragons get a celebration, **C** clears the flock, a cold first run of the night ends with exactly one dragon home, and the dragon card shows the right dragon and number.
-- **`tests/sound.spec.js`**: sound is on by default and **M** is remembered, a browser that blocks audio gets "press any key" and that key does nothing else, phones skip it and unlock on the first touch, a whole run works muted, and every hoop and the swell land on the beat.
-- **`tests/routes.spec.js`**: guests in a row get the three routes in turn with identical hoops, and every route plays all the way home.
-- **`tests/soundbutton.spec.js`**: the speaker button toggles sound by click, by tap (the first tap on a phone turns sound on), by holding the light on it (once per hold, never mid-flight), and by **M**.
-- **`tests/levels.spec.js`**: each lantern starts its level, holding still near the middle starts HATCHLING but a resting light never does, each level uses its numbers from `config.js` and really gets harder, every level always gets home, and how long a whole run takes on each level.
-- **`tests/choose.spec.js`**: three lost dragons, holding the light picks one and the other two stay lost for the next guest, it picks by itself after 5 s, and a walk-away puts the picked dragon back.
-- **`tests/score.spec.js`**: hoops, perfect hoops, streaks and clean flying score; stars follow the score; the card shows them; the best flight is kept per level, survives a refresh and **C** clears it.
-- **`tests/hazards.spec.js`**: no enemies on HATCHLING (puffs instead, plus a fireball and a flock friend), bumps tumble and cost a little but every run gets home, clouds zap hoops, wisps hide them, and each power-up does its job (a flock friend only when somebody is home).
-- **`tests/celebration.spec.js`**: the 8th dragon gets a 7-8 s celebration with every saved dragon and this round's names, it leaves a star that survives a refresh until **C**, and it plays calmer in reduced motion.
-- **`tests/ages.spec.js`**: a slow kid, a decent teen and a sharp player fly every level; it prints their scores and stars and checks the levels are really different (STORM RIDER gives the decent player one star).
-- **`tests/framerate.spec.js`**: at 8 fps the game clock still keeps real time, a frozen tab only nudges the game forward, and a full run at ~8 fps lands within 2 s of a normal one.
-- **`tests/motion.spec.js`**: reduced motion follows the OS setting, **G** cycles and is remembered, no shake and a calmer camera when reduced.
-- **`tests/calibration.spec.js`**: a deliberately misaligned pretend rig is fixed by **K**, the calibration survives a refresh, Delete clears it, and a mouse isn't affected.
-- **`tests/screenshots.spec.js`**: `npm run shots` writes every scene at 1920×1080 and phone landscape to `tests/screens/`, including all three routes, the celebration, the dragon card and the "press any key" screen.
+## Art
 
-The tests press a key right after loading, the same way the operator starts the station, because a browser holds the sound (and so the lantern) until then. With `npm run dev` running, `node tools/pitch.mjs` regenerates the pitch images in `design/`.
+The gull and three trees are cropped from licensed art packs we're allowed to use but not share, so the packs aren't in the repo (`assets/` is ignored). `npm run sprites` crops them again if you have the packs. Everything else, including the dragons and the music, is drawn or synthesized in code. See [CREDITS.md](CREDITS.md).
 
-## Code map
-
-```
-src/config.js          every tunable number (durations, tempo, thresholds, palette)
-src/main.js            loop, letterbox scaling, test hooks
-src/input/             Input (one pointer), adapters (mouse/touch/mocap/keys), OneEuroFilter, Dwell, SoundButton
-src/core/              SceneManager, Beat (120 BPM), Camera, Particles, AuroraStore (ribbons + dragons + bests), Operator,
-                       dragons (seeded dragon parts, names, the lost pool), Points (score + stars), Hazards (enemies,
-                       power-ups, gusts), Audio (mixing, unlock, scheduler), synth (instruments), tune (the music)
-src/art/               font (pixel font), knotwork, dragon (parts-based dragon drawing), quirks, flock, routes (the 3 flights),
-                       critters (enemies + power-ups), world, aurora (+ celebration stars), icons, sprites
-src/scenes/            Attract (level picker), Choose, FindDragon, Flight, Home, Celebration, EndCard (the dragon card)
-```
-
-Everything renders into a 480×270 buffer that is scaled up with nearest-neighbor (4× on a 1080p projector), so it stays crisp from across the lobby.
+Made by: Hana, Tabish, Tigistu, TJ

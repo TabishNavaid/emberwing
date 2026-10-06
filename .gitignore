@@ -1,13 +1,13 @@
+# build output and test leftovers
 node_modules/
 dist/
-# the asset packs can be used in the game but not redistributed, so only our crops in public/sprites get committed
-assets/
 test-results/
 playwright-report/
 tests/screens/
 .DS_Store
-# course docs include internal emails from the symphony, keep them out of the public repo
-docs/
 
-# per-second clueless captures are big, the contact sheets + log get committed instead
-notes/clueless-*/[0-9][0-9].png
+# the licensed art packs. we can use them but not share them, only our crops in public/sprites get committed
+assets/
+
+# course docs, including private emails from the symphony
+docs/
