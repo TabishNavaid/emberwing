@@ -11,7 +11,7 @@ const SPAWN_X = W + 40;
 // lives in the same world coordinates as the hoops. nothing in here can end a run, the worst a
 // bump does is a tumble and a few points
 export class Hazards {
-  constructor(f, g, seed) {
+  constructor(f, seed) {
     this.f = f;
     const r = (this.r = mulberry32(seed));
     const L = f.L;
@@ -55,7 +55,7 @@ export class Hazards {
     return f.rings.find((ring) => !ring.tutorial && ring.state === 'coming' && !ring.taken && f.ringX(ring) > x0 && f.ringX(ring) < x1);
   }
 
-  spawn(g, e) {
+  spawn(e) {
     const f = this.f;
     const s = f.L.scroll;
     const it = { kind: e.kind, x: SPAWN_X, y: 130, vx: -s, t: 0, alpha: 1 };
@@ -95,7 +95,7 @@ export class Hazards {
 
   update(g, dt) {
     const f = this.f;
-    while (this.queue.length && f.tt >= this.queue[0].at && !f.tutorial) this.spawn(g, this.queue.shift());
+    while (this.queue.length && f.tt >= this.queue[0].at && !f.tutorial) this.spawn(this.queue.shift());
     for (const e of this.gusts) {
       if (!e.fired && f.tt >= e.at + ENEMY.GUST_WARN) {
         e.fired = true;
@@ -103,7 +103,6 @@ export class Hazards {
         g.audio.cue('gust');
       }
     }
-    const t = f.t;
     for (const it of this.list) {
       it.t += dt;
       if (it.popT !== undefined) {
@@ -138,7 +137,7 @@ export class Hazards {
     }
     this.list = this.list.filter((it) => it.x > -40 && it.alpha > 0.02 && !(it.popT > 0.5));
     this.updateFire(g, dt);
-    this.updateFriend(g, dt, t);
+    this.updateFriend(g, dt);
   }
 
   updateCloud(g, it, dt) {
@@ -296,7 +295,7 @@ export class Hazards {
     };
   }
 
-  draw(g, ctx, t) {
+  draw(ctx, t) {
     for (const it of this.list) {
       if (it.popT !== undefined) continue;
       if (it.kind === 'cloud') drawGrumpyCloud(ctx, it.x, it.y, t, it.zapper && it.zapT > ENEMY.ZAP_AFTER ? 1 : 0);

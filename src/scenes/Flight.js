@@ -33,7 +33,7 @@ export class Flight {
     this.follows = `${this.d.name} FOLLOWS YOUR LIGHT`;
     const r = mulberry32(g.rng.int(1, 1e6));
     // the level picked on the attract screen: hoop size, speed, how many move, enemies...
-    this.levelId = LEVELS[g.level] ? g.level : 'hatchling';
+    this.levelId = g.level;
     this.L = LEVELS[this.levelId];
     this.T = this.L.timeline;
     // the swell lands on a bar downbeat near 2/3 of the way through (12s on hatchling)
@@ -68,7 +68,6 @@ export class Flight {
     this.tt = 0;
     this.tutorial = true;
     this.tutT = 0;
-    this.hits = 0;
     this.points = new Points(this.levelId);
     this.countPop = 0;
     this.prompt = this.follows;
@@ -107,7 +106,7 @@ export class Flight {
 
     // which of the three routes this guest gets. only the scenery changes, the hoops above are
     // laid out before this so every route gets the same flight
-    this.routeIndex = (g.route ?? 0) % ROUTES.length;
+    this.routeIndex = g.route % ROUTES.length;
     this.route = ROUTES[this.routeIndex];
     this.route.setup(this, r);
 
@@ -119,8 +118,7 @@ export class Flight {
     this.tumbleT = 0; // tumbling after a bump
     this.safeT = 0; // can't be bumped again yet
     this.push = 0; // a gust's shove, px/sec, fades out
-    this.power = null; // the last power-up, for the corner
-    this.hz = new Hazards(this, g, Math.floor(r() * 1e9));
+    this.hz = new Hazards(this, Math.floor(r() * 1e9));
   }
 
   // flew through a power-up orb
@@ -128,7 +126,6 @@ export class Flight {
     const at = this.toScreen(x, y);
     const names = { fireball: 'FIREBALL!', speed: 'SPEED BURST!', shield: 'SHIELD!', magnet: 'MAGNET!', friend: 'FLOCK FRIEND!' };
     this.points.add(SCORE.POWERUP, at.x, at.y, names[kind], POWER_COLORS[kind]);
-    this.power = { kind, t: 0 };
     if (kind === 'fireball') this.fireT = POWER.FIREBALL;
     else if (kind === 'speed') this.speedT = POWER.SPEED;
     else if (kind === 'magnet') this.magnetT = POWER.MAGNET;
@@ -206,7 +203,7 @@ export class Flight {
   nextRing() {
     return this.rings.find((r) => r.state === 'coming' && (r.tutorial || this.ringX(r) > REF_X - 4));
   }
-  target(g) {
+  target() {
     const r = this.nextRing();
     if (!r) return { x: W * 0.4, y: H * 0.3 };
     // screen coords, the playwright "guest" steers toward this
@@ -309,7 +306,6 @@ export class Flight {
     if (this.tutorial) this.updateTutorial(g, dt);
     g.audio.rain(this.route.rain ? this.route.rain(p) : 0);
     for (const k of ['fireT', 'speedT', 'magnetT', 'tumbleT', 'safeT']) this[k] = Math.max(0, this[k] - dt);
-    if (this.power) this.power.t += dt;
     this.hz.update(g, dt);
 
     for (const ring of this.rings) {
@@ -340,7 +336,6 @@ export class Flight {
     ring.hitY = this.ringY(ring);
     const gold = ring.p > FLIGHT.WOBBLY_UNTIL;
     if (hit) {
-      this.hits++;
       this.countPop = 0.4;
       this.squash = 1;
       this.cheerT = 0.4;
@@ -492,7 +487,7 @@ export class Flight {
     ctx.translate(-W / 2, -H / 2 - this.camY);
     this.drawTrail(ctx, conf);
     for (const ring of this.rings) this.drawRing(g, ctx, ring);
-    this.hz.draw(g, ctx, t);
+    this.hz.draw(ctx, t);
     for (const f of this.flock) {
       for (let i = 1; i < f.trail.length; i++) {
         const k = i / f.trail.length;
@@ -620,7 +615,7 @@ export class Flight {
   // "3 / 8" up in the corner with a little hoop, pops when you get one
   drawCounter(ctx) {
     const pop = this.countPop > 0 ? 1 + Math.sin((this.countPop / 0.4) * Math.PI) * 0.3 : 1;
-    const label = `${this.hits} / ${this.L.hoops}`;
+    const label = `${this.points.hits} / ${this.L.hoops}`;
     drawKnotRing(ctx, 412, 14, 7 * pop, 1, { lobes: 5, amp: 1.5, width: 1, on: PAL.gold });
     drawTextPop(ctx, label, 446, 14, 1, { scale: Math.round(2 * pop) || 2, color: PAL.gold2 });
   }
@@ -630,8 +625,8 @@ export class Flight {
   drawJourney(ctx, p, t) {
     const x0 = 150, x1 = 330, y = 13;
     const px = Math.round(lerp(x0, x1, p));
-    drawKnotBand(ctx, x0, y, x1 - x0, { color: 'rgba(255,243,214,0.5)', period: 10, amp: 2 });
-    if (px > x0) drawKnotBand(ctx, x0, y, px - x0, { color: PAL.gold, period: 10, amp: 2 });
+    drawKnotBand(ctx, x0, y, x1 - x0, { color: 'rgba(255,243,214,0.5)' });
+    if (px > x0) drawKnotBand(ctx, x0, y, px - x0);
     // tiny lighthouse
     ctx.fillStyle = '#e8e0cc';
     ctx.fillRect(x0 - 16, y - 6, 5, 12);

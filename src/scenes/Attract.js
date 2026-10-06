@@ -37,7 +37,7 @@ const PAGES = [
 ];
 
 // how many more dragons until the next celebration
-export const partyLeft = (n) => FLOCK.CELEBRATE_EVERY - (n % FLOCK.CELEBRATE_EVERY);
+const partyLeft = (n) => FLOCK.CELEBRATE_EVERY - (n % FLOCK.CELEBRATE_EVERY);
 
 export class Attract {
   interactive = false;
@@ -180,7 +180,7 @@ export class Attract {
     }
     // held still anywhere near the middle (not on a level) for a couple of seconds = hatchling
     const inMiddle = inp.x >= MIDDLE.x0 && inp.x <= MIDDLE.x1 && inp.y >= MIDDLE.y0 && inp.y <= MIDDLE.y1;
-    const can = !g.gate && inp.seen && !onRow && inMiddle && this.moved > 30 && !g.soundBtn?.contains(inp.x, inp.y);
+    const can = !g.gate && inp.seen && !onRow && inMiddle && this.moved > 30 && !g.soundBtn.contains(inp.x, inp.y);
     if (can && this.anyAt && Math.hypot(inp.x - this.anyAt.x, inp.y - this.anyAt.y) < 12) {
       this.anyHold += dt;
       if (this.anyHold >= HOLD_ANYWHERE) return this.start(g, 'hatchling');
@@ -233,9 +233,9 @@ export class Attract {
   drawPicker(g, ctx, t) {
     const pulse = g.beat.pulse;
     drawText(ctx, 'NEXT FLYER', COL, 4, { scale: 2, align: 'center', color: PAL.gold });
-    drawFeet(ctx, COL - 52, 28, 2, PAL.cream);
+    drawFeet(ctx, COL - 52, 28);
     drawText(ctx, 'STEP HERE', COL - 30, 21, { scale: 2, color: PAL.cream });
-    drawKnotBand(ctx, COL - 96, 42, 192, { color: PAL.gold, period: 10, amp: 2 });
+    drawKnotBand(ctx, COL - 96, 42, 192);
     for (const r of this.rows) {
       const L = LEVELS[r.id];
       const lit = r.hover || this.starting === r.id;
@@ -253,7 +253,7 @@ export class Attract {
       drawLevelIcon(ctx, r.id, r.ring.x, r.ring.y, t);
       drawText(ctx, L.label, 316, r.top, { scale: 2, color: lit ? PAL.gold2 : PAL.gold });
       drawText(ctx, L.hint, 316, r.top + 17, { scale: 2, color: PAL.cream });
-      const best = g.store.best?.[r.id];
+      const best = g.store.best[r.id];
       if (best) drawText(ctx, `${best.name} ${best.score}`, 316, r.top + 34, { scale: 2, color: '#bff8ee' });
       else drawText(ctx, L.fresh, 316, r.top + 34, { scale: 2, color: easy ? PAL.gold2 : 'rgba(191,248,238,0.6)', alpha: easy ? 0.75 + 0.25 * pulse : 1 });
     }
@@ -263,7 +263,7 @@ export class Attract {
     if (!hover && !this.starting) {
       const k = (t * 0.8) % 1;
       ctx.globalAlpha = 1 - k;
-      drawArrowUp(ctx, COL + 104, 236 - k * 12, 1, PAL.cream);
+      drawArrowUp(ctx, COL + 104, 236 - k * 12);
       ctx.globalAlpha = 1;
     }
   }
@@ -403,7 +403,7 @@ export class Attract {
     });
     const lx = lerp(-10, 60, ease.outCubic(clamp(t / 3.5)));
     glow(pg, lx, 66, 40, PAL.gold, 0.35);
-    drawLantern(pg, lx, 64, 1, 1, t);
+    drawLantern(pg, lx, 64, 1, t);
     pg.fillStyle = 'rgba(92,114,140,0.25)';
     for (let i = 0; i < 4; i++) pg.fillRect(0, 80 + i * 16 + Math.round(Math.sin(t + i) * 3), BOOK.w, 6);
     return 'WHO WILL YOU FIND?';
@@ -428,7 +428,7 @@ export class Attract {
       ghost = { x: lerp(30, eyes.x, k) + Math.sin(t * 5) * 18 * (1 - k), y: lerp(40, eyes.y, k) };
       // same dark fog + warm beam as the real scene so the demo looks like the game
       glow(pg, ghost.x, ghost.y, 44, PAL.gold, 0.45);
-      drawFog(pg, BOOK.w, BOOK.h, t, [{ x: ghost.x, y: ghost.y, r: 42 }], { alpha: 0.93 });
+      drawFog(pg, BOOK.w, BOOK.h, t, [{ x: ghost.x, y: ghost.y, r: 42 }], 0.93);
       glow(pg, eyes.x, eyes.y, 9, PAL.gold, 0.8);
       const fill = clamp((t - 1.4) / 1.2);
       if (fill > 0) drawKnotRing(pg, ex, ey - 4, 30, fill, { lobes: 8, amp: 2.5, on: PAL.gold });
@@ -454,7 +454,7 @@ export class Attract {
     }
     if (t < 0.2) this.demoY = undefined;
     pg.globalAlpha = 0.85;
-    drawLantern(pg, ghost.x, ghost.y, 1, 0.8, t);
+    drawLantern(pg, ghost.x, ghost.y, 0.8, t);
     pg.globalAlpha = 1;
     drawText(pg, 'YOU', ghost.x, ghost.y - 28, { scale: 2, align: 'center', color: PAL.gold2 });
     return t < FIND ? `FIND ${d.name}` : 'FLY HOME!';

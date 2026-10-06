@@ -43,7 +43,7 @@ export class Operator {
     } else if (k === 'r') {
       g.scenes.go('attract', { reason: 'operator' }, { fade: 0.2 });
     } else if (k === 's') {
-      g.scenes.skip();
+      g.scenes.current?.skip(g);
     } else if (k === 'd') {
       this.debug = !this.debug;
     } else if (k === 'c') {

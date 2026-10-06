@@ -1,7 +1,7 @@
 // the instruments, all made from scratch with web audio (no sound files to download or license).
 // every function schedules one note at `when` (audio clock) into `out`
 
-export const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
 // tiny seeded random so the plucked strings sound the same every time
 function lcg(seed) {

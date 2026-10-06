@@ -25,12 +25,7 @@ export class AuroraStore {
       const d = JSON.parse(raw);
       if (!d || !Array.isArray(d.ribbons)) return;
       if (STORE.NEW_NIGHT_BY_DATE && d.date !== today()) return;
-      // ribbons saved before dragons were a thing get one, so the flock still matches the count
-      d.ribbons.forEach((rib, i) => {
-        if (!rib.d) rib.d = stand(i).seed;
-        if (!rib.n) rib.n = stand(i).name;
-      });
-      this.data = { date: d.date, count: d.count | 0, ribbons: d.ribbons, best: d.best && typeof d.best === 'object' ? d.best : {} };
+      this.data = { date: d.date, count: d.count | 0, ribbons: d.ribbons, best: d.best || {} };
       this.version++;
     } catch (e) {
       console.warn('[emberwing] could not read saved aurora', e);

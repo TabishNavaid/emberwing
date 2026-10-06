@@ -119,7 +119,7 @@ window.addEventListener('pointerdown', (e) => {
 // laptop the operator presses any key once to start the station (M starts it silent instead).
 // phones skip that, the first touch turns the sound on
 const touchFirst = !!window.matchMedia?.('(hover: none) and (pointer: coarse)').matches;
-game.gate = !touchFirst && game.audio.needsGesture;
+game.gate = !touchFirst && game.audio.status === 'locked';
 game.audio.ctx?.addEventListener('statechange', () => {
   if (game.audio.ctx.state === 'running') game.gate = false;
 });
@@ -231,7 +231,6 @@ window.__emberwing = {
 loadSprites().then(() => {
   const start = params.get('scene') || 'attract';
   game.scenes.enter(start);
-  if (params.has('t')) window.__emberwing.step(+params.get('t'));
   document.body.classList.add('ready');
   requestAnimationFrame(frame);
 });

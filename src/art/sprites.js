@@ -23,12 +23,13 @@ export function loadSprites() {
     ),
   );
 }
-export function drawGull(ctx, x, y, frame = 0, flip = false) {
+// flipped so it faces into the scene
+export function drawGull(ctx, x, y, frame) {
   const img = SPR.gull;
   if (!img) return;
   ctx.save();
   ctx.translate(Math.round(x), Math.round(y));
-  if (flip) ctx.scale(-1, 1);
+  ctx.scale(-1, 1);
   ctx.drawImage(img, (frame % 4) * 18, 0, 18, 18, -9, -17, 18, 18);
   ctx.restore();
 }
@@ -51,8 +52,8 @@ function tinted(name, color) {
   }
   return c;
 }
-export function drawTree(ctx, name, x, baseY, color = null) {
-  const img = color ? tinted(name, color) : SPR[name];
+export function drawTree(ctx, name, x, baseY, color) {
+  const img = tinted(name, color);
   if (!img) return;
   ctx.drawImage(img, Math.round(x - img.width / 2), Math.round(baseY - img.height));
 }

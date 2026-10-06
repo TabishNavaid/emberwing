@@ -51,7 +51,7 @@ export const SKY = {
   aurora: [[0, '#050818'], [0.5, '#0e1a3a'], [1, '#1d3450']],
 };
 
-export function makeStars(seed, n = 70, maxY = H * 0.6) {
+export function makeStars(seed, n, maxY) {
   const r = mulberry32(seed);
   return Array.from({ length: n }, () => ({ x: r() * W, y: r() * maxY, p: r() * TAU, b: r() }));
 }
@@ -71,11 +71,7 @@ export function drawStars(ctx, stars, t, alpha = 1) {
 }
 
 export function drawSea(ctx, y, t, o = {}) {
-  const c1 = o.c1 ?? PAL.sea;
-  const c2 = o.c2 ?? PAL.sea2;
-  const foam = o.foam ?? PAL.foam;
-  const scroll = o.scroll ?? 0;
-  const glint = o.glint ?? null;
+  const { c1, c2, foam, scroll = 0, glint = null } = o;
   // runs a bit past the bottom so a camera nudge never shows a gap under the sea
   const bottom = H + 16;
   ctx.fillStyle = c1;
@@ -335,9 +331,9 @@ export function drawRays(ctx, cx, cy, t, color, alpha = 0.3, n = 9, len = 420) {
 }
 
 // the asset packs only have perched gulls, so flying ones are drawn by hand
-export function drawFlyingGull(ctx, x, y, t, color = '#dfe6ee') {
+export function drawFlyingGull(ctx, x, y, t) {
   const up = Math.sin(t * 9) > 0;
-  ctx.fillStyle = color;
+  ctx.fillStyle = '#e8eef4';
   x = Math.round(x);
   y = Math.round(y);
   ctx.fillRect(x - 1, y, 3, 1);
@@ -354,7 +350,7 @@ export function drawFlyingGull(ctx, x, y, t, color = '#dfe6ee') {
 
 // fog with soft holes where the light is. holes: [{ x, y, r, a }], a = how much it clears
 const fogCanvases = new Map();
-export function drawFog(ctx, w, h, t, holes = [], o = {}) {
+export function drawFog(ctx, w, h, t, holes, alpha) {
   const key = w + 'x' + h;
   let f = fogCanvases.get(key);
   if (!f) {
@@ -362,19 +358,16 @@ export function drawFog(ctx, w, h, t, holes = [], o = {}) {
     fogCanvases.set(key, f);
   }
   const [c, g] = f;
-  const alpha = o.alpha ?? 0.92;
-  const color = o.color ?? '#141c2a';
-  const color2 = o.color2 ?? '#2a3850';
   g.globalCompositeOperation = 'source-over';
   g.clearRect(0, 0, w, h);
-  g.fillStyle = rgba(color, alpha);
+  g.fillStyle = rgba('#141c2a', alpha);
   g.fillRect(0, 0, w, h);
   // flat drifting banks, round blobs looked like bokeh
   for (let i = 0; i < 16; i++) {
     const sp = 6 + (i % 4) * 4;
     const x = ((i * 67 + t * sp) % (w + 100)) - 50;
     const y = ((i * 41) % h) + Math.sin(t * 0.4 + i) * 6;
-    g.fillStyle = rgba(i % 3 ? color2 : '#2c3a4c', 0.22 * alpha);
+    g.fillStyle = rgba(i % 3 ? '#2a3850' : '#2c3a4c', 0.22 * alpha);
     const r = 16 + (i % 5) * 7;
     for (let yy = -r * 0.35; yy <= r * 0.35; yy++) {
       const ww = Math.round(r * 1.8 * Math.sqrt(1 - Math.pow(yy / (r * 0.35), 2)));

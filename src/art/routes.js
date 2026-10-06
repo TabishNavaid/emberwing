@@ -10,7 +10,7 @@ import { drawBaseAurora } from './aurora.js';
 // s = { t, p, conf, rise, swell, windup } from the flight
 
 const { W, H } = VIEW;
-export const SEA_Y = 222;
+const SEA_Y = 222;
 
 const wrap = (x, span) => ((x % span) + span) % span;
 

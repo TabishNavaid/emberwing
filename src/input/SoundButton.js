@@ -7,7 +7,7 @@ import { drawSpeaker } from '../art/icons.js';
 // the speaker in the bottom left corner. it used to be just a picture, people clicked it and
 // nothing happened. now it's a real control: click it, tap it, or hold the light on it (the
 // mocap prop can't click). M still works too
-export const SOUND_BTN = { x: 17, y: 256, w: 30, h: 24 };
+const SOUND_BTN = { x: 17, y: 256, w: 30, h: 24 };
 const HOLD = 1.5; // a bit longer than the lanterns, so brushing past doesn't mute anything
 
 export class SoundButton {
@@ -65,7 +65,7 @@ export class SoundButton {
     ctx.fillRect(x - w / 2, y - h / 2, 1, h);
     ctx.fillRect(x + w / 2 - 1, y - h / 2, 1, h);
     if (this.flash > 0) glow(ctx, x, y, 26, state === 'on' ? PAL.gold : PAL.rose, this.flash * 0.8);
-    drawSpeaker(ctx, x - 12, y, state, g.time, g.beat.pulse, 2);
+    drawSpeaker(ctx, x - 12, y, state, g.time, g.beat.pulse);
     if (this.hover || this.hold > 0) {
       drawKnotRing(ctx, x, y, 19, this.hold / HOLD, { lobes: 6, amp: 2, width: 1, on: PAL.gold, off: 'rgba(255,226,138,0.45)' });
       // on its own dark plate so it reads over whatever the scene has in that corner

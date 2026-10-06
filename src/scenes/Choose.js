@@ -20,7 +20,7 @@ export class Choose {
   interactive = false; // it picks by itself, no idle reset needed
 
   enter(g) {
-    this.level = LEVELS[g.level] ? g.level : 'hatchling';
+    this.level = g.level;
     this.options = g.lost.slice(0, 3).map((d, i) => ({ d, me: member(d, i), x: CARD_X[i], progress: 0, hover: false }));
     this.picked = null;
     this.going = false;
@@ -132,6 +132,6 @@ export class Choose {
     lines.forEach((l, i) => drawText(ctx, l, o.x, 182 + i * 16, { scale: 2, align: 'center', color: '#bff8ee' }));
     ctx.globalAlpha = 1;
     if (other) drawText(ctx, 'NEXT TIME', o.x, 216, { scale: 2, align: 'center', color: PAL.cream, alpha: clamp(this.pickT * 3) * 0.8 });
-    if (chosen) drawKnotBand(ctx, x0 + 12, CARD.y1 - 20, CARD.w - 24, { color: PAL.gold, period: 10, amp: 2 });
+    if (chosen) drawKnotBand(ctx, x0 + 12, CARD.y1 - 20, CARD.w - 24);
   }
 }

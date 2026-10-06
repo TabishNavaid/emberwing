@@ -103,9 +103,9 @@ export class EndCard {
       if (earned && k > 0 && k < 1) glow(ctx, cx - 26 + i * 26, 118, 18, PAL.gold, 1 - k);
       drawStarIcon(ctx, cx - 26 + i * 26, 118, earned && k > 0, 2);
     }
-    drawText(ctx, `${LEVELS[this.run.level]?.label ?? ''} ${this.run.score}`, cx, 131, { scale: 2, align: 'center', color: PAL.gold });
+    drawText(ctx, `${LEVELS[this.run.level].label} ${this.run.score}`, cx, 131, { scale: 2, align: 'center', color: PAL.gold });
 
-    drawKnotBand(ctx, x + 20, 150, w - 40, { color: PAL.gold, period: 10, amp: 2 });
+    drawKnotBand(ctx, x + 20, 150, w - 40);
 
     // the line to take into the hall
     const l1 = 'HEAR IT LIVE IN ACT II';
@@ -125,7 +125,7 @@ export class EndCard {
 
     // hold the light on the little lantern to skip
     drawKnotRing(ctx, SKIP.x, SKIP.y, SKIP.r, this.dwell.progress, { lobes: 6, amp: 2, width: 1, on: PAL.gold, off: 'rgba(255,226,138,0.5)' });
-    drawLantern(ctx, SKIP.x, SKIP.y, 1, 0.5 + this.dwell.progress * 0.5, t);
+    drawLantern(ctx, SKIP.x, SKIP.y, 0.5 + this.dwell.progress * 0.5, t);
     drawText(ctx, 'NEXT', SKIP.x - SKIP.r - 6, SKIP.y - 6, { scale: 2, align: 'right', color: PAL.cream, alpha: 0.85 });
 
     g.particles.draw(ctx);

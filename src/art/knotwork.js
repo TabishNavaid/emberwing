@@ -61,8 +61,8 @@ export function drawKnotRing(ctx, cx, cy, r, progress = 1, o = {}) {
 // straight woven band for frames and dividers
 export function drawKnotBand(ctx, x, y, len, o = {}) {
   const vertical = o.vertical ?? false;
-  const period = o.period ?? 12;
-  const amp = o.amp ?? 2.5;
+  const period = o.period ?? 10;
+  const amp = o.amp ?? 2;
   const color = o.color ?? '#ffc94a';
   const crossAt = [];
   for (let s0 = 0; s0 <= len; s0 += period / 2) crossAt.push(s0);
@@ -82,10 +82,11 @@ export function drawKnotFrame(ctx, x, y, w, h, o = {}) {
     let g;
     const pad = 6;
     [c, g] = makeCanvas(w + pad * 2, h + pad * 2);
-    drawKnotBand(g, pad, pad, w, { color });
-    drawKnotBand(g, pad, pad + h, w, { color });
-    drawKnotBand(g, pad, pad, h, { color, vertical: true });
-    drawKnotBand(g, pad + w, pad, h, { color, vertical: true });
+    const band = { color, period: 12, amp: 2.5 };
+    drawKnotBand(g, pad, pad, w, band);
+    drawKnotBand(g, pad, pad + h, w, band);
+    drawKnotBand(g, pad, pad, h, { ...band, vertical: true });
+    drawKnotBand(g, pad + w, pad, h, { ...band, vertical: true });
     for (const [cx, cy] of [[pad, pad], [pad + w, pad], [pad, pad + h], [pad + w, pad + h]]) {
       drawKnotRing(g, cx, cy, 4, 1, { lobes: 3, amp: 2, width: 1, on: color, off: color });
     }

@@ -37,8 +37,10 @@ export class Points {
     return this.bumps === 0 && this.misses <= 1;
   }
 
+  // one star for everybody, then the level's thresholds
   get stars() {
-    return starsFor(this.level, this.score);
+    const [two, three] = LEVELS[this.level].stars;
+    return this.score >= three ? 3 : this.score >= two ? 2 : 1;
   }
 
   update(dt) {
@@ -54,10 +56,4 @@ export class Points {
       drawText(ctx, p.text, p.x, Math.round(p.y - 14 - p.t * 22), { scale: 2, align: 'center', color: p.color, alpha: a });
     }
   }
-}
-
-// one star for everybody, then the level's thresholds
-export function starsFor(level, score) {
-  const [two, three] = (LEVELS[level] ?? LEVELS.hatchling).stars;
-  return score >= three ? 3 : score >= two ? 2 : 1;
 }

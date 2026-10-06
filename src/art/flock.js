@@ -45,7 +45,7 @@ export function updateMember(g, m, dt, x, y, { scale = 1, flip = false, flying =
   if (m.q.update(dt, flying) === 'sneeze') sneeze(g, m.d, x, y, scale, flip, quiet);
 }
 
-export function sneeze(g, d, x, y, scale = 1, flip = false, quiet = false) {
+function sneeze(g, d, x, y, scale = 1, flip = false, quiet = false) {
   const n = noseOffset(d, scale, flip);
   g.particles.burst(x + n.x, y + n.y, 9, { speed: 70, angle: flip ? Math.PI : 0, spread: 1.2, colors: [PAL.gold2, PAL.amber, '#ffffff'], kind: 'spark', size: 1, drag: 3, life: 0.5 }, g.rng);
   if (!quiet) g.audio.cue('sneeze');

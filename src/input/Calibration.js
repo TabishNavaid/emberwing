@@ -15,7 +15,7 @@ export const CAL_NAMES = ['TOP LEFT', 'TOP RIGHT', 'BOTTOM RIGHT', 'BOTTOM LEFT'
 
 // solve the 8 unknowns of a homography from 4 point pairs (plain gaussian elimination).
 // returns null if the points are degenerate, like all 4 captured in the same spot
-export function solveHomography(src, dst) {
+function solveHomography(src, dst) {
   const A = [];
   for (let i = 0; i < 4; i++) {
     const [x, y] = src[i];
@@ -37,7 +37,7 @@ export function solveHomography(src, dst) {
   return A.map((row, i) => row[8] / row[i]).concat(1);
 }
 
-export function applyHomography(h, x, y) {
+function applyHomography(h, x, y) {
   const w = h[6] * x + h[7] * y + h[8];
   return [(h[0] * x + h[1] * y + h[2]) / w, (h[3] * x + h[4] * y + h[5]) / w];
 }

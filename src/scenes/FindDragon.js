@@ -196,7 +196,7 @@ export class FindDragon {
       drawStone(ctx, s.x, s.y, s.h, s.w, s.rune, clamp(lit * (0.5 + 0.5 * g.beat.pulse)));
     }
     const gl = this.gull;
-    if (gl.perched) drawGull(ctx, gl.x, gl.y, Math.floor(t * 2.5) % 4 === 3 ? 2 : Math.floor(t * 1.5) % 2, true);
+    if (gl.perched) drawGull(ctx, gl.x, gl.y, Math.floor(t * 2.5) % 4 === 3 ? 2 : Math.floor(t * 1.5) % 2);
 
     this.drawLost(g, ctx, t);
 
@@ -209,9 +209,9 @@ export class FindDragon {
     if (this.fogA > 0.01) {
       const holes = [{ x: bx, y: by, r: 50 }, { x: 46, y: 96, r: 46, a: 0.55 }];
       if (this.popped) holes.push({ x: this.ex, y: this.ey, r: 60 + (this.burstT - 0.1) * 200 });
-      drawFog(ctx, W, H, t, holes, { alpha: 0.93 * this.fogA });
+      drawFog(ctx, W, H, t, holes, 0.93 * this.fogA);
     }
-    if (!gl.perched && gl.fy > -10) drawFlyingGull(ctx, gl.fx, gl.fy, gl.t, '#e8eef4');
+    if (!gl.perched && gl.fy > -10) drawFlyingGull(ctx, gl.fx, gl.fy, gl.t);
 
     // beam comes out of the lighthouse, nod to the bat-signal proof of concept
     if (!this.found) this.drawBeam(ctx, lamp.lx, lamp.ly, bx, by);
@@ -277,7 +277,7 @@ export class FindDragon {
       const x = cx + Math.sin(t * 3) * 26;
       ctx.fillStyle = 'rgba(255,226,138,0.5)';
       for (let i = 1; i < 6; i++) ctx.fillRect(Math.round(x - Math.cos(t * 3) * i * 4), cy, 2, 2);
-      drawLantern(ctx, x, cy, 1, 0.8, t);
+      drawLantern(ctx, x, cy, 0.8, t);
     } else if (msg === FIND) {
       // a light drifting over to a pair of eyes
       const k = (t % 1.8) / 1.8;

@@ -16,7 +16,7 @@ export class Particles {
       max: p.life ?? 1,
     });
   }
-  burst(x, y, n, opts = {}, rng = Math.random) {
+  burst(x, y, n, opts, rng) {
     const { speed = 60, spread = Math.PI * 2, angle = 0, colors = ['#fff'], life = 0.9, size = 1, ...rest } = opts;
     for (let i = 0; i < n; i++) {
       const a = angle + (rng() - 0.5) * spread;

@@ -3,16 +3,14 @@ import { makeCanvas, glow, disc } from '../core/util.js';
 import { drawText, textWidth } from './font.js';
 import { drawKnotFrame } from './knotwork.js';
 
-const lanternCache = new Map();
-// s = pixel scale
-export function drawLantern(ctx, x, y, s = 2, lit = 1, t = 0) {
-  let c = lanternCache.get(s);
-  if (!c) {
+let lantern = null;
+export function drawLantern(ctx, x, y, lit, t) {
+  if (!lantern) {
     let g;
-    [c, g] = makeCanvas(14 * s, 22 * s);
+    [lantern, g] = makeCanvas(14, 22);
     const px = (xx, yy, w, h, col) => {
       g.fillStyle = col;
-      g.fillRect(xx * s, yy * s, w * s, h * s);
+      g.fillRect(xx, yy, w, h);
     };
     const dark = '#1a1410';
     px(4, 0, 6, 1, dark); px(3, 1, 1, 3, dark); px(10, 1, 1, 3, dark); px(4, 1, 6, 1, '#b8863a');
@@ -25,15 +23,15 @@ export function drawLantern(ctx, x, y, s = 2, lit = 1, t = 0) {
     px(5, 13, 1, 2, '#fff6d8'); px(8, 13, 1, 2, '#fff6d8');
     px(1, 17, 12, 1, dark); px(2, 18, 10, 2, '#c9953f'); px(1, 18, 1, 2, dark); px(12, 18, 1, 2, dark);
     px(1, 20, 12, 1, dark); px(3, 18, 3, 1, '#ffd98a');
-    lanternCache.set(s, c);
   }
-  if (lit > 0) glow(ctx, x, y + 2 * s, 18 * s * (0.9 + 0.1 * Math.sin(t * 2.5)), PAL.gold, 0.55 * lit);
-  ctx.drawImage(c, Math.round(x - c.width / 2), Math.round(y - c.height / 2));
+  if (lit > 0) glow(ctx, x, y + 2, 18 * (0.9 + 0.1 * Math.sin(t * 2.5)), PAL.gold, 0.55 * lit);
+  ctx.drawImage(lantern, Math.round(x - lantern.width / 2), Math.round(y - lantern.height / 2));
 }
 
-export function drawFeet(ctx, x, y, s = 2, color = PAL.cream) {
+export function drawFeet(ctx, x, y) {
+  const s = 2;
   const foot = (fx, fy, mirror) => {
-    ctx.fillStyle = color;
+    ctx.fillStyle = PAL.cream;
     const px = (a, b, w, h) => ctx.fillRect(Math.round(fx + (mirror ? 4 - a - w : a) * s), Math.round(fy + b * s), w * s, h * s);
     px(1, 2, 3, 1); px(0, 3, 5, 3); px(1, 6, 3, 1);
     px(1, 8, 3, 3); px(2, 11, 1, 1);
@@ -86,10 +84,10 @@ export function drawSparkle(ctx, x, y, r, color = '#fff6d8') {
   if (r > 2) ctx.fillRect(x - 1, y - 1, 3, 3);
 }
 
-export function drawArrowUp(ctx, x, y, s = 2, color = PAL.cream) {
-  ctx.fillStyle = color;
-  for (let i = 0; i < 5; i++) ctx.fillRect(Math.round(x - i * s), Math.round(y + i * s), (i * 2 + 1) * s, s);
-  ctx.fillRect(Math.round(x - s), Math.round(y + 5 * s), 3 * s, 5 * s);
+export function drawArrowUp(ctx, x, y) {
+  ctx.fillStyle = PAL.cream;
+  for (let i = 0; i < 5; i++) ctx.fillRect(Math.round(x - i), Math.round(y + i), i * 2 + 1, 1);
+  ctx.fillRect(Math.round(x - 1), Math.round(y + 5), 3, 5);
 }
 
 // the guest's light everywhere except find (that one's a beam)
@@ -120,9 +118,10 @@ export function drawActBanner(ctx, cx, y, t, pulse, alpha = 1) {
 
 // the speaker on the sound button. on = waves pulsing on the beat, muted = an x, locked = waves
 // blinking slowly (waiting for a key press or a touch). shape, not color, tells them apart.
-// x is the left edge, y the middle, s = pixel scale
-export function drawSpeaker(ctx, x, y, state, t, pulse = 0, s = 1) {
+// x is the left edge, y the middle. drawn at 2x
+export function drawSpeaker(ctx, x, y, state, t, pulse) {
   if (state === 'none') return;
+  const s = 2;
   x = Math.round(x);
   y = Math.round(y);
   const px = (a, b, w, h) => ctx.fillRect(x + a * s, y + b * s, w * s, h * s);
@@ -213,7 +212,7 @@ export function drawLevelIcon(ctx, id, x, y, t = 0) {
 // a chunky 5 point star for the score and the dragon card. filled or just an outline, so earned
 // and not-yet stars differ by shape too, not only color. s = pixel scale
 const STAR = ['...#...', '...#...', '..###..', '#######', '.#####.', '..###..', '.##.##.', '##...##'];
-export function drawStarIcon(ctx, x, y, filled = true, s = 1, color = PAL.gold2) {
+export function drawStarIcon(ctx, x, y, filled, s) {
   x = Math.round(x - (STAR[0].length * s) / 2);
   y = Math.round(y - (STAR.length * s) / 2);
   ctx.fillStyle = '#0b0f1a';
@@ -223,7 +222,7 @@ export function drawStarIcon(ctx, x, y, filled = true, s = 1, color = PAL.gold2)
     // outline-only stars keep just the edge pixels
     const edge = !filled && (STAR[j - 1]?.[i] !== '#' || STAR[j + 1]?.[i] !== '#' || row[i - 1] !== '#' || row[i + 1] !== '#');
     if (filled || edge) {
-      ctx.fillStyle = filled ? color : 'rgba(255,243,214,0.55)';
+      ctx.fillStyle = filled ? PAL.gold2 : 'rgba(255,243,214,0.55)';
       ctx.fillRect(x + i * s, y + j * s, s, s);
     }
   }));

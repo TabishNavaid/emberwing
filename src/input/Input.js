@@ -46,10 +46,6 @@ export class Input {
     if (v) this.idle = 0;
   }
 
-  get present() {
-    return this.seen && this.idle < 1.5;
-  }
-
   update(dt) {
     if (dt <= 0) return;
     const px = this.x;

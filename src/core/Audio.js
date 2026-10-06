@@ -116,10 +116,6 @@ export class Audio {
     if (!this.on) return 'muted';
     return this.ctx.state === 'running' ? 'on' : 'locked';
   }
-  // the station needs a key press before sound can start (desktop browsers block it until then)
-  get needsGesture() {
-    return this.status === 'locked';
-  }
 
   // call from a real key press / click / touch. safari also wants a sound played right then
   unlock() {

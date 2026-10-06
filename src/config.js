@@ -231,8 +231,6 @@ export const STORE = {
 
 // storm slate -> sea green -> gold / ember / aurora. the color arc tells the story
 export const PAL = {
-  sea: '#1d3b4a',
-  sea2: '#2a5a66',
   seaGreen: '#3f8a7a',
   foam: '#cfe6e6',
   rock: '#1a2433',
@@ -243,10 +241,7 @@ export const PAL = {
   gold: '#ffc94a',
   gold2: '#ffe28a',
   amber: '#ff9e3a',
-  ember: '#f0762a',
-  ember2: '#c8521f',
   ember3: '#ffa654',
-  belly: '#ffd99a',
   teal: '#3ff0d8',
   violet: '#9a6cff',
   rose: '#ff8fb0',

@@ -54,12 +54,12 @@ const TIPS = ['#ffc94a', '#fff3d6', '#ff9e3a'];
 // frills and crests, picked to stand out from both the body and the wings
 const ACCENTS = ['#ffc94a', '#fff3d6', '#ff9e3a', '#ff8fb0', '#8ad8ff', '#c4a8ff'];
 
-export const WING_SHAPES = ['bat', 'leaf', 'feather', 'moth'];
-export const HEADS = ['horns', 'curls', 'frill', 'antlers', 'crest'];
-export const TAILS = ['diamond', 'spade', 'flame', 'leaf', 'puff', 'fork'];
-export const MARKS = ['none', 'spots', 'bands'];
-export const SIZES = [0.86, 0.93, 1, 1.07, 1.14];
-export const QUIRKS = ['sparky', 'loopy', 'wobbly', 'shy', 'bouncy'];
+const WING_SHAPES = ['bat', 'leaf', 'feather', 'moth'];
+const HEADS = ['horns', 'curls', 'frill', 'antlers', 'crest'];
+const TAILS = ['diamond', 'spade', 'flame', 'leaf', 'puff', 'fork'];
+const MARKS = ['none', 'spots', 'bands'];
+const SIZES = [0.86, 0.93, 1, 1.07, 1.14];
+const QUIRKS = ['sparky', 'loopy', 'wobbly', 'shy', 'bouncy'];
 export const QUIRK_TEXT = {
   sparky: 'SNEEZES SPARKS',
   loopy: 'LOVES LOOPS',
@@ -116,7 +116,7 @@ function diff(a, b) {
 
 // the next lost dragon. recent = dragons already home tonight (newest last), so the new one
 // never repeats the last few body colors or the last dragon's shapes and quirk
-export function pickDragon(rng, recent = [], usedNames = []) {
+function pickDragon(rng, recent = [], usedNames = []) {
   const last = recent[recent.length - 1];
   const recentBodies = new Set(recent.slice(-6).map((d) => d.body));
   let best = null;
@@ -136,7 +136,7 @@ export function pickDragon(rng, recent = [], usedNames = []) {
 }
 
 // no repeats in a night until the whole list is used up, then anything but the last few
-export function pickName(rng, used = []) {
+function pickName(rng, used = []) {
   const taken = new Set(used);
   let free = NAMES.filter((n) => !taken.has(n));
   if (!free.length) {

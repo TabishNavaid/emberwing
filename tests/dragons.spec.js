@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, state, startRun, findDragon, fly, watch, waitScene } from './helpers.js';
+import { boot, state, startRun, findDragon, fly, watch, waitScene, reload } from './helpers.js';
 
 // every guest rescues a different dragon, and the flock on screen is always exactly the
 // dragons people brought home tonight
@@ -151,6 +151,42 @@ test('cold first run of the night: nobody home yet, the first dragon flies home 
   expect(after.saved).toEqual([start.name]);
   expect(after.seen).toMatchObject({ near: 1, far: 0, names: [start.name], partyLeft: 7 });
   expect(after.next).not.toBe(start.name); // a new dragon is lost for the next guest
+});
+
+test('a saved night comes back after a refresh: dragons, ribbons, best flights, celebration stars', async ({ page }) => {
+  await boot(page);
+  const night = () => page.evaluate(() => {
+    const g = window.__emberwing.game;
+    const s = g.store;
+    return {
+      count: s.count,
+      ribbons: s.ribbons,
+      dragons: s.dragons.map((d) => [d.seed, d.name]),
+      best: s.best,
+      stars: Math.floor(s.count / 8),
+      flock: g.scenes.current.visibleDragons(),
+    };
+  });
+  await page.evaluate(() => {
+    const w = window.__emberwing;
+    const g = w.game;
+    w.pause(true);
+    g.store.clear();
+    // 9 guests, each brings the lost dragon home through the real home scene with a score
+    for (let i = 0; i < 9; i++) {
+      w.goto('attract');
+      g.level = ['hatchling', 'flier', 'storm'][i % 3];
+      w.goto('home', { path: [[0, 0.5], [0.3, 0.3 + i * 0.02], [0.6, 0.6], [1, 0.4]], run: { flown: true, level: g.level, score: 500 + i * 100 } });
+    }
+    w.goto('attract');
+  });
+  const saved = await night();
+  await reload(page);
+  const after = await night();
+  expect(saved.count).toBe(9);
+  expect(saved.stars).toBe(1);
+  expect(Object.keys(saved.best).sort()).toEqual(['flier', 'hatchling', 'storm']);
+  expect(after).toEqual(saved);
 });
 
 test('the dragon card shows the rescued dragon and its number tonight, then goes back to attract', async ({ page }) => {

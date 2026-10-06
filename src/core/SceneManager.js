@@ -42,9 +42,6 @@ export class SceneManager {
     this.fadeColor = color;
     this.fadeTime = fade;
   }
-  skip() {
-    this.current?.skip?.(this.game);
-  }
   update(dt) {
     const g = this.game;
     if (this.fadeDir) {
@@ -100,7 +97,7 @@ export class SceneManager {
     drawTextPop(ctx, this.title.text, W / 2, H / 2 - 6, k * 1.4, { scale: fitScale(this.title.text, W - 16, 4), color: PAL.gold2, alpha: a });
     const len = Math.round(220 * ease.outCubic(clamp(k / 0.5)));
     ctx.globalAlpha = a;
-    drawKnotBand(ctx, W / 2 - len / 2, H / 2 + 22, len, { color: PAL.gold, period: 10, amp: 2 });
+    drawKnotBand(ctx, W / 2 - len / 2, H / 2 + 22, len);
     ctx.globalAlpha = 1;
   }
 }

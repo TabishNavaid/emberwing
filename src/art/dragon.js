@@ -427,10 +427,10 @@ export function drawSpeck(ctx, x, y, d, t) {
 }
 
 // little "!" lines out of a dragon's mouth, so a chirp still reads with the sound off
-export function drawChirp(ctx, x, y, k, flip = false, color = PAL.cream) {
+export function drawChirp(ctx, x, y, k, flip = false) {
   if (k <= 0 || k >= 1) return;
   const dir = flip ? -1 : 1;
-  ctx.fillStyle = color;
+  ctx.fillStyle = PAL.cream;
   ctx.globalAlpha = 1 - k;
   const r = 3 + k * 6;
   for (const a of [-0.7, 0, 0.7]) {
@@ -440,5 +440,5 @@ export function drawChirp(ctx, x, y, k, flip = false, color = PAL.cream) {
     ctx.fillRect(Math.round(cx + dir), Math.round(cy), 1, 1);
   }
   ctx.globalAlpha = 1;
-  glow(ctx, x + dir * 4, y, 6, color, 0.4 * (1 - k));
+  glow(ctx, x + dir * 4, y, 6, PAL.cream, 0.4 * (1 - k));
 }
