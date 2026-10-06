@@ -147,9 +147,7 @@ export class Hazards {
       // fly to the hoop: the blocker parks right in front of it, the zapper sits on top of it
       const tx = f.ringX(ring) + (it.zapper ? 0 : -16);
       const ty = f.ringY(ring) + (it.zapper ? -20 : 0);
-      const k = 1 - Math.exp(-dt * 5);
-      it.x += (tx - it.x) * k + (f.L.scroll * -dt) * (1 - k);
-      it.y += (ty - it.y) * k;
+      this.chase(it, tx, ty, 5, dt);
       if (it.zapper && Math.abs(it.x - tx) < 8) {
         it.zapT = (it.zapT ?? 0) + dt;
         if (it.zapT >= ENEMY.ZAP_AFTER + 0.5) {
@@ -174,10 +172,7 @@ export class Hazards {
     const ring = it.ring;
     if (ring && ring.state === 'coming' && !it.leaving) {
       const tx = f.ringX(ring);
-      const ty = f.ringY(ring);
-      const k = 1 - Math.exp(-dt * 6);
-      it.x += (tx - it.x) * k + (f.L.scroll * -dt) * (1 - k);
-      it.y += (ty - it.y) * k;
+      this.chase(it, tx, f.ringY(ring), 6, dt);
       if (Math.abs(it.x - tx) < 10) {
         it.sat = (it.sat ?? 0) + dt;
         ring.hidden = true;
@@ -194,6 +189,13 @@ export class Hazards {
       it.y -= 25 * dt;
       it.alpha = Math.max(0, it.alpha - dt * 1.2);
     }
+  }
+
+  // glide toward a hoop while still drifting with the scroll, so it settles on a moving target
+  chase(it, tx, ty, rate, dt) {
+    const k = 1 - Math.exp(-dt * rate);
+    it.x += (tx - it.x) * k + (this.f.L.scroll * -dt) * (1 - k);
+    it.y += (ty - it.y) * k;
   }
 
   release(it) {

@@ -4,7 +4,7 @@ import { drawText, drawTextPop, textWidth, fitScale } from '../art/font.js';
 import { drawDragon } from '../art/dragon.js';
 import { flockOf, member, chirp, updateMember, drawMember } from '../art/flock.js';
 import { drawSky, SKY, makeStars, drawStars } from '../art/world.js';
-import { drawBaseAurora, drawFullAurora, drawPartyStar, drawPartyStars, PARTY_STARS } from '../art/aurora.js';
+import { drawBaseAurora, drawFullAurora, drawPartyStar, drawPartyStars, partyStarSpot } from '../art/aurora.js';
 
 const { W, H } = VIEW;
 const C = { x: 240, y: 118 }; // middle of the spiral
@@ -81,13 +81,6 @@ export class Celebration {
     if (t >= DUR.CELEBRATE) g.scenes.go('end', {}, { color: '#070a18' });
   }
 
-  // where the new star ends up (the same spot attract, home and the card draw it in)
-  starSpot() {
-    const i = this.nth - 1;
-    const [x, y] = PARTY_STARS[i % PARTY_STARS.length];
-    return { x: x + Math.floor(i / PARTY_STARS.length) * 7, y: y + Math.floor(i / PARTY_STARS.length) * 5 };
-  }
-
   visibleDragons() {
     return { near: this.dragons.length, far: 0, names: this.round.map((r) => r.d.name) };
   }
@@ -147,7 +140,7 @@ export class Celebration {
   // a sparkle gathers in the middle, then flies up to its place in the sky and stays
   drawNewStar(ctx, t) {
     if (t < STAR_AT) return;
-    const spot = this.starSpot();
+    const spot = partyStarSpot(this.nth - 1); // same spot attract, home and the card draw it in
     if (t < STAR_UP) {
       const k = (t - STAR_AT) / (STAR_UP - STAR_AT);
       glow(ctx, C.x, C.y, 10 + k * 30, PAL.gold2, 0.4 + k * 0.5);

@@ -1,5 +1,5 @@
 import { STORE } from '../config.js';
-import { NAMES, dragonFromSeed } from './dragons.js';
+import { dragonFromSeed, standIn } from './dragons.js';
 
 // every guest's ribbon and the dragon they brought home, saved to localStorage so a refresh or
 // crashed tab doesn't wipe the wall. storage can throw (private mode, blocked site data), then
@@ -8,9 +8,6 @@ const today = () => {
   const d = new Date();
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 };
-
-// a stand-in dragon for ribbons that don't have one (old saves, tests)
-const stand = (i) => dragonFromSeed(7919 * (i + 1), NAMES[i % NAMES.length]);
 
 export class AuroraStore {
   constructor() {
@@ -64,7 +61,7 @@ export class AuroraStore {
     const p = [];
     for (const [x, y] of points) p.push(Math.round(x * 999), Math.round(y * 999));
     const n = this.data.count;
-    dragon ??= stand(n);
+    dragon ??= standIn(n);
     const rib = {
       p,
       h: hue,

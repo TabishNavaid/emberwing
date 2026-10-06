@@ -4,7 +4,7 @@ import { mulberry32 } from './util.js';
 // so storing { seed, name } is enough to draw the same dragon again later in the night
 
 // short (7 letters max, so "JUNIPER FOLLOWS YOUR LIGHT" still fits at scale 3), all made up for this
-export const NAMES = [
+const NAMES = [
   'PIP', 'SKYE', 'BRAMBLE', 'CINDER', 'MARLO', 'FENN', 'JUNIPER', 'KOA',
   'WREN', 'MOSS', 'TANSY', 'ROWAN', 'PUCK', 'NELL', 'OLLIE', 'BEAN',
   'CLOVER', 'TUCK', 'HAZEL', 'BIRCH', 'SORREL', 'NUTMEG', 'BASIL', 'RORY',
@@ -106,6 +106,10 @@ export function dragonFromSeed(seed, name = '') {
   cache.set(key, d);
   return d;
 }
+
+// a made-up dragon for a ribbon saved without one (the tests add ribbons that way), and to pad
+// the flock past STORE.MAX_RIBBONS so the picture still matches the count
+export const standIn = (i) => dragonFromSeed(7919 * (i + 1), NAMES[i % NAMES.length]);
 
 // how different two dragons look, counted in parts
 function diff(a, b) {

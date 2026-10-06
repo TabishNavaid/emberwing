@@ -13,6 +13,10 @@ export const ease = {
 // exponential ease toward a target, same feel at 30 or 144 fps
 export const approach = (cur, target, rate, dt) => cur + (target - cur) * (1 - Math.exp(-rate * dt));
 
+// hover-and-hold instead of clicking, a mocap prop can't click. drains a bit faster than it
+// fills so brushing past doesn't start anything
+export const dwell = (progress, hover, dt, seconds) => clamp(progress + (hover ? 1 : -1.5) * (dt / seconds));
+
 export function mulberry32(seed) {
   let a = seed >>> 0;
   const rng = () => {

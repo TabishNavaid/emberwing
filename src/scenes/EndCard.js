@@ -1,6 +1,5 @@
 import { VIEW, DUR, PAL, LEVELS, FLOCK } from '../config.js';
-import { clamp, glow, ease } from '../core/util.js';
-import { Dwell } from '../input/Dwell.js';
+import { clamp, glow, ease, dist, dwell } from '../core/util.js';
 import { drawText, drawTextPop, textWidth, fitScale } from '../art/font.js';
 import { drawKnotFrame, drawKnotRing, drawKnotBand } from '../art/knotwork.js';
 import { drawSky, SKY, makeStars, drawStars } from '../art/world.js';
@@ -23,7 +22,7 @@ export class EndCard {
 
   enter(g) {
     this.stars = makeStars(33, 90, 200);
-    this.dwell = new Dwell(SKIP.x, SKIP.y, SKIP.r + 6, DUR.END_SKIP_DWELL);
+    this.skipHold = 0; // 0..1 on the little lantern
     this.leaving = false;
     this.d = g.dragon;
     // which number it was. home saved it already, so it's the count (or the next one if we got
@@ -55,7 +54,12 @@ export class EndCard {
 
   update(g, dt) {
     updateMember(g, this.me, dt, PORTRAIT.x, PORTRAIT.y, { scale: 2 / this.d.size });
-    if (this.dwell.update(g.input, dt)) this.leave(g);
+    if (this.skipHold < 1) {
+      const inp = g.input;
+      const over = inp.seen && dist(inp.x, inp.y, SKIP.x, SKIP.y) < SKIP.r + 6;
+      this.skipHold = dwell(this.skipHold, over, dt, DUR.END_SKIP_DWELL);
+      if (this.skipHold >= 1) this.leave(g);
+    }
     if (this.t >= DUR.END) this.leave(g);
   }
 
@@ -124,8 +128,8 @@ export class EndCard {
     ctx.restore();
 
     // hold the light on the little lantern to skip
-    drawKnotRing(ctx, SKIP.x, SKIP.y, SKIP.r, this.dwell.progress, { lobes: 6, amp: 2, width: 1, on: PAL.gold, off: 'rgba(255,226,138,0.5)' });
-    drawLantern(ctx, SKIP.x, SKIP.y, 0.5 + this.dwell.progress * 0.5, t);
+    drawKnotRing(ctx, SKIP.x, SKIP.y, SKIP.r, this.skipHold, { lobes: 6, amp: 2, width: 1, on: PAL.gold, off: 'rgba(255,226,138,0.5)' });
+    drawLantern(ctx, SKIP.x, SKIP.y, 0.5 + this.skipHold * 0.5, t);
     drawText(ctx, 'NEXT', SKIP.x - SKIP.r - 6, SKIP.y - 6, { scale: 2, align: 'right', color: PAL.cream, alpha: 0.85 });
 
     g.particles.draw(ctx);

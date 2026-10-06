@@ -117,7 +117,7 @@ export function drawBaseAurora(ctx, t, alpha = 1, top = 20) {
 // every celebration leaves a bright star in the sky for the rest of the night, so the sky shows
 // how many there have been. same spots in every scene, in the strip of sky the attract screen
 // leaves open between the title and NEXT FLYER
-export const PARTY_STARS = [[196, 12], [226, 30], [254, 8], [284, 26], [208, 40], [240, 18], [270, 42], [298, 10], [186, 28], [260, 32], [218, 6], [292, 40]];
+const PARTY_STARS = [[196, 12], [226, 30], [254, 8], [284, 26], [208, 40], [240, 18], [270, 42], [298, 10], [186, 28], [260, 32], [218, 6], [292, 40]];
 export function drawPartyStar(ctx, x, y, t, k = 1, i = 0) {
   const tw = 0.75 + 0.25 * Math.sin(t * 1.3 + i * 1.7); // slow twinkle
   glow(ctx, x, y, 14 * k, PAL.gold2, 0.55 * tw * k);
@@ -129,22 +129,26 @@ export function drawPartyStar(ctx, x, y, t, k = 1, i = 0) {
   ctx.fillRect(Math.round(x) - 1, Math.round(y) - 1, 3, 3);
   ctx.globalAlpha = 1;
 }
+// where star i sits. past 12 they start a second layer just below the first
+export function partyStarSpot(i) {
+  const [x, y] = PARTY_STARS[i % PARTY_STARS.length];
+  const layer = Math.floor(i / PARTY_STARS.length);
+  return { x: x + layer * 7, y: y + layer * 5 };
+}
 export function drawPartyStars(ctx, n, t) {
   for (let i = 0; i < n; i++) {
-    const [x, y] = PARTY_STARS[i % PARTY_STARS.length];
-    // past 12 they start a second layer just below the first
-    drawPartyStar(ctx, x + Math.floor(i / PARTY_STARS.length) * 7, y + Math.floor(i / PARTY_STARS.length) * 5, t, 1, i);
+    const { x, y } = partyStarSpot(i);
+    drawPartyStar(ctx, x, y, t, 1, i);
   }
 }
 
 // the whole sky full of aurora, for the celebration. k = 0..1 how full
 export function drawFullAurora(ctx, t, k) {
   if (k <= 0) return;
-  const cols = [PAL.teal, PAL.violet, PAL.gold, PAL.rose, '#7fd6ff', PAL.seaGreen];
   for (let b = 0; b < 7; b++) {
     const pts = [];
     const y0 = 8 + b * 26;
     for (let x = -10; x <= W + 10; x += 16) pts.push([x, y0 + Math.sin(x * 0.015 + t * (0.5 + b * 0.1) + b) * 14 + Math.sin(x * 0.04 - t * 0.7) * 5]);
-    drawRibbon(ctx, pts, cols[b % cols.length], 0.32 * k, t + b, 50 + (b % 3) * 14);
+    drawRibbon(ctx, pts, RIBBON_COLORS[b % RIBBON_COLORS.length], 0.32 * k, t + b, 50 + (b % 3) * 14);
   }
 }

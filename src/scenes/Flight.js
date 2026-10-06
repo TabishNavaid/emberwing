@@ -8,7 +8,7 @@ import { drawKnotRing, drawKnotBand } from '../art/knotwork.js';
 import { drawDragon, drawSpeck } from '../art/dragon.js';
 import { flockOf, member, chirp, updateMember, drawMember } from '../art/flock.js';
 import { makeStars, drawWind, drawRune } from '../art/world.js';
-import { ROUTES } from '../art/routes.js';
+import { ROUTES, RAINBOW } from '../art/routes.js';
 import { drawHorn, drawSoundLines, drawCursorLight, drawStarIcon } from '../art/icons.js';
 
 // second instruction at the start of the flight (the first one has the dragon's name in it)
@@ -207,9 +207,7 @@ export class Flight {
     const r = this.nextRing();
     if (!r) return { x: W * 0.4, y: H * 0.3 };
     // screen coords, the playwright "guest" steers toward this
-    const z = this.zoom;
-    const x = (REF_X - W / 2) * z + W / 2;
-    return { x, y: (this.ringY(r) - this.camY - H / 2) * z + H / 2 };
+    return this.toScreen(REF_X, this.ringY(r));
   }
 
   skip(g) {
@@ -546,16 +544,10 @@ export class Flight {
     drawCursorLight(ctx, g.input.x, g.input.y, t, 1);
   }
 
-  // the dragon's position on screen (it lives in the zoomed world)
-  dragonOnScreen() {
-    const z = this.zoom;
-    return { x: (this.ex - W / 2) * z + W / 2, y: (this.ey - this.camY - H / 2) * z + H / 2 };
-  }
-
   // teaching arrows: light -> dragon while "PIP FOLLOWS YOUR LIGHT" is up, then a bouncing
   // chevron from the dragon toward the tutorial hoop while it's waiting
   drawGuides(ctx, lx, ly, t) {
-    const e = this.dragonOnScreen();
+    const e = this.toScreen(this.ex, this.ey);
     if (this.prompt === this.follows) {
       const d = Math.hypot(e.x - lx, e.y - ly);
       if (d > 30) {
@@ -575,8 +567,7 @@ export class Flight {
     }
     const tut = this.rings[0];
     if (this.tutorial && this.tutT >= FLIGHT.TUT_SLIDE && tut.state === 'coming') {
-      const z = this.zoom;
-      const hy = (tut.y - this.camY - H / 2) * z + H / 2;
+      const hy = this.toScreen(0, tut.y).y;
       const dir = Math.sign(hy - e.y);
       if (Math.abs(hy - e.y) > 24) {
         const bob = Math.sin(t * 8) * 3;
@@ -656,9 +647,7 @@ export class Flight {
   // dotted light from the guest's light to the dragon when they drift apart, so it's obvious
   // the dragon is following YOU
   drawTether(ctx, x, y, t) {
-    const z = this.zoom;
-    const ex = (this.ex - W / 2) * z + W / 2;
-    const ey = (this.ey - this.camY - H / 2) * z + H / 2;
+    const { x: ex, y: ey } = this.toScreen(this.ex, this.ey);
     const d = Math.hypot(ex - x, ey - y);
     if (d < 28 || this.p > FLIGHT.RISE_AT) return;
     const a = clamp((d - 28) / 40) * 0.6;
@@ -713,7 +702,7 @@ export class Flight {
       const w = 1 + Math.round(k * 3);
       ctx.globalAlpha = k * (0.45 + conf * 0.45);
       // a speed burst leaves a rainbow trail
-      ctx.fillStyle = this.speedT > 0 ? ['#ff6a6a', '#ffb04a', '#ffe86a', '#7ae07a', '#5ab0ff', '#9a7aff'][Math.floor(i / 4 + this.t * 10) % 6] : mix(PAL.teal, PAL.gold2, clamp(k * 0.5 + conf * 0.6));
+      ctx.fillStyle = this.speedT > 0 ? RAINBOW[Math.floor(i / 4 + this.t * 10) % RAINBOW.length] : mix(PAL.teal, PAL.gold2, clamp(k * 0.5 + conf * 0.6));
       ctx.fillRect(Math.round(x), Math.round(y - w / 2), 2, w);
     }
     ctx.globalAlpha = 1;

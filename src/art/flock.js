@@ -1,7 +1,7 @@
 import { FLOCK, PAL } from '../config.js';
 import { drawDragon, drawChirp, noseOffset } from './dragon.js';
 import { Quirk } from './quirks.js';
-import { NAMES, dragonFromSeed } from '../core/dragons.js';
+import { standIn } from '../core/dragons.js';
 
 // the flock is always the dragons people actually brought home tonight. the newest FLOCK.CLOSE
 // get drawn up close, everyone else is a speck further off. near + far always adds up to the count
@@ -9,9 +9,8 @@ export function flockOf(store, upTo = store.count) {
   const all = store.dragons;
   const count = Math.min(upTo, store.count);
   const have = all.slice(0, count);
-  // the store keeps at most STORE.MAX_RIBBONS ribbons, the count keeps going. pad with stand-ins
-  // so the picture still matches the number (a very long night only)
-  while (have.length < count) have.unshift(dragonFromSeed(1009 * (have.length + 1), NAMES[have.length % NAMES.length]));
+  // the store keeps at most STORE.MAX_RIBBONS ribbons, the count keeps going (a very long night only)
+  while (have.length < count) have.unshift(standIn(have.length));
   const near = have.slice(-FLOCK.CLOSE);
   const far = have.slice(0, have.length - near.length);
   return { near, far };

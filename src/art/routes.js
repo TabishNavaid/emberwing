@@ -86,7 +86,7 @@ const seaStacks = {
 // 2. into a rain squall, then out the other side into clearing sky (and a rainbow at the swell)
 const SQUALL = [[0, '#141a24'], [0.55, '#262f3c'], [1, '#3c4756']];
 const CLEAR = [[0, '#2a4a8a'], [0.5, '#5a8ac8'], [0.82, '#e8b8a0'], [1, '#ffdca0']];
-const RAINBOW = ['#ff6a6a', '#ffb04a', '#ffe86a', '#7ae07a', '#5ab0ff', '#9a7aff'];
+export const RAINBOW = ['#ff6a6a', '#ffb04a', '#ffe86a', '#7ae07a', '#5ab0ff', '#9a7aff'];
 const squall = {
   name: 'THROUGH THE SQUALL',
   setup(f, r) {

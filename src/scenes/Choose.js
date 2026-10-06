@@ -1,5 +1,5 @@
 import { VIEW, DUR, PAL, LEVELS } from '../config.js';
-import { clamp, glow, ease } from '../core/util.js';
+import { clamp, glow, ease, dwell } from '../core/util.js';
 import { drawText, drawTextPop, textWidth } from '../art/font.js';
 import { drawKnotRing, drawKnotBand } from '../art/knotwork.js';
 import { drawDragon } from '../art/dragon.js';
@@ -69,7 +69,7 @@ export class Choose {
       const inCard = Math.abs(inp.x - o.x) < CARD.w / 2 && inp.y > CARD.y0 && inp.y < CARD.y1;
       o.hover = inp.seen && !on && inCard;
       if (o.hover) on = o;
-      o.progress = clamp(o.progress + (o.hover ? 1 : -1.5) * (dt / DUR.CHOOSE_DWELL));
+      o.progress = dwell(o.progress, o.hover, dt, DUR.CHOOSE_DWELL);
       if (o.progress >= 1) return this.pick(g, o);
     }
     if (this.t >= DUR.CHOOSE) {

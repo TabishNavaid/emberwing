@@ -1,5 +1,5 @@
 import { VIEW, DUR, PAL, FLOCK, LEVELS, LEVEL_ORDER } from '../config.js';
-import { makeCanvas, glow, clamp, ease, lerp } from '../core/util.js';
+import { makeCanvas, glow, clamp, ease, lerp, dwell } from '../core/util.js';
 import { drawText } from '../art/font.js';
 import { drawKnotRing, drawKnotFrame, drawKnotBand } from '../art/knotwork.js';
 import { drawDragon, drawSpeck, eyeOffset } from '../art/dragon.js';
@@ -170,8 +170,7 @@ export class Attract {
       r.hover = !g.gate && inp.seen && (inRect || Math.hypot(inp.x - r.ring.x, inp.y - r.ring.y) < r.ring.r + 8);
       if (r.hover && !onRow) onRow = r;
       else r.hover = false;
-      // drains a bit faster than it fills so brushing past doesn't start anything
-      r.progress = clamp(r.progress + (r.hover ? 1 : -1.5) * (dt / DUR.START_DWELL));
+      r.progress = dwell(r.progress, r.hover, dt, DUR.START_DWELL);
       if (r.progress >= 1) return this.start(g, r.id);
       if (r.hover && g.rng() < dt * 30) {
         const a = g.rng() * Math.PI * 2;
