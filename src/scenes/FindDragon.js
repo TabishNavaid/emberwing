@@ -1,6 +1,6 @@
 // find the dragon: it's hiding in the fog and the guest's lighthouse beam has to find its eyes and
 // hold still on them. one instruction at a time, and the hints get stronger the longer it takes
-import { VIEW, DUR, INPUT, PAL } from '../config.js';
+import { VIEW, DUR, INPUT, PAL, TEXT } from '../config.js';
 import { clamp, dist, lerp, approach, glow, ease } from '../core/util.js';
 import { drawText, drawTextPop, fitScale } from '../art/font.js';
 import { drawKnotRing } from '../art/knotwork.js';
@@ -254,7 +254,7 @@ export class FindDragon {
       }
       if (this.popped) {
         const msg = `YOU FOUND ${this.d.name}!`;
-        drawTextPop(ctx, msg, W / 2, 40, (this.burstT - 0.1) * 1.6, { scale: fitScale(msg, W - 16, 4), color: PAL.gold2 });
+        drawTextPop(ctx, msg, W / 2, 40, (this.burstT - 0.1) * 1.6, { scale: fitScale(msg, W - 16, TEXT.L, TEXT.M), color: PAL.gold2, edge: 'outline' });
       }
     }
   }
@@ -263,7 +263,7 @@ export class FindDragon {
   drawPrompt(ctx, t) {
     const msg = this.prompt;
     const a = clamp(this.promptT / 0.25);
-    drawText(ctx, msg, W / 2, 10, { scale: 3, align: 'center', color: msg === HOLD ? PAL.gold2 : PAL.cream, alpha: a });
+    drawText(ctx, msg, W / 2, 10, { scale: TEXT.M, align: 'center', color: msg === HOLD ? PAL.gold2 : PAL.cream, edge: 'outline', alpha: a });
     const cx = W / 2;
     const cy = 52;
     ctx.globalAlpha = a;

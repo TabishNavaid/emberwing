@@ -1,6 +1,6 @@
 // the flight: the dragon follows the light through the level's hoops, past enemies and power-ups,
 // with the brass swell 2/3 of the way in and a climb into the aurora at the end
-import { VIEW, DUR, FLIGHT, PAL, MUSIC, MOTION, INPUT, LEVELS, SCORE, ENEMY, POWER, FLOCK } from '../config.js';
+import { VIEW, DUR, FLIGHT, PAL, MUSIC, MOTION, INPUT, LEVELS, SCORE, ENEMY, POWER, FLOCK, TEXT } from '../config.js';
 import { Points } from '../core/Points.js';
 import { Hazards } from '../core/Hazards.js';
 import { drawPowerIcon, POWER_COLORS } from '../art/critters.js';
@@ -532,13 +532,13 @@ export class Flight {
     }
     if (this.swellFired && this.swellT < 2.2) {
       const a = clamp((2.2 - this.swellT) * 2);
-      drawTextPop(ctx, 'SOAR!', W / 2 + 14, 40, this.swellT * 1.4, { scale: 5, color: PAL.gold2, alpha: a });
+      drawTextPop(ctx, 'SOAR!', W / 2 + 14, 40, this.swellT * 1.4, { scale: TEXT.L, color: PAL.gold2, edge: 'outline', alpha: a });
       ctx.globalAlpha = a;
       drawHorn(ctx, W / 2 - 88, 40, 2);
       drawSoundLines(ctx, W / 2 - 64, 40, 1, t, PAL.gold2);
       ctx.globalAlpha = 1;
     }
-    if (rise > 0.1) drawText(ctx, 'HOME IS UP THERE', W / 2, 236, { scale: 2, align: 'center', color: '#bff8ee', alpha: clamp(rise * 3) });
+    if (rise > 0.1) drawText(ctx, 'HOME IS UP THERE', W / 2, 236, { scale: TEXT.S, align: 'center', color: '#bff8ee', edge: 'outline', alpha: clamp(rise * 3) });
 
     if (this.prompt !== this.follows) drawTether(ctx, this, g.input.x, g.input.y, t);
     drawCursorLight(ctx, g.input.x, g.input.y, t, 1);

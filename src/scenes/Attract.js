@@ -1,27 +1,31 @@
 // the attract screen: tonight's flock and aurora, the storybook, and the level picker. holding the
 // light on a level is how a run starts
-import { DUR, PAL, FLOCK, LEVELS, LEVEL_ORDER } from '../config.js';
-import { glow, clamp, dwell } from '../core/util.js';
-import { drawText } from '../art/font.js';
-import { drawKnotRing, drawKnotBand } from '../art/knotwork.js';
+import { DUR, PAL, FLOCK, LEVELS, LEVEL_ORDER, TEXT, QR } from '../config.js';
+import { glow, clamp, dwell, makeCanvas } from '../core/util.js';
+import { makeQR } from '../core/qr.js';
+import { drawText, textWidth } from '../art/font.js';
+import { drawKnotRing } from '../art/knotwork.js';
 import { drawSpeck } from '../art/dragon.js';
 import { flockOf, member, chirp, updateMember, drawMember } from '../art/flock.js';
 import { fillLost } from '../core/dragons.js';
 import { ROUTES } from '../art/routes.js';
 import { drawSky, SKY, makeStars, drawStars, drawSea, drawWind } from '../art/world.js';
-import { drawFeet, drawCursorLight, drawSparkle, drawArrowUp, drawLevelIcon } from '../art/icons.js';
+import { drawFeet, drawCursorLight, drawSparkle, drawLevelIcon } from '../art/icons.js';
 import { drawBaseAurora, drawRibbon, ribbonSkyPoints, RIBBON_COLORS, drawCelebrationStars } from '../art/aurora.js';
 import { Storybook, BOOK } from '../art/storybook.js';
 
-// the level picker is the right column (the storybook on the left is art/storybook.js)
-const COL = 374; // middle of the right column
+// the level picker is the right column (the storybook on the left is art/storybook.js). the levels
+// are the one thing to do here, so they get the biggest words on the screen and everything else
+// is small and dim
 const ROW_H = 58;
-// each row is a big target: the ring, the name, the hint and tonight's best all count
+const NAME_X = 288;
+// each row is a big target: the ring, the name and the line under it all count
 const ROWS = LEVEL_ORDER.map((id, i) => {
-  const top = 50 + i * ROW_H;
-  return { id, top, ring: { x: 292, y: top + 22, r: 17 }, x0: 270, x1: 479, y0: top - 4, y1: top + 52 };
+  const top = 58 + i * ROW_H;
+  return { id, top, ring: { x: 255, y: top + 16, r: 16 }, x0: 236, x1: 479, y0: top - 6, y1: top + ROW_H - 6 };
 });
-const YOURS = { x: 222, y: 10 }; // the free strip of sky between the title and NEXT FLYER
+const YOURS = { x: 400, y: 6 }; // the open sky in the top right corner
+const DIM = 'rgba(255,243,214,0.7)';
 // holding the light still for this long anywhere near the middle starts hatchling, for people
 // who don't aim at a lantern at all
 const HOLD_ANYWHERE = 2.0;
@@ -131,6 +135,12 @@ export class Attract {
   // started the station (the gate in main.js)
   updatePicker(g, dt) {
     const inp = g.input;
+    // on a phone a tap on a level picks it straight away
+    const tap = inp.tap;
+    if (tap && !g.gate) {
+      const r = this.rows.find((row) => this.onRow(row, tap.x, tap.y));
+      if (r) return this.start(g, r.id);
+    }
     // only real movement of the device counts as "someone raised the light": the raw position (the
     // smoothed light glides even when nothing moves), and not a jump (the light showing up for the
     // first time, a rig reconnecting), or a resting prop would start a run after a reload
@@ -140,8 +150,7 @@ export class Attract {
     this.lastY = inp.rawY;
     let onRow = null;
     for (const r of this.rows) {
-      const inRect = inp.x >= r.x0 && inp.x <= r.x1 && inp.y >= r.y0 && inp.y <= r.y1;
-      r.hover = !g.gate && inp.seen && (inRect || Math.hypot(inp.x - r.ring.x, inp.y - r.ring.y) < r.ring.r + 8);
+      r.hover = !g.gate && inp.seen && this.onRow(r, inp.x, inp.y);
       if (r.hover && !onRow) onRow = r;
       else r.hover = false;
       r.progress = dwell(r.progress, r.hover, dt, DUR.START_DWELL);
@@ -189,12 +198,11 @@ export class Attract {
 
     this.book.draw(ctx, g, this.flock);
     this.drawPicker(g, ctx, t);
-
-    // tagline sits under the title at scale 2, it was scale 1 (under 2in tall on the big screen)
-    drawText(ctx, 'EMBERWING', BOOK.x + 2, 5, { scale: 3, color: PAL.ember3 });
-    drawText(ctx, 'THE WAY HOME', BOOK.x + 3, 30, { scale: 2, color: PAL.cream });
+    // the name is a logo up in the corner, not something to read first
+    drawText(ctx, 'EMBERWING', BOOK.x + 1, 7, { scale: TEXT.S, color: PAL.ember3 });
 
     this.drawTally(ctx, g.store.count, t);
+    if (g.op.qr && !g.touch) this.drawQR(ctx);
 
     if (this.yoursT > 0) this.drawYours(ctx, t, g.beat.pulse);
     g.particles.draw(ctx);
@@ -202,13 +210,17 @@ export class Attract {
     if (g.input.seen) drawCursorLight(ctx, g.input.x, g.input.y, t, 1);
   }
 
-  // the three levels, one row each: ring with the badge, name, hint, tonight's best
+  // one prompt at the top, then the three levels: ring with the badge, the name, one short line.
+  // tonight's best score only shows once there is one, small under the badge
   drawPicker(g, ctx, t) {
     const pulse = g.beat.pulse;
-    drawText(ctx, 'NEXT FLYER', COL, 4, { scale: 2, align: 'center', color: PAL.gold });
-    drawFeet(ctx, COL - 52, 28);
-    drawText(ctx, 'STEP HERE', COL - 30, 21, { scale: 2, color: PAL.cream });
-    drawKnotBand(ctx, COL - 96, 42, 192);
+    const hover = this.rows.some((r) => r.hover);
+    // phones have no line to stand in and no light to raise, so they just get told to tap
+    let cap = g.touch ? 'TAP ONE' : 'RAISE YOUR LIGHT';
+    if (this.starting) cap = 'HERE WE GO!';
+    else if (hover && !g.touch) cap = 'HOLD IT THERE';
+    if (!g.touch) drawFeet(ctx, 250, 37);
+    drawText(ctx, cap, g.touch ? 244 : 268, 31, { scale: TEXT.S, color: hover || this.starting ? PAL.gold2 : PAL.cream, alpha: hover ? 1 : 0.8 + 0.2 * pulse });
     for (const r of this.rows) {
       const L = LEVELS[r.id];
       const lit = r.hover || this.starting === r.id;
@@ -217,28 +229,25 @@ export class Attract {
         ctx.fillRect(r.x0, r.y0, r.x1 - r.x0, r.y1 - r.y0);
       }
       const easy = r.id === 'hatchling';
-      glow(ctx, r.ring.x, r.ring.y, 30 + (easy ? pulse * 6 : 0), PAL.gold, (easy ? 0.22 : 0.1) + r.progress * 0.4);
+      glow(ctx, r.ring.x, r.ring.y, 30 + (easy ? pulse * 6 : 0), PAL.gold, (easy ? 0.25 : 0.12) + r.progress * 0.4);
       ctx.fillStyle = 'rgba(8,10,24,0.75)';
       ctx.beginPath();
       ctx.arc(r.ring.x, r.ring.y, r.ring.r - 2, 0, Math.PI * 2);
       ctx.fill();
-      drawKnotRing(ctx, r.ring.x, r.ring.y, r.ring.r, r.progress, { lobes: 7, amp: 2.5, width: 2, on: PAL.gold, off: lit ? 'rgba(255,226,138,0.7)' : 'rgba(255,226,138,0.42)' });
+      drawKnotRing(ctx, r.ring.x, r.ring.y, r.ring.r, r.progress, { lobes: 7, amp: 2.5, width: 2, on: PAL.gold, off: lit ? 'rgba(255,226,138,0.75)' : 'rgba(255,226,138,0.5)' });
       drawLevelIcon(ctx, r.id, r.ring.x, r.ring.y, t);
-      drawText(ctx, L.label, 316, r.top, { scale: 2, color: lit ? PAL.gold2 : PAL.gold });
-      drawText(ctx, L.hint, 316, r.top + 17, { scale: 2, color: PAL.cream });
+      drawText(ctx, L.label, NAME_X, r.top + 3, { scale: TEXT.M, color: lit ? PAL.gold2 : PAL.gold });
+      // hatchling's line is a small tag that says start here, the others say what's different
+      if (easy) drawText(ctx, L.hint, NAME_X, r.top + 29, { scale: TEXT.S, color: PAL.gold2, alpha: 0.75 + 0.25 * pulse });
+      else drawText(ctx, L.hint, NAME_X, r.top + 29, { scale: TEXT.S, color: DIM });
+      // tonight's best sits under the ring, clear of the next row's ring
       const best = g.store.best[r.id];
-      if (best) drawText(ctx, `${best.name} ${best.score}`, 316, r.top + 34, { scale: 2, color: '#bff8ee' });
-      else drawText(ctx, L.fresh, 316, r.top + 34, { scale: 2, color: easy ? PAL.gold2 : 'rgba(191,248,238,0.6)', alpha: easy ? 0.75 + 0.25 * pulse : 1 });
+      if (best) drawText(ctx, String(best.score), r.ring.x, r.top + 36, { scale: TEXT.S, align: 'center', color: DIM });
     }
-    const hover = this.rows.some((r) => r.hover);
-    const cap = this.starting ? 'HERE WE GO!' : hover ? 'HOLD IT THERE' : 'RAISE YOUR LIGHT';
-    drawText(ctx, cap, COL, 226, { scale: 2, align: 'center', color: hover ? PAL.gold2 : PAL.white, alpha: hover ? 1 : 0.75 + 0.25 * pulse });
-    if (!hover && !this.starting) {
-      const k = (t * 0.8) % 1;
-      ctx.globalAlpha = 1 - k;
-      drawArrowUp(ctx, COL + 104, 236 - k * 12);
-      ctx.globalAlpha = 1;
-    }
+  }
+
+  onRow(r, x, y) {
+    return (x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1) || Math.hypot(x - r.ring.x, y - r.ring.y) < r.ring.r + 8;
   }
 
   // the ring that fills on the light itself when someone holds still away from the levels
@@ -249,29 +258,50 @@ export class Attract {
     drawText(ctx, 'HATCHLING', inp.x, inp.y + 22, { scale: 2, align: 'center', color: PAL.gold2, alpha: clamp(k * 3) });
   }
 
-  // how many are home (always the same number as dragons in the sky) and how close the next
-  // celebration is. under the book, clear of the sound button in the corner
+  // one quiet line under the book: a pip per dragon in this round of 8 (a full round = a
+  // celebration) and how far along it is. the dragons in the sky already show how many are home
   drawTally(ctx, n, t) {
-    const cx = BOOK.x + BOOK.w / 2 + 12;
-    const s = n === 0 ? 'NO DRAGONS HOME YET' : `${n} ${n === 1 ? 'DRAGON' : 'DRAGONS'} HOME`;
-    drawText(ctx, s, cx, 201, { scale: 2, align: 'center', color: '#bff8ee' });
     const every = FLOCK.CELEBRATE_EVERY;
     const done = n % every;
-    // one pip per dragon in this round, the next one to fill breathes
-    const x0 = cx - ((every - 1) * 15) / 2;
+    const label = n === 0 ? 'BE THE FIRST' : `${done} / ${every}`;
+    const gap = 10;
+    const w = (every - 1) * gap + 12 + textWidth(label, TEXT.S);
+    const x0 = Math.round(BOOK.x + BOOK.w / 2 - w / 2 + 4);
+    const y = BOOK.y + BOOK.h + 22;
     for (let i = 0; i < every; i++) {
       const on = i < done;
       const next = i === done;
-      const r = next ? 4.5 + Math.sin(t * 4) * 0.7 : 4;
-      if (on) glow(ctx, x0 + i * 15, 224, 9, PAL.gold, 0.6);
-      drawKnotRing(ctx, x0 + i * 15, 224, r, on ? 1 : 0, { lobes: 3, amp: 1, width: 1, on: PAL.gold, off: next ? 'rgba(191,248,238,0.9)' : 'rgba(191,248,238,0.35)' });
+      const r = next ? 4 + Math.sin(t * 4) * 0.6 : 3.5;
+      if (on) glow(ctx, x0 + i * gap, y, 8, PAL.gold, 0.5);
+      drawKnotRing(ctx, x0 + i * gap, y, r, on ? 1 : 0, { lobes: 3, amp: 1, width: 1, on: PAL.gold, off: next ? 'rgba(191,248,238,0.8)' : 'rgba(191,248,238,0.3)' });
     }
-    drawText(ctx, `${untilCelebration(n)} MORE TO THE`, cx, 234, { scale: 2, align: 'center', color: '#bff8ee' });
-    drawText(ctx, 'NEXT CELEBRATION', cx, 250, { scale: 2, align: 'center', color: '#bff8ee' });
+    drawText(ctx, label, x0 + (every - 1) * gap + 10, y - 7, { scale: TEXT.S, color: DIM });
   }
 
-  // the label lives in the open strip of sky between the title and NEXT FLYER (anywhere else it
-  // landed on text or the book) and a dotted line of light leads to the ribbon itself
+  // the operator's Q key: a code for the live site under the tally, dark squares on a light card
+  // with a quiet border so phone cameras pick it up
+  drawQR(ctx) {
+    if (!this.qrCanvas) {
+      const m = makeQR(QR.URL);
+      const s = QR.MODULE;
+      const n = m.length + 6;
+      const [c, q] = makeCanvas(n * s, n * s);
+      q.fillStyle = PAL.cream;
+      q.fillRect(0, 0, n * s, n * s);
+      q.fillStyle = '#05070d';
+      m.forEach((row, r) => row.forEach((on, col) => on && q.fillRect((col + 3) * s, (r + 3) * s, s, s)));
+      this.qrCanvas = c;
+    }
+    const c = this.qrCanvas;
+    const x = 40;
+    const y = 268 - c.height;
+    ctx.drawImage(c, x, y);
+    drawText(ctx, 'PLAY ON', x + c.width + 8, y + c.height / 2 - 16, { scale: TEXT.S, color: DIM });
+    drawText(ctx, 'YOUR PHONE', x + c.width + 8, y + c.height / 2, { scale: TEXT.S, color: DIM });
+  }
+
+  // the label lives in the open sky in the top right corner (anywhere else it landed on text or
+  // the book) and a dotted line of light leads to the ribbon itself
   drawYours(ctx, t, pulse) {
     const { x, y } = this.yoursAt;
     const a = clamp(this.yoursT / 1.5); // fades out over the last 1.5s
@@ -289,16 +319,16 @@ export class Attract {
     drawSparkle(ctx, x, y, 3 + Math.round(pulse * 2), PAL.gold2);
     ctx.globalAlpha = 1;
     const bob = Math.round(Math.sin(t * 4) * 1.5);
-    drawText(ctx, 'YOURS!', lx, YOURS.y + bob, { scale: 2, align: 'center', color: PAL.gold2, alpha: a });
+    drawText(ctx, 'YOURS!', lx, YOURS.y + bob, { scale: TEXT.S, align: 'center', color: PAL.gold2, alpha: a });
   }
 }
 
 // the aurora is mostly hidden behind the storybook and the level picker. pick a bit of the
-// ribbon you can see near the label: the strip of sky between the title and NEXT FLYER first
+// ribbon you can see near the label: the open sky across the top first
 function pickVisiblePoint(pts) {
   const zones = [
-    { x0: 176, x1: 290, y0: 26, y1: 46, aim: [YOURS.x, 40] },
-    { x0: 176, x1: 470, y0: 0, y1: 46, aim: [YOURS.x, 30] },
+    { x0: 236, x1: 470, y0: 10, y1: 26, aim: [YOURS.x, 20] },
+    { x0: 130, x1: 470, y0: 0, y1: 26, aim: [YOURS.x, 16] },
   ];
   for (const z of zones) {
     let best = null;
@@ -315,6 +345,6 @@ function pickVisiblePoint(pts) {
   }
   // nothing visible, point at whatever part is closest to the label
   let best = { x: pts[0][0], y: pts[0][1] };
-  for (const [x, y] of pts) if (Math.hypot(x - YOURS.x, y - 40) < Math.hypot(best.x - YOURS.x, best.y - 40)) best = { x, y };
+  for (const [x, y] of pts) if (Math.hypot(x - YOURS.x, y - 20) < Math.hypot(best.x - YOURS.x, best.y - 20)) best = { x, y };
   return best;
 }

@@ -1,6 +1,6 @@
 // the entry point: builds the game, scales the tiny 480x270 picture up to the screen, runs the
 // loop, and hangs a few hooks on window for the tests
-import { VIEW, LOOP, LEVELS, DETAIL } from './config.js';
+import { VIEW, LOOP, LEVELS, DETAIL, PAL } from './config.js';
 import { Input } from './input/Input.js';
 import { attachPointer, attachMocap, attachKeys } from './input/adapters.js';
 import { Beat } from './core/Beat.js';
@@ -17,7 +17,8 @@ import { mulberry32, detail } from './core/util.js';
 import { fillLost } from './core/dragons.js';
 import { loadSprites } from './art/sprites.js';
 import { AuroraWall } from './art/aurora.js';
-import { warmSome } from './art/dragon.js';
+import { warmSome, drawDragon } from './art/dragon.js';
+import { drawText, textWidth, textLog } from './art/font.js';
 import { Attract } from './scenes/Attract.js';
 import { FindDragon } from './scenes/FindDragon.js';
 import { Choose } from './scenes/Choose.js';
@@ -39,16 +40,20 @@ ctx.imageSmoothingEnabled = false;
 
 // fit = where the picture sits on the screen, in device pixels
 let fit = { x: 0, y: 0, w: W, h: H, dpr: 1 };
+// the picture stays inside the safe area, clear of a phone's notch and home bar (read off #safe)
+const safe = document.getElementById('safe');
 function resize() {
   const dpr = window.devicePixelRatio || 1;
-  const cw = window.innerWidth * dpr;
-  const ch = window.innerHeight * dpr;
+  const inset = getComputedStyle(safe);
+  const l = parseFloat(inset.paddingLeft) || 0;
+  const t = parseFloat(inset.paddingTop) || 0;
+  const cw = (window.innerWidth - l - (parseFloat(inset.paddingRight) || 0)) * dpr;
+  const ch = (window.innerHeight - t - (parseFloat(inset.paddingBottom) || 0)) * dpr;
   let s = Math.min(cw / W, ch / H);
-  // snap to a whole number when we're close, uneven pixel sizes look wobbly on the projector
-  if (s >= 2 && s - Math.floor(s) < 0.2) s = Math.floor(s);
+  if (s >= 2 && (s - Math.floor(s)) / s < VIEW.SNAP) s = Math.floor(s);
   const w = Math.round(W * s);
   const h = Math.round(H * s);
-  fit = { x: Math.round((cw - w) / 2), y: Math.round((ch - h) / 2), w, h, dpr };
+  fit = { x: Math.round(l * dpr + (cw - w) / 2), y: Math.round(t * dpr + (ch - h) / 2), w, h, dpr };
   Object.assign(display.style, { width: w / dpr + 'px', height: h / dpr + 'px', left: fit.x / dpr + 'px', top: fit.y / dpr + 'px' });
 }
 window.addEventListener('resize', resize);
@@ -111,13 +116,18 @@ game.soundBtn = new SoundButton(game);
 window.addEventListener('pointerdown', (e) => {
   if (game.gate) return;
   const p = toView(e.clientX, e.clientY);
-  if (game.soundBtn.contains(p.x, p.y)) game.soundBtn.press();
+  // a finger gets a bigger target, at least 44 css px on a small phone
+  if (game.soundBtn.contains(p.x, p.y, e.pointerType === 'touch' ? 9 : 3)) game.soundBtn.press();
 });
+// ios safari ignores user-scalable=no, this stops pinch zoom there
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+document.addEventListener('contextmenu', (e) => e.preventDefault());
 
 // browsers keep sound locked until someone presses a key or touches the screen. on the lobby
 // laptop the operator presses any key once to start the station (M starts it silent instead).
 // phones skip that, the first touch turns the sound on
 const touchFirst = !!window.matchMedia?.('(hover: none) and (pointer: coarse)').matches;
+game.touch = touchFirst; // a phone or tablet: tap to pick, no queue to stand in
 game.gate = !touchFirst && game.audio.status === 'locked';
 game.audio.ctx?.addEventListener('statechange', () => {
   if (game.audio.ctx.state === 'running') game.gate = false;
@@ -152,6 +162,7 @@ function step(dt) {
     game.particles.update(dt);
     game.cam.update(dt);
   }
+  input.tap = null; // a tap only counts for the step right after it
   game.audio.update();
   game.soundBtn.update(dt);
   game.op.update(dt);
@@ -180,9 +191,15 @@ function render() {
 // a weak laptop took way longer. now we catch up in small steps instead
 let last = performance.now();
 let paused = false;
+// a phone held upright gets the turn-your-phone screen and the game waits underneath
+const portrait = window.matchMedia('(orientation: portrait) and (max-width: 900px)');
 function frame(now) {
   // ask for the next frame first, so one bad frame can't stop the loop and freeze the station
   requestAnimationFrame(frame);
+  if (portrait.matches) {
+    last = now;
+    return;
+  }
   const gap = now - last;
   watchDetail(gap);
   let left = Math.min(Math.max(0, gap / 1000), LOOP.MAX_CATCHUP);
@@ -227,6 +244,15 @@ window.__emberwing = {
     for (let i = 0; i < n; i++) step(1 / fps);
     if (draw) render();
   },
+  // every line of text the next frame draws, as [text, size]. operator overlays aren't guest text
+  words: () => {
+    textLog.lines = [];
+    textLog.on = true;
+    game.scenes.draw(ctx);
+    game.soundBtn.draw(ctx);
+    textLog.on = false;
+    return textLog.lines;
+  },
   state: () => ({
     scene: game.scenes.name,
     title: game.scenes.title?.text ?? null,
@@ -244,9 +270,35 @@ window.__emberwing = {
   }),
 };
 
+// the turn-your-phone screen, drawn with the game's own dragon and font so it looks like part of it
+function drawTurnHint() {
+  const pixels = (id, w, h, draw) => {
+    const c = document.getElementById(id);
+    c.width = w;
+    c.height = h;
+    const g = c.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    draw(g);
+  };
+  pixels('turn-dragon', 64, 50, (g) => drawDragon(g, 30, 36, game.dragon, { mood: 'curious', wing: 'folded', glow: 2, look: 1 }));
+  pixels('turn-phone', 14, 22, (g) => {
+    g.fillStyle = PAL.gold;
+    g.fillRect(1, 0, 12, 22);
+    g.fillStyle = '#05070d';
+    g.fillRect(3, 2, 8, 16);
+    g.fillStyle = PAL.teal;
+    g.fillRect(4, 3, 6, 14);
+    g.fillStyle = '#05070d';
+    g.fillRect(6, 19, 2, 1);
+  });
+  const msg = 'TURN YOUR PHONE';
+  pixels('turn-text', textWidth(msg, 1) + 2, 10, (g) => drawText(g, msg, 1, 1, { color: PAL.gold }));
+}
+
 loadSprites().then(() => {
   const start = params.get('scene') || 'attract';
   game.scenes.enter(start);
+  drawTurnHint();
   document.body.classList.add('ready');
   requestAnimationFrame(frame);
 });

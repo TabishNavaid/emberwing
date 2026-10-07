@@ -80,25 +80,20 @@ function paint(ctx, str, x, y, scale, color) {
   }
 }
 
-// outline thickness in internal px. it used to be 1 font-pixel, which at scale 5-7 turned
-// into big black slabs around SOAR! and ACT II. 2px still reads over fog and aurora
-const outlineW = (scale, outline) => (outline ? Math.min(scale, 2) : 0);
-
+// text gets a 1px dark shadow underneath, or a 1px outline all the way round over busy art
+// (edge: 'outline'). it used to be a 2px outline on everything, which at scale 2 filled in the
+// gaps between letters and turned every line into a dark box
 const cache = new Map();
-// dark outline so text reads over fog, sky or aurora. rendered once and cached
-function textSprite(str, scale, color, outline) {
-  const key = `${str}|${scale}|${color}|${outline}`;
+function textSprite(str, scale, color, outline, edge) {
+  const key = `${str}|${scale}|${color}|${outline}|${edge}`;
   let c = cache.get(key);
   if (c) return c;
-  const o = outlineW(scale, outline);
-  const w = textWidth(str, scale) + o * 2;
-  const h = textHeight(scale) + o * 2;
+  const o = outline ? 1 : 0;
   let g;
-  [c, g] = makeCanvas(w, h + o);
+  [c, g] = makeCanvas(textWidth(str, scale) + o * 2, textHeight(scale) + o * 3);
   if (outline) {
-    // dy goes to 2 for a little drop shadow
-    for (let dy = -1; dy <= 2; dy++)
-      for (let dx = -1; dx <= 1; dx++) paint(g, str, o + dx * o, o + dy * o, scale, outline);
+    if (edge === 'outline') for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) paint(g, str, o + dx, o + dy, scale, outline);
+    paint(g, str, o, o + 1, scale, outline);
   }
   paint(g, str, o, o, scale, color);
   if (cache.size > 400) cache.clear(); // debug overlay makes a new string every frame
@@ -107,14 +102,18 @@ function textSprite(str, scale, color, outline) {
 }
 
 // makes a line's sprite ahead of time, so a scene can do it while it's still behind a fade
-export function warmText(str, { scale = 1, color = '#fff', outline = '#0b0f1a' } = {}) {
-  textSprite(str, scale, color, outline);
+export function warmText(str, { scale = 1, color = '#fff', outline = '#0b0f1a', edge = 'shadow' } = {}) {
+  textSprite(str, scale, color, outline, edge);
 }
 
+// the word-budget test turns this on to see every line a screen draws, and at what size
+export const textLog = { on: false, lines: [] };
+
 // y is the top of the letters
-export function drawText(ctx, str, x, y, { scale = 1, color = '#fff', outline = '#0b0f1a', align = 'left', alpha = 1 } = {}) {
-  const s = textSprite(str, scale, color, outline);
-  const o = outlineW(scale, outline);
+export function drawText(ctx, str, x, y, { scale = 1, color = '#fff', outline = '#0b0f1a', edge = 'shadow', align = 'left', alpha = 1 } = {}) {
+  if (textLog.on && alpha * ctx.globalAlpha > 0.05) textLog.lines.push([String(str), scale]);
+  const s = textSprite(str, scale, color, outline, edge);
+  const o = outline ? 1 : 0;
   let dx = x - o;
   if (align === 'center') dx = x - Math.floor(textWidth(str, scale) / 2) - o;
   else if (align === 'right') dx = x - textWidth(str, scale) - o;
@@ -127,7 +126,8 @@ export function drawText(ctx, str, x, y, { scale = 1, color = '#fff', outline = 
 // springy pop-in for the big one-word moments (SOAR!, PIP IS HOME!)
 export function drawTextPop(ctx, str, x, y, t, opts = {}) {
   const scale = opts.scale ?? 3;
-  const s = textSprite(str, scale, opts.color ?? '#fff', opts.outline ?? '#0b0f1a');
+  if (textLog.on && (opts.alpha ?? 1) * ctx.globalAlpha > 0.05) textLog.lines.push([String(str), scale]);
+  const s = textSprite(str, scale, opts.color ?? '#fff', opts.outline ?? '#0b0f1a', opts.edge ?? 'shadow');
   const k = t >= 1 ? 1 : 1 + Math.pow(2, -8 * t) * Math.sin((t * 8 - 0.75) * 2.1) * 0.6;
   const kk = Math.max(0.01, t < 0.12 ? t / 0.12 : k);
   const pa = ctx.globalAlpha;

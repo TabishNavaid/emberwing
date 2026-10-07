@@ -1,9 +1,9 @@
 // the speaker button in the bottom left corner: click it, tap it, or hold the light on it (the mocap
 // prop can't click). M does the same
-import { PAL } from '../config.js';
+import { PAL, TEXT } from '../config.js';
 import { glow } from '../core/util.js';
 import { drawKnotRing } from '../art/knotwork.js';
-import { drawText, textWidth } from '../art/font.js';
+import { drawText } from '../art/font.js';
 import { drawSpeaker } from '../art/icons.js';
 
 // it used to be just a picture. people clicked it and nothing happened
@@ -19,8 +19,8 @@ export class SoundButton {
     this.flash = 0;
   }
 
-  contains(x, y) {
-    return Math.abs(x - SOUND_BTN.x) <= SOUND_BTN.w / 2 + 3 && Math.abs(y - SOUND_BTN.y) <= SOUND_BTN.h / 2 + 3;
+  contains(x, y, pad = 3) {
+    return Math.abs(x - SOUND_BTN.x) <= SOUND_BTN.w / 2 + pad && Math.abs(y - SOUND_BTN.y) <= SOUND_BTN.h / 2 + pad;
   }
 
   // a click, a tap, or a full hold
@@ -68,11 +68,9 @@ export class SoundButton {
     drawSpeaker(ctx, x - 12, y, state, g.time, g.beat.pulse);
     if (this.hover || this.hold > 0) {
       drawKnotRing(ctx, x, y, 19, this.hold / HOLD, { lobes: 6, amp: 2, width: 1, on: PAL.gold, off: 'rgba(255,226,138,0.45)' });
-      // on its own dark plate so it reads over whatever the scene has in that corner
+      // outlined so it reads over whatever the scene has in that corner
       const msg = state === 'on' ? 'HOLD TO MUTE' : 'HOLD FOR SOUND';
-      ctx.fillStyle = 'rgba(5,7,13,0.88)';
-      ctx.fillRect(x + 20, y - 11, textWidth(msg, 2) + 10, 22);
-      drawText(ctx, msg, x + 25, y - 7, { scale: 2, color: PAL.cream });
+      drawText(ctx, msg, x + 25, y - 7, { scale: TEXT.S, color: PAL.cream, edge: 'outline' });
     }
   }
 }

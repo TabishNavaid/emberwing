@@ -1,6 +1,6 @@
 // every 8th dragon home: everyone saved tonight floods the screen, fireworks, a fanfare, this round's
 // names, and a new star that stays in the sky for the rest of the night
-import { VIEW, DUR, PAL, FLOCK, DETAIL } from '../config.js';
+import { VIEW, DUR, PAL, FLOCK, DETAIL, TEXT } from '../config.js';
 import { clamp, lerp, ease, glow, detail } from '../core/util.js';
 import { drawText, drawTextPop, textWidth, fitScale, warmText } from '../art/font.js';
 import { drawDragon, drawSpeck } from '../art/dragon.js';
@@ -12,6 +12,9 @@ const { W, H } = VIEW;
 const C = { x: 240, y: 118 }; // middle of the spiral
 const STAR_AT = 5.6; // the new star starts gathering
 const STAR_UP = 6.3; // ...and flies up to its spot in the sky
+// the whole sky is aurora here, so text gets a thin outline instead of a band behind it
+const NAME_TEXT = { scale: TEXT.S, color: PAL.cream, edge: 'outline' };
+const BIG_TEXT = { color: PAL.gold2, edge: 'outline' };
 
 // nobody does anything here, the whole line just gets to watch (and cheer)
 export class Celebration {
@@ -34,9 +37,9 @@ export class Celebration {
     this.born = false;
     this.round.forEach((r, i) => chirp(this.dragons[this.dragons.length - this.round.length + i], 1 + i * 0.25));
     // the names and the big line, made now while the fade from home still covers the screen
-    for (const r of this.round) warmText(r.d.name, { scale: 2, color: PAL.cream });
+    for (const r of this.round) warmText(r.d.name, NAME_TEXT);
     const msg = `${count} DRAGONS HOME!`;
-    warmText(msg, { scale: fitScale(msg, W - 12, 6, 4), color: PAL.gold2 });
+    warmText(msg, { ...BIG_TEXT, scale: fitScale(msg, W - 12, TEXT.L, TEXT.M) });
     g.audio.section('celebration');
     g.audio.cue('fanfare');
     g.cam.shake(2.5);
@@ -138,7 +141,7 @@ export class Celebration {
 
     const msg = `${this.count} DRAGONS HOME!`;
     const a = clamp((DUR.CELEBRATE - 0.3 - t) * 3);
-    if (t > 0.3) drawTextPop(ctx, msg, W / 2, 34, (t - 0.3) * 1.2, { scale: fitScale(msg, W - 12, 6, 4), color: PAL.gold2, alpha: a });
+    if (t > 0.3) drawTextPop(ctx, msg, W / 2, 34, (t - 0.3) * 1.2, { ...BIG_TEXT, scale: fitScale(msg, W - 12, TEXT.L, TEXT.M), alpha: a });
 
     this.drawNames(ctx, t);
     this.drawNewStar(ctx, t);
@@ -148,8 +151,6 @@ export class Celebration {
   drawNames(ctx, t) {
     if (t < 0.8) return;
     const k = clamp((t - 0.8) * 2) * clamp((DUR.CELEBRATE - 0.4 - t) * 3);
-    ctx.fillStyle = `rgba(5,8,20,${0.6 * k})`;
-    ctx.fillRect(0, 190, W, 66);
     const rows = [this.round.slice(0, 4), this.round.slice(4)];
     rows.forEach((row, ri) => {
       const items = row.map((r) => ({ ...r, w: textWidth(r.d.name, 2) + 44 }));
@@ -162,7 +163,7 @@ export class Celebration {
       for (const it of items) {
         drawDragon(ctx, x + 12, y + 3, it.d, { mood: 'joy', flap: t * 3 + it.i, life: t, glow: 2, scale: 0.4, flip: ri === 1 });
         glow(ctx, x + 30 + (it.w - 44) / 2, y, 16, it.d.colors.wingLit, 0.35 * k);
-        drawText(ctx, it.d.name, x + 30, y - 6, { scale: 2, color: PAL.cream, alpha: k });
+        drawText(ctx, it.d.name, x + 30, y - 6, { ...NAME_TEXT, alpha: k });
         x += it.w;
       }
     });
@@ -186,6 +187,6 @@ export class Celebration {
       glow(ctx, lerp(C.x, spot.x, kk), lerp(C.y, spot.y, kk) - Math.sin(kk * Math.PI) * 30, 6, PAL.gold2, 0.3 * (1 - i / 8));
     }
     drawCelebrationStar(ctx, x, y, t, lerp(1.8, 1, k), this.nth);
-    if (k >= 1) drawText(ctx, 'A NEW STAR!', spot.x, spot.y + 12, { scale: 2, align: 'center', color: PAL.gold2, alpha: clamp((DUR.CELEBRATE - t) * 3) });
+    if (k >= 1) drawText(ctx, 'A NEW STAR!', spot.x, spot.y + 12, { scale: TEXT.S, align: 'center', color: PAL.gold2, edge: 'outline', alpha: clamp((DUR.CELEBRATE - t) * 3) });
   }
 }

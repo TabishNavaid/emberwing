@@ -1,8 +1,7 @@
 // small pixel-art bits used all over: the lantern, footprints, horn, speaker, level badges, stars
-import { PAL } from '../config.js';
+import { PAL, TEXT } from '../config.js';
 import { makeCanvas, glow, disc } from '../core/util.js';
 import { drawText, textWidth } from './font.js';
-import { drawKnotFrame } from './knotwork.js';
 
 let lantern = null;
 export function drawLantern(ctx, x, y, lit, t) {
@@ -85,12 +84,6 @@ export function drawSparkle(ctx, x, y, r, color = '#fff6d8') {
   if (r > 2) ctx.fillRect(x - 1, y - 1, 3, 3);
 }
 
-export function drawArrowUp(ctx, x, y) {
-  ctx.fillStyle = PAL.cream;
-  for (let i = 0; i < 5; i++) ctx.fillRect(Math.round(x - i), Math.round(y + i), i * 2 + 1, 1);
-  ctx.fillRect(Math.round(x - 1), Math.round(y + 5), 3, 5);
-}
-
 // the guest's light everywhere except find (that one's a beam)
 export function drawCursorLight(ctx, x, y, t, size = 1) {
   glow(ctx, x, y, 22 * size, PAL.gold, 0.55);
@@ -100,20 +93,17 @@ export function drawCursorLight(ctx, x, y, t, size = 1) {
   disc(ctx, x, y, r * size);
 }
 
-// "HEAR IT LIVE IN ACT II" plaque. home shows it too, not just the card, because people
-// couldn't read it in time when it was only on the card
+// "HEAR IT LIVE IN ACT II" with a little horn. home shows it too, not just the card, because people
+// couldn't read it in time when it was only on the card. no box, the night sky is dark enough
 export function drawActBanner(ctx, cx, y, t, pulse, alpha = 1) {
   const label = 'HEAR IT LIVE IN ACT II';
-  const w = textWidth(label, 2) + 44;
+  const w = textWidth(label, TEXT.S) + 26;
   const x = Math.round(cx - w / 2);
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = 'rgba(8,10,24,0.85)';
-  ctx.fillRect(x, y, w, 30);
-  drawKnotFrame(ctx, x, y, w, 30, { color: PAL.gold });
-  glow(ctx, x + 18, y + 15, 16, PAL.gold, 0.3 + pulse * 0.2);
-  drawHorn(ctx, x + 20, y + 15, 1);
-  drawText(ctx, label, x + 36, y + 9, { scale: 2, color: PAL.gold2 });
+  glow(ctx, x + 6, y + 15, 16, PAL.gold, 0.3 + pulse * 0.2);
+  drawHorn(ctx, x + 8, y + 15, 1);
+  drawText(ctx, label, x + 26, y + 9, { scale: TEXT.S, color: PAL.gold2 });
   ctx.restore();
 }
 

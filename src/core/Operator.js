@@ -1,11 +1,13 @@
 // the hidden operator keys (F fullscreen, R reset, S skip, D debug, C clear, M sound, G motion,
-// K calibrate) and what they put on screen: debug overlay, clear dialog, calibration, press any key
+// K calibrate, Q qr code) and what they put on screen: debug overlay, clear dialog, calibration, press any key
 import { VIEW, PAL, INPUT } from '../config.js';
 import { drawText } from '../art/font.js';
 import { drawKnotRing } from '../art/knotwork.js';
 import { ROUTES } from '../art/routes.js';
 import { glow, detail } from './util.js';
 import { CAL_TARGETS, CAL_NAMES } from '../input/Calibration.js';
+
+const QR_KEY = 'emberwing.qr.v1';
 
 export class Operator {
   constructor(game) {
@@ -16,6 +18,12 @@ export class Operator {
     this.toastT = 0;
     this.fps = 60;
     this.cal = null; // calibration in progress
+    this.qr = false; // the code for the live site on the start screen, off unless the operator wants it
+    try {
+      this.qr = localStorage.getItem(QR_KEY) === 'on';
+    } catch {
+      // storage blocked, it just starts off
+    }
     window.addEventListener('keydown', (e) => this.key(e));
   }
   say(msg) {
@@ -55,6 +63,14 @@ export class Operator {
       this.say(`MOTION ${g.motion.label()}`);
     } else if (k === 'm') {
       this.say(g.audio.toggle() ? 'SOUND ON' : 'SOUND OFF');
+    } else if (k === 'q') {
+      this.qr = !this.qr;
+      try {
+        localStorage.setItem(QR_KEY, this.qr ? 'on' : 'off');
+      } catch {
+        // fine, it just won't survive a refresh
+      }
+      this.say(this.qr ? 'QR CODE ON' : 'QR CODE OFF');
     }
   }
   calKey(key) {

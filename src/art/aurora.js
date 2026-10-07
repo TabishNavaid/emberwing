@@ -131,9 +131,9 @@ export function drawBaseAurora(ctx, t, alpha = 1, top = 20) {
 }
 
 // every celebration leaves a bright star in the sky for the rest of the night, so the sky shows
-// how many there have been. same spots in every scene, in the strip of sky the attract screen
-// leaves open between the title and NEXT FLYER
-const STAR_SPOTS = [[196, 12], [226, 30], [254, 8], [284, 26], [208, 40], [240, 18], [270, 42], [298, 10], [186, 28], [260, 32], [218, 6], [292, 40]];
+// how many there have been. same spots in every scene, in the strip of open sky across the top of
+// the start screen
+const STAR_SPOTS = [[150, 8], [176, 16], [202, 6], [228, 14], [254, 8], [280, 16], [306, 6], [332, 14], [163, 12], [215, 10], [267, 12], [319, 10]];
 export function drawCelebrationStar(ctx, x, y, t, k = 1, i = 0) {
   const tw = 0.75 + 0.25 * Math.sin(t * 1.3 + i * 1.7); // slow twinkle
   glow(ctx, x, y, 14 * k, PAL.gold2, 0.55 * tw * k);

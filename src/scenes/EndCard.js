@@ -1,12 +1,12 @@
 // the dragon card at the end: portrait, name, which one home it was tonight, its quirk, the score,
 // and the act II line to take into the hall
-import { VIEW, DUR, PAL, LEVELS, FLOCK } from '../config.js';
+import { VIEW, DUR, PAL, FLOCK, TEXT } from '../config.js';
 import { clamp, glow, ease, dist, dwell } from '../core/util.js';
 import { drawText, drawTextPop, textWidth, fitScale } from '../art/font.js';
 import { drawKnotFrame, drawKnotRing, drawKnotBand } from '../art/knotwork.js';
 import { drawSky, SKY, makeStars, drawStars } from '../art/world.js';
 import { drawBaseAurora, drawCelebrationStars } from '../art/aurora.js';
-import { drawHorn, drawLantern, drawCursorLight, drawSparkle, drawStarIcon } from '../art/icons.js';
+import { drawHorn, drawLantern, drawCursorLight, drawSparkle, drawStarIcon, drawLevelIcon } from '../art/icons.js';
 import { member, chirp, updateMember, drawMember } from '../art/flock.js';
 import { ordinal, QUIRK_TEXT } from '../core/dragons.js';
 
@@ -54,6 +54,8 @@ export class EndCard {
 
   update(g, dt) {
     updateMember(g, this.me, dt, PORTRAIT.x, PORTRAIT.y, { scale: 2 / this.d.size });
+    const tap = g.input.tap;
+    if (tap && dist(tap.x, tap.y, SKIP.x, SKIP.y) < SKIP.r + 14) this.leave(g); // a phone taps NEXT
     if (this.skipHold < 1) {
       const inp = g.input;
       const over = inp.seen && dist(inp.x, inp.y, SKIP.x, SKIP.y) < SKIP.r + 6;
@@ -91,35 +93,36 @@ export class EndCard {
 
     // name, which one it was tonight, its quirk, and how the flight went
     const cx = 302;
-    const nameScale = fitScale(d.name, 196, 5, 3);
-    drawTextPop(ctx, d.name, cx, 34, clamp((t - 0.25) * 1.3), { scale: nameScale, color: PAL.gold2 });
-    drawText(ctx, `THE ${ordinal(this.nth)} EMBERWING`, cx, 58, { scale: 2, align: 'center', color: PAL.cream });
-    drawText(ctx, 'HOME TONIGHT', cx, 74, { scale: 2, align: 'center', color: PAL.cream });
+    const dim = 'rgba(255,243,214,0.7)';
+    drawTextPop(ctx, d.name, cx, 32, clamp((t - 0.25) * 1.3), { scale: fitScale(d.name, 196, TEXT.L, TEXT.M), color: PAL.gold2 });
+    drawText(ctx, `${ordinal(this.nth)} HOME TONIGHT`, cx, 56, { scale: TEXT.S, align: 'center', color: dim });
     const quirk = QUIRK_TEXT[d.quirk];
-    const qw = textWidth(quirk, 2);
-    drawSparkle(ctx, cx - qw / 2 - 9, 98, 3, d.colors.wingLit);
-    drawSparkle(ctx, cx + qw / 2 + 9, 98, 3, d.colors.wingLit);
-    drawText(ctx, quirk, cx, 92, { scale: 2, align: 'center', color: '#bff8ee' });
-    // stars pop in one at a time
+    const qw = textWidth(quirk, TEXT.S);
+    drawSparkle(ctx, cx - qw / 2 - 9, 82, 3, d.colors.wingLit);
+    drawSparkle(ctx, cx + qw / 2 + 9, 82, 3, d.colors.wingLit);
+    drawText(ctx, quirk, cx, 76, { scale: TEXT.S, align: 'center', color: 'rgba(191,248,238,0.8)' });
+    // stars pop in one at a time, then the score under them with the level's badge
     for (let i = 0; i < 3; i++) {
       const k = clamp((t - 0.6 - i * 0.25) / 0.2);
       const earned = i < this.run.stars;
-      if (earned && k > 0 && k < 1) glow(ctx, cx - 26 + i * 26, 118, 18, PAL.gold, 1 - k);
-      drawStarIcon(ctx, cx - 26 + i * 26, 118, earned && k > 0, 2);
+      if (earned && k > 0 && k < 1) glow(ctx, cx - 26 + i * 26, 104, 18, PAL.gold, 1 - k);
+      drawStarIcon(ctx, cx - 26 + i * 26, 104, earned && k > 0, 2);
     }
-    drawText(ctx, `${LEVELS[this.run.level].label} ${this.run.score}`, cx, 131, { scale: 2, align: 'center', color: PAL.gold });
+    const score = String(this.run.score);
+    const sw = textWidth(score, TEXT.M);
+    drawLevelIcon(ctx, this.run.level, cx - sw / 2 - 14, 130, t);
+    drawText(ctx, score, cx + 4, 120, { scale: TEXT.M, align: 'center', color: PAL.gold });
 
     drawKnotBand(ctx, x + 20, 150, w - 40);
 
-    // the line to take into the hall
+    // the line to take into the hall, and the piece to listen for
     const l1 = 'HEAR IT LIVE IN ACT II';
-    const l1w = textWidth(l1, 2) + 30;
+    const l1w = textWidth(l1, TEXT.S) + 30;
     const l1x = Math.round(W / 2 - l1w / 2);
-    glow(ctx, l1x + 10, 167, 18, PAL.gold, 0.3 + g.beat.pulse * 0.2);
-    drawHorn(ctx, l1x + 12, 167, 1);
-    drawText(ctx, l1, l1x + 30, 160, { scale: 2, color: PAL.gold2 });
-    drawText(ctx, 'HOW TO TRAIN YOUR DRAGON', W / 2, 180, { scale: 2, align: 'center', color: PAL.cream });
-    drawText(ctx, 'LISTEN FOR THE BRASS!', W / 2, 200, { scale: 2, align: 'center', color: PAL.gold2 });
+    glow(ctx, l1x + 10, 169, 18, PAL.gold, 0.3 + g.beat.pulse * 0.2);
+    drawHorn(ctx, l1x + 12, 169, 1);
+    drawText(ctx, l1, l1x + 30, 162, { scale: TEXT.S, color: PAL.gold2 });
+    drawText(ctx, 'HOW TO TRAIN YOUR DRAGON', W / 2, 186, { scale: TEXT.S, align: 'center', color: dim });
 
     // shrinking bar = time left, no numbers needed
     const left = clamp(1 - t / DUR.END);
@@ -130,7 +133,7 @@ export class EndCard {
     // hold the light on the little lantern to skip
     drawKnotRing(ctx, SKIP.x, SKIP.y, SKIP.r, this.skipHold, { lobes: 6, amp: 2, width: 1, on: PAL.gold, off: 'rgba(255,226,138,0.5)' });
     drawLantern(ctx, SKIP.x, SKIP.y, 0.5 + this.skipHold * 0.5, t);
-    drawText(ctx, 'NEXT', SKIP.x - SKIP.r - 6, SKIP.y - 6, { scale: 2, align: 'right', color: PAL.cream, alpha: 0.85 });
+    drawText(ctx, 'NEXT', SKIP.x - SKIP.r - 6, SKIP.y - 2, { scale: TEXT.S, align: 'right', color: PAL.cream, alpha: 0.7 });
 
     g.particles.draw(ctx);
     if (g.input.seen) drawCursorLight(ctx, g.input.x, g.input.y, t, 0.8);

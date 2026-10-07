@@ -1,5 +1,5 @@
 // the score for one flight, plus the little "+150" numbers that float up where it happened
-import { SCORE, LEVELS, PAL } from '../config.js';
+import { SCORE, LEVELS, PAL, TEXT } from '../config.js';
 import { drawText } from '../art/font.js';
 
 export class Points {
@@ -51,11 +51,12 @@ export class Points {
     this.popups.length = j;
   }
 
-  // popups are in screen coords
+  // popups are in screen coords. they start well above the spot and drift up and a bit back, so
+  // they never sit on the dragon or on the hoops coming from the right
   drawPopups(ctx) {
     for (const p of this.popups) {
       const a = Math.min(1, (1.1 - p.t) * 3);
-      drawText(ctx, p.text, p.x, Math.round(p.y - 14 - p.t * 22), { scale: 2, align: 'center', color: p.color, alpha: a });
+      drawText(ctx, p.text, Math.round(p.x - 16 - p.t * 10), Math.round(p.y - 40 - p.t * 22), { scale: TEXT.S, align: 'center', color: p.color, edge: 'outline', alpha: a });
     }
   }
 }

@@ -50,6 +50,7 @@ export class Input {
     this.anchorX = this.x;
     this.anchorY = this.y;
     this.status = ''; // mocap connection line for the debug overlay
+    this.tap = null; // { x, y } on the step right after a finger tap, phones only
   }
 
   feed(x, y, source = 'mouse') {

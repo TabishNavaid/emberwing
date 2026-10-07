@@ -2,8 +2,9 @@
 // they all just feed one x/y into Input
 import { VIEW, INPUT } from '../config.js';
 
-// mouse, touch and pen all come in as pointer events. pressing only sets `holding`,
-// nothing actually needs a click
+// mouse, touch and pen all come in as pointer events. a mouse press only sets `holding`, nothing
+// needs a click. a finger tap also leaves input.tap (where the finger really was, not the light
+// above it) so a phone can pick things by tapping
 export function attachPointer(input, target, toView) {
   const onMove = (e) => {
     const p = toView(e.clientX, e.clientY);
@@ -14,6 +15,7 @@ export function attachPointer(input, target, toView) {
   target.addEventListener('pointerdown', (e) => {
     onMove(e);
     input.setHolding(true);
+    if (e.pointerType === 'touch') input.tap = toView(e.clientX, e.clientY);
   });
   window.addEventListener('pointerup', () => input.setHolding(false));
   window.addEventListener('pointercancel', () => input.setHolding(false));

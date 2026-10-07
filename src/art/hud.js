@@ -1,6 +1,6 @@
 // everything drawn over the flight that isn't the world: the score and stars, the hoop counter,
 // the lighthouse-to-home track, the instruction, and the arrows that teach steering
-import { VIEW, FLIGHT, PAL, POWER } from '../config.js';
+import { VIEW, FLIGHT, PAL, POWER, TEXT } from '../config.js';
 import { clamp, lerp, glow, makeCanvas } from '../core/util.js';
 import { drawText, drawTextPop, fitScale } from './font.js';
 import { drawKnotRing, drawKnotBand } from './knotwork.js';
@@ -16,7 +16,7 @@ export function drawHud(ctx, f, g, t) {
   drawScore(ctx, f);
   f.points.drawPopups(ctx);
   if (f.prompt) {
-    drawText(ctx, f.prompt, W / 2, 30, { scale: fitScale(f.prompt, W - 10), align: 'center', color: PAL.cream, alpha: clamp(f.promptT / 0.25) });
+    drawText(ctx, f.prompt, W / 2, 30, { scale: fitScale(f.prompt, W - 10, TEXT.M, TEXT.S), align: 'center', color: PAL.cream, edge: 'outline', alpha: clamp(f.promptT / 0.25) });
   }
   drawGuides(ctx, f, g.input.x, g.input.y, t);
 }
@@ -68,8 +68,8 @@ function drawScore(ctx, f) {
   const stars = pts.stars;
   for (let i = 0; i < 3; i++) drawStarIcon(ctx, 10 + i * 12, 12, i < stars, 1);
   const pop = pts.pop > 0 ? 1 + Math.sin((pts.pop / 0.35) * Math.PI) * 0.25 : 1;
-  drawText(ctx, String(pts.score), 46, 6, { scale: 2, color: PAL.gold2, alpha: 1 });
-  if (pop > 1.01) drawText(ctx, String(pts.score), 46, 6, { scale: 2, color: '#ffffff', alpha: (pop - 1) * 3 });
+  drawText(ctx, String(pts.score), 46, 6, { scale: TEXT.S, color: PAL.gold2, edge: 'outline' });
+  if (pop > 1.01) drawText(ctx, String(pts.score), 46, 6, { scale: TEXT.S, color: '#ffffff', edge: 'outline', alpha: (pop - 1) * 3 });
   const running = [['fireball', f.fireT, POWER.FIREBALL], ['speed', f.speedT, POWER.SPEED], ['magnet', f.magnetT, POWER.MAGNET], ['shield', f.shield ? 1 : 0, 1]].filter(([, v]) => v > 0);
   running.forEach(([kind, v, max], i) => {
     const x = 12 + i * 26;
@@ -85,7 +85,7 @@ function drawCounter(ctx, f) {
   const pop = f.countPop > 0 ? 1 + Math.sin((f.countPop / 0.4) * Math.PI) * 0.3 : 1;
   const label = `${f.points.hits} / ${f.L.hoops}`;
   drawKnotRing(ctx, 412, 14, 7 * pop, 1, { lobes: 5, amp: 1.5, width: 1, on: PAL.gold });
-  drawTextPop(ctx, label, 446, 14, 1, { scale: Math.round(2 * pop) || 2, color: PAL.gold2 });
+  drawTextPop(ctx, label, 446, 14, pop > 1.01 ? 0.95 : 1, { scale: TEXT.S, color: PAL.gold2, edge: 'outline' });
 }
 
 // lighthouse -> home track across the top. someone who glances over mid-flight gets

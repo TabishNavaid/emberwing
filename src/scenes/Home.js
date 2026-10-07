@@ -1,6 +1,6 @@
 // home: the dragon lands with tonight's flock, its flight path lifts into the aurora and becomes a
 // ribbon, and the counter ticks up
-import { VIEW, DUR, PAL, FLOCK } from '../config.js';
+import { VIEW, DUR, PAL, FLOCK, TEXT } from '../config.js';
 import { clamp, lerp, ease, invLerp, glow } from '../core/util.js';
 import { drawText, drawTextPop, textWidth, fitScale } from '../art/font.js';
 import { drawSpeck, warmUp } from '../art/dragon.js';
@@ -198,7 +198,7 @@ export class Home {
 
     if (t > 0.4 && t < 3.2) {
       const msg = `${this.d.name} IS HOME!`;
-      drawTextPop(ctx, msg, W / 2, 38, (t - 0.4) * 1.4, { scale: fitScale(msg, W - 16, 5), color: PAL.cream, alpha: clamp((3.2 - t) * 3) });
+      drawTextPop(ctx, msg, W / 2, 38, (t - 0.4) * 1.4, { scale: fitScale(msg, W - 16, TEXT.L, TEXT.M), color: PAL.cream, alpha: clamp((3.2 - t) * 3) });
     }
     // the counter only shows up once it's on the new number. starting on the old one for a
     // moment read like "0 DRAGONS", like you hadn't made it
@@ -213,18 +213,14 @@ export class Home {
     const n = this.count;
     const num = String(n);
     const label = n === 1 ? 'DRAGON HOME TONIGHT' : 'DRAGONS HOME TONIGHT';
-    const wNum = textWidth(num, 4);
-    const wLab = textWidth(label, 2);
+    const wNum = textWidth(num, TEXT.M);
+    const wLab = textWidth(label, TEXT.S);
     const x0 = Math.round(W / 2 - (wNum + 10 + wLab) / 2);
     const a = clamp(k * 4);
-    ctx.globalAlpha = a * 0.7;
-    ctx.fillStyle = '#050814';
-    ctx.fillRect(0, 230, W, 36);
-    ctx.globalAlpha = 1;
     const nx = x0 + wNum / 2;
     if (k < 0.8) glow(ctx, nx, 248, 26, PAL.gold, 0.6 * (1 - k / 0.8));
-    drawTextPop(ctx, num, nx, 248, k * 1.6, { scale: 4, color: PAL.gold });
-    drawText(ctx, label, x0 + wNum + 10, 244, { scale: 2, color: '#bff8ee', alpha: a });
+    drawTextPop(ctx, num, nx, 248, k * 1.6, { scale: TEXT.M, color: PAL.gold });
+    drawText(ctx, label, x0 + wNum + 10, 244, { scale: TEXT.S, color: 'rgba(191,248,238,0.8)', alpha: a });
   }
 
   // a band of light sweeps across the whole aurora once the new ribbon settles in.

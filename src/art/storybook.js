@@ -1,6 +1,6 @@
 // the storybook on the attract screen. its pages turn by themselves and show the people in line
 // what the game is: the storm, the lost dragons, a ghost player doing it, home, the act II line
-import { DUR, PAL } from '../config.js';
+import { DUR, PAL, TEXT } from '../config.js';
 import { makeCanvas, glow, clamp, ease, lerp } from '../core/util.js';
 import { drawText } from './font.js';
 import { drawKnotRing, drawKnotFrame } from './knotwork.js';
@@ -10,7 +10,8 @@ import { drawLantern, drawHorn, drawSoundLines, drawSparkle } from './icons.js';
 import { drawBaseAurora } from './aurora.js';
 import { drawTree } from './sprites.js';
 
-export const BOOK = { x: 10, y: 48, w: 252, h: 140 };
+// narrower than it was so the level picker gets the room, and tucked up under the logo
+export const BOOK = { x: 10, y: 26, w: 216, h: 140 };
 
 const PAGES = [
   { id: 'storm', caption: 'A STORM...' },
@@ -50,11 +51,8 @@ export class Storybook {
     pg.clearRect(0, 0, BOOK.w, BOOK.h);
     const id = PAGES[this.page].id;
     const caption = this[id](pg, this.pageT, g, g.dragon, flock) ?? PAGES[this.page].caption;
-    if (caption) {
-      pg.fillStyle = 'rgba(5,7,13,0.55)';
-      pg.fillRect(0, BOOK.h - 24, BOOK.w, 24);
-      drawText(pg, caption, BOOK.w / 2, BOOK.h - 19, { scale: 2, align: 'center', color: PAL.cream });
-    }
+    // a small caption right on the picture, no bar behind it
+    if (caption) drawText(pg, caption, BOOK.w / 2, BOOK.h - 18, { scale: TEXT.S, align: 'center', color: PAL.cream, edge: 'outline' });
 
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.fillRect(BOOK.x + 4, BOOK.y + 5, BOOK.w, BOOK.h);
@@ -108,7 +106,7 @@ export class Storybook {
       const y = (i * 53 + t * 190) % BOOK.h;
       pg.fillRect(Math.round(x), Math.round(y), 1, 4);
     }
-    const ex = 150 + Math.sin(t * 1.3) * 30 + t * 8;
+    const ex = 128 + Math.sin(t * 1.3) * 30 + t * 8;
     const ey = 54 + Math.sin(t * 2.1) * 12;
     drawDragon(pg, ex, ey, d, { mood: 'scared', flap: t * 3, glow: 0, rot: Math.sin(t * 2.5) * 0.6, scale: 0.8 });
   }
@@ -122,11 +120,11 @@ export class Storybook {
     pg.fillStyle = PAL.rock2;
     for (let x = 0; x < BOOK.w; x++) pg.fillRect(x, 100 + Math.round(Math.sin(x * 0.07) * 3), 1, 3);
     drawStone(pg, 60, 104, 34, 12, 2, 0);
-    drawStone(pg, 205, 106, 26, 10, 4, 0);
+    drawStone(pg, 196, 106, 26, 10, 4, 0);
     drawTree(pg, 'bare', 30, 104, '#0e1622');
     const shake = Math.sin(t * 30) * 0.6;
     (g.lost.length ? g.lost : [d]).forEach((dd, i) => {
-      drawDragon(pg, 92 + i * 56 + (i === 1 ? shake : 0), 101 - 11 * dd.size, dd, { mood: 'scared', wing: 'folded', glow: 0, life: t + i, look: i === 2 ? 1 : -1, scale: 0.8 });
+      drawDragon(pg, 80 + i * 52 + (i === 1 ? shake : 0), 101 - 11 * dd.size, dd, { mood: 'scared', wing: 'folded', glow: 0, life: t + i, look: i === 2 ? 1 : -1, scale: 0.8 });
     });
     const lx = lerp(-10, 60, ease.outCubic(clamp(t / 3.5)));
     glow(pg, lx, 66, 40, PAL.gold, 0.35);
@@ -146,7 +144,7 @@ export class Storybook {
       pg.fillStyle = PAL.rock;
       for (let x = 0; x < BOOK.w; x++) pg.fillRect(x, 106 + Math.round(Math.sin(x * 0.05) * 5 + Math.sin(x * 0.17) * 2), 1, 50);
       drawStone(pg, 60, 110, 30, 11, 1, 0);
-      const ex = 170, ey = 100;
+      const ex = 156, ey = 100;
       const eo = eyeOffset(d, 0.85);
       eyes.x = ex + eo.x;
       eyes.y = ey + eo.y;
@@ -163,17 +161,17 @@ export class Storybook {
       const ft = t - FIND;
       drawSea(pg, 116, t, { c1: '#2a3a60', c2: '#4a5a8a', foam: '#ffd0a0' });
       for (let i = 0; i < 4; i++) {
-        const rx = 260 + i * 70 - ft * 70;
+        const rx = BOOK.w + 8 + i * 70 - ft * 70;
         const ry = 66 + Math.sin(i * 1.7) * 24;
-        if (rx < -30 || rx > 280) continue;
+        if (rx < -30 || rx > BOOK.w + 30) continue;
         const passed = rx < 96;
         if (!passed) drawKnotRing(pg, rx, ry, 14 + i * 2, 1, { lobes: 6, amp: 2, width: 1, on: i > 1 ? PAL.gold : '#bff8ee' });
         else if (rx > 60) {
           for (let s = 0; s < 6; s++) drawSparkle(pg, rx + Math.cos(s) * (96 - rx) * 0.6, ry + Math.sin(s * 2) * (96 - rx) * 0.4, 2, PAL.gold2);
         }
       }
-      const nextY = 66 + Math.sin(Math.floor((ft * 70 - 164 + 70) / 70) * 1.7) * 24;
-      ghost = { x: 130, y: lerp(66, nextY, 0.8) + Math.sin(ft * 2) * 6 };
+      const nextY = 66 + Math.sin(Math.floor((ft * 70 - (BOOK.w - 88) + 70) / 70) * 1.7) * 24;
+      ghost = { x: 124, y: lerp(66, nextY, 0.8) + Math.sin(ft * 2) * 6 };
       this.demoY = this.demoY === undefined ? ghost.y : lerp(this.demoY, ghost.y, 0.08);
       pg.fillStyle = 'rgba(255,201,74,0.5)';
       for (let i = 1; i < 18; i++) pg.fillRect(96 - i * 4, Math.round(this.demoY + Math.sin(ft * 3 - i * 0.4) * 3), 3, 1);
@@ -183,7 +181,7 @@ export class Storybook {
     pg.globalAlpha = 0.85;
     drawLantern(pg, ghost.x, ghost.y, 0.8, t);
     pg.globalAlpha = 1;
-    drawText(pg, 'YOU', ghost.x, ghost.y - 28, { scale: 2, align: 'center', color: PAL.gold2 });
+    drawText(pg, 'YOU', ghost.x, ghost.y - 28, { scale: TEXT.S, align: 'center', color: PAL.gold2 });
     return t < FIND ? `FIND ${d.name}` : 'FLY HOME!';
   }
 
@@ -196,24 +194,23 @@ export class Storybook {
     const waiting = flock.slice(-4);
     waiting.forEach((m, i) => {
       const a = t * 0.7 + (i / waiting.length) * Math.PI * 2;
-      const x = 125 + Math.cos(a) * 92;
+      const x = BOOK.w / 2 + Math.cos(a) * 80;
       const y = 64 + Math.sin(a) * 24;
       drawDragon(pg, x, y, m.d, { mood: 'joy', flap: t * 2.5 + i * 0.3, life: t, glow: 2, scale: 0.7, flip: Math.sin(a) > 0 });
     });
-    drawDragon(pg, 125, 78 + Math.sin(t * 3) * 3, d, { mood: 'happy', flap: t * 2.5, glow: 2 });
+    drawDragon(pg, BOOK.w / 2, 78 + Math.sin(t * 3) * 3, d, { mood: 'happy', flap: t * 2.5, glow: 2 });
     return `GUIDE ${d.name} HOME`;
   }
 
   music(pg, t, g) {
     pg.fillStyle = '#1a1430';
     pg.fillRect(0, 0, BOOK.w, BOOK.h);
-    // the full credit lives here, the end card only has room for the act II line
-    glow(pg, BOOK.w / 2, 24, 70, PAL.gold, 0.25 + g.beat.pulse * 0.1);
-    drawHorn(pg, BOOK.w / 2 - 6, 22, 3);
-    drawSoundLines(pg, BOOK.w / 2 + 30, 22, 2, t);
-    drawText(pg, 'HOW TO TRAIN', BOOK.w / 2, 42, { scale: 2, align: 'center', color: PAL.gold });
-    drawText(pg, 'YOUR DRAGON', BOOK.w / 2, 58, { scale: 2, align: 'center', color: PAL.gold });
-    drawText(pg, 'WALLA WALLA SYMPHONY', BOOK.w / 2, 78, { scale: 2, align: 'center', color: PAL.cream });
-    drawText(pg, 'YOUTH ORCHESTRA', BOOK.w / 2, 94, { scale: 2, align: 'center', color: PAL.cream });
+    // the piece and who plays it. the caption under it says when
+    glow(pg, BOOK.w / 2, 28, 70, PAL.gold, 0.25 + g.beat.pulse * 0.1);
+    drawHorn(pg, BOOK.w / 2 - 6, 26, 3);
+    drawSoundLines(pg, BOOK.w / 2 + 30, 26, 2, t);
+    drawText(pg, 'HOW TO TRAIN', BOOK.w / 2, 50, { scale: TEXT.S, align: 'center', color: PAL.gold });
+    drawText(pg, 'YOUR DRAGON', BOOK.w / 2, 66, { scale: TEXT.S, align: 'center', color: PAL.gold });
+    drawText(pg, 'YOUTH ORCHESTRA', BOOK.w / 2, 90, { scale: TEXT.S, align: 'center', color: 'rgba(255,243,214,0.7)' });
   }
 }

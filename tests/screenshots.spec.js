@@ -1,5 +1,6 @@
-// npm run shots -> tests/screens/, every scene at projector and phone size
-import { test } from '@playwright/test';
+// npm run shots -> tests/screens/, every scene at projector and phone size. each one also checks
+// the screen uses at most three text sizes, and the start screen and dragon card stay short
+import { test, expect } from '@playwright/test';
 
 const SHOTS = [
   ['attract', 2, null],
@@ -38,6 +39,7 @@ const SHOTS = [
   ['end', 1.6, null, 'flock'], // the dragon card, 6th home
   ['attract', 3, null, 'flock'], // tonight's flock circling, countdown to the next celebration
   ['attract', 1, null, 'gate'], // press any key to start the station
+  ['attract', 3, null, 'qr'], // the operator's Q key: a code for the live site
   ['attract', 0.6, { x: 292, y: 130 }], // holding the light on FLIER
   ['choose', 1.2, null], // who will you find?
   ['choose', 1.0, { x: 240, y: 104 }], // holding the light on the middle dragon
@@ -48,15 +50,21 @@ const SHOTS = [
   ['celebration', 6.6, null, 'eight'], // the new star flies up into the sky
   ['end', 2.0, null, 'scored'], // the dragon card with a score and stars
 ];
+// the projector, an iphone held sideways, and a small android held sideways
+// what a guest reads, not what the operator sees
+const GUEST = (scene, ptr, extra) => ptr !== 'calibrate' && extra !== 'gate' && extra !== 'qr';
+// the storybook's music page also names the piece and who plays it, which we keep on purpose
+const MAX_WORDS = { attract: 22, end: 22, music: 30 };
 const SIZES = [
-  ['projector', { width: 1920, height: 1080 }, 1],
-  ['phone', { width: 844, height: 390 }, 2],
+  ['projector', { width: 1920, height: 1080 }, 1, false],
+  ['phone', { width: 844, height: 390 }, 3, true],
+  ['android', { width: 640, height: 360 }, 2, true],
 ];
 
-for (const [label, viewport, dpr] of SIZES) {
+for (const [label, viewport, dpr, touch] of SIZES) {
   for (const [scene, t, ptr, extra] of SHOTS) {
     test(`${scene} @${t}s ${extra ?? ''} ${label}`, async ({ browser }) => {
-      const ctx = await browser.newContext({ viewport, deviceScaleFactor: dpr });
+      const ctx = await browser.newContext({ viewport, deviceScaleFactor: dpr, isMobile: touch, hasTouch: touch });
       const page = await ctx.newPage();
       // seeded Math.random + no real-time loop so the same code always gives the same pixels,
       // that's how we checked the cleanup didn't change anything
@@ -82,6 +90,7 @@ for (const [label, viewport, dpr] of SIZES) {
           w.goto(scene);
         }
         if (extra === 'gate') w.game.gate = true;
+        if (extra === 'qr') w.game.op.qr = true;
         if (ptr === 'title') w.game.scenes.go('flight', {}, { title: 'NOW FLY HOME!' });
         if (ptr === 'calibrate') {
           w.game.op.cal = { step: 1, pts: [[40, 40]], hold: 0.6, ax: 300, ay: 60, armed: true, source: 'mocap' };
@@ -100,7 +109,31 @@ for (const [label, viewport, dpr] of SIZES) {
         }
       }, [scene, t, ptr, extra]);
       await page.screenshot({ path: `tests/screens/${scene}-${t}${extra ? '-' + extra.replace('=', '') : ''}-${label}.png` });
+      // after the screenshot, words() draws the scene again to see its text
+      const lines = await page.evaluate(() => window.__emberwing.words());
+      const words = lines.flatMap(([str]) => str.split(/\s+/)).filter((wd) => /[A-Z0-9]/i.test(wd)).length;
+      const sizes = [...new Set(lines.map(([, size]) => size))].sort();
+      console.log(`words ${scene}@${t}${extra ? ' ' + extra : ''} ${label}: ${words} words, sizes ${sizes.join(',')} | ${lines.map(([str]) => str).join(' / ')}`);
+      expect(sizes.length).toBeLessThanOrEqual(3);
+      const cap = lines.some(([str]) => str === 'YOUR DRAGON') ? MAX_WORDS.music : MAX_WORDS[scene];
+      if (GUEST(scene, ptr, extra) && cap) expect(words).toBeLessThanOrEqual(cap);
       await ctx.close();
     });
   }
 }
+
+// a phone held upright gets the turn-your-phone screen, and the game waits behind it
+test('turn your phone, portrait phone', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage();
+  await page.goto('./?seed=3');
+  await page.waitForFunction(() => document.body.classList.contains('ready'), null, { polling: 50 });
+  await page.waitForTimeout(300);
+  const r = await page.evaluate(() => ({ rotate: getComputedStyle(document.getElementById('rotate')).display, t: window.__emberwing.game.time }));
+  await page.waitForTimeout(300);
+  const later = await page.evaluate(() => window.__emberwing.game.time);
+  expect(r.rotate).toBe('flex');
+  expect(later).toBe(r.t); // paused while upright
+  await page.screenshot({ path: 'tests/screens/rotate-phone.png' });
+  await ctx.close();
+});

@@ -5,7 +5,16 @@ export const VIEW = {
   // everything draws at 480x270 and gets scaled up (4x on a 1080p projector)
   W: 480,
   H: 270,
+  // round the scale down to whole pixels when that costs less than this much of the picture.
+  // uneven pixel sizes look wobbly on the projector. not more than 5%: at 8% a sideways iphone
+  // shrank to 4x with black bars all round, and on its tiny pixels the unevenness can't be seen
+  SNAP: 0.05,
 };
+
+// the only three text sizes a guest ever sees (font scale, 7px letters times this). S is 56px tall on
+// the projector, which is the smallest that reads from 15ft, so nothing a guest reads goes below it.
+// if a line doesn't fit, cut words before shrinking it
+export const TEXT = { S: 2, M: 3, L: 4 };
 
 export const DUR = {
   START_DWELL: 1.0, // hold on a level's lantern to start
@@ -72,8 +81,7 @@ export const FLIGHT = {
 export const LEVELS = {
   hatchling: {
     label: 'HATCHLING',
-    hint: 'FIRST TIME?',
-    fresh: 'START HERE!', // shown where the best flight goes until somebody sets one
+    hint: 'START HERE', // the line under each name on the start screen
     timeline: 18, // seconds of hoops after the tutorial hoop
     hoops: 8, // including the tutorial hoop
     hoopBeats: 4, // a hoop every 4 beats (2s). at 2 beats first-timers had no time to steer
@@ -95,7 +103,6 @@ export const LEVELS = {
   flier: {
     label: 'FLIER',
     hint: 'MOVING HOOPS',
-    fresh: 'NO BEST YET',
     timeline: 24,
     hoops: 13,
     hoopBeats: 3,
@@ -117,7 +124,6 @@ export const LEVELS = {
   storm: {
     label: 'STORM RIDER',
     hint: 'FOR THE BRAVE',
-    fresh: 'NO BEST YET',
     timeline: 26,
     hoops: 20,
     hoopBeats: 2,
@@ -232,6 +238,12 @@ export const INPUT = {
 export const FLOCK = {
   CLOSE: 12, // this many of the newest get drawn up close, the rest are specks further off
   CELEBRATE_EVERY: 8, // every 8th dragon home gets the whole flock out for a flyover
+};
+
+// the operator's Q key puts a code for the live site on the start screen, for people in line
+export const QR = {
+  URL: 'https://tabishnavaid.github.io/emberwing/',
+  MODULE: 2, // internal px per square, so 8 real px on the projector. bigger reads from further
 };
 
 export const STORE = {

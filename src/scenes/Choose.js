@@ -1,5 +1,5 @@
 // "who will you find?": three lost dragons side by side, hold the light on one to pick it
-import { VIEW, DUR, PAL, LEVELS } from '../config.js';
+import { VIEW, DUR, PAL, LEVELS, TEXT } from '../config.js';
 import { clamp, glow, ease, dwell } from '../core/util.js';
 import { drawText, drawTextPop, textWidth } from '../art/font.js';
 import { drawKnotRing, drawKnotBand } from '../art/knotwork.js';
@@ -63,10 +63,15 @@ export class Choose {
       return;
     }
     const inp = g.input;
+    const inCard = (o, x, y) => Math.abs(x - o.x) < CARD.w / 2 && y > CARD.y0 && y < CARD.y1;
+    // on a phone a tap on a dragon picks it straight away
+    if (inp.tap) {
+      const o = this.options.find((opt) => inCard(opt, inp.tap.x, inp.tap.y));
+      if (o) return this.pick(g, o);
+    }
     let on = null;
     for (const o of this.options) {
-      const inCard = Math.abs(inp.x - o.x) < CARD.w / 2 && inp.y > CARD.y0 && inp.y < CARD.y1;
-      o.hover = inp.seen && !on && inCard;
+      o.hover = inp.seen && !on && inCard(o, inp.x, inp.y);
       if (o.hover) on = o;
       o.progress = dwell(o.progress, o.hover, dt, DUR.CHOOSE_DWELL);
       if (o.progress >= 1) return this.pick(g, o);
@@ -85,12 +90,12 @@ export class Choose {
     drawStars(ctx, this.stars, t, 0.5);
     for (let i = 0; i < 4; i++) drawCloud(ctx, ((t * (10 + i * 4) + i * 140) % 640) - 80, 30 + (i % 2) * 150, 120, '#1c2a40', 50 + i, 0.6);
 
-    drawText(ctx, 'WHO WILL YOU FIND?', W / 2, 10, { scale: 3, align: 'center', color: PAL.gold2 });
-    // the level they picked, small, so they know it took
+    drawText(ctx, 'WHO WILL YOU FIND?', W / 2, 10, { scale: TEXT.M, align: 'center', color: PAL.gold2 });
+    // the level they picked, small and dim, so they know it took
     const lab = LEVELS[this.level].label;
-    const lw = textWidth(lab, 2);
+    const lw = textWidth(lab, TEXT.S);
     drawLevelIcon(ctx, this.level, W / 2 - lw / 2 - 14, 251, t);
-    drawText(ctx, lab, W / 2 + 4, 245, { scale: 2, align: 'center', color: PAL.gold });
+    drawText(ctx, lab, W / 2 + 4, 245, { scale: TEXT.S, align: 'center', color: 'rgba(255,201,74,0.75)' });
 
     for (const o of this.options) this.drawCard(g, ctx, o, t);
 
@@ -110,8 +115,11 @@ export class Choose {
     const other = this.picked && !chosen;
     const x0 = o.x - CARD.w / 2;
     ctx.globalAlpha = other ? 0.4 : 1;
-    ctx.fillStyle = o.hover || chosen ? 'rgba(40,36,70,0.85)' : 'rgba(10,14,30,0.75)';
-    ctx.fillRect(x0, CARD.y0 + 10, CARD.w, CARD.y1 - CARD.y0 - 26);
+    // the night sky is dark enough to read on, so a card only lights up when it's being picked
+    if (o.hover || chosen) {
+      ctx.fillStyle = 'rgba(255,201,74,0.1)';
+      ctx.fillRect(x0, CARD.y0 + 10, CARD.w, CARD.y1 - CARD.y0 - 26);
+    }
     glow(ctx, o.x, RING.dy, 52, d.colors.wingLit, (chosen ? 0.6 : 0.15) + o.progress * 0.4);
     drawKnotRing(ctx, o.x, RING.dy, RING.r, chosen ? 1 : o.progress, { lobes: 9, amp: 3, width: 2, on: PAL.gold, off: o.hover ? 'rgba(255,226,138,0.7)' : 'rgba(255,226,138,0.35)' });
     // lost and a bit scared until picked, then happy and lit up
@@ -122,15 +130,15 @@ export class Choose {
     } else {
       drawDragon(ctx, o.x, dy, d, { mood: o.hover ? 'curious' : 'scared', wing: 'folded', glow: 1, life: t + o.x, look: o.hover ? 0 : -1 });
     }
-    if (chosen) drawTextPop(ctx, d.name, o.x, 164, this.pickT * 1.5, { scale: 3, color: PAL.gold2 });
-    else drawText(ctx, d.name, o.x, 154, { scale: 3, align: 'center', color: PAL.gold });
+    if (chosen) drawTextPop(ctx, d.name, o.x, 164, this.pickT * 1.5, { scale: TEXT.M, color: PAL.gold2 });
+    else drawText(ctx, d.name, o.x, 154, { scale: TEXT.M, align: 'center', color: PAL.gold });
     // the quirk, on two lines when it's long so the cards don't run into each other
     const q = QUIRK_TEXT[d.quirk];
     const words = q.split(' ');
     const lines = q.length > 11 ? [words.slice(0, Math.ceil(words.length / 2)).join(' '), words.slice(Math.ceil(words.length / 2)).join(' ')] : [q];
-    lines.forEach((l, i) => drawText(ctx, l, o.x, 182 + i * 16, { scale: 2, align: 'center', color: '#bff8ee' }));
+    lines.forEach((l, i) => drawText(ctx, l, o.x, 182 + i * 16, { scale: TEXT.S, align: 'center', color: 'rgba(191,248,238,0.8)' }));
     ctx.globalAlpha = 1;
-    if (other) drawText(ctx, 'NEXT TIME', o.x, 216, { scale: 2, align: 'center', color: PAL.cream, alpha: clamp(this.pickT * 3) * 0.8 });
+    if (other) drawText(ctx, 'NEXT TIME', o.x, 216, { scale: TEXT.S, align: 'center', color: PAL.cream, alpha: clamp(this.pickT * 3) * 0.8 });
     if (chosen) drawKnotBand(ctx, x0 + 12, CARD.y1 - 20, CARD.w - 24);
   }
 }
