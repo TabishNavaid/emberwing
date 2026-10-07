@@ -63,7 +63,7 @@ export function mulberry32(seed) {
 }
 
 const rgbCache = new Map();
-function hexToRgb(hex) {
+export function hexToRgb(hex) {
   let c = rgbCache.get(hex);
   if (!c) {
     const n = parseInt(hex.slice(1), 16);

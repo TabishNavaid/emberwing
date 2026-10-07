@@ -1,7 +1,7 @@
 // scenery every scene shares, all drawn in code: sky, stars, sea, cliffs, the lighthouse, standing
 // stones, sea stacks, clouds, wind, rays and fog
 import { VIEW, PAL } from '../config.js';
-import { makeCanvas, mix, mulberry32, clamp, TAU, glow, stampLine, disc, rgba, detail } from '../core/util.js';
+import { makeCanvas, mix, hexToRgb, mulberry32, clamp, TAU, glow, stampLine, disc, rgba, detail } from '../core/util.js';
 
 const { W, H } = VIEW;
 
@@ -24,20 +24,28 @@ export function drawSky(ctx, stops, y0 = 0, y1 = H, alpha = 1) {
       }
       return stops[stops.length - 1][1];
     };
+    // written pixel by pixel into one ImageData. it used to be a fillRect per 2px, 65k calls,
+    // which took 25ms (150ms on a slow laptop) the first time each sky faded in mid-flight
+    const img = g.createImageData(W, h);
+    const px = img.data;
     const bands = 14;
     for (let y = 0; y < h; y++) {
       const t = y / h;
       const bi = Math.floor(t * bands);
       const frac = t * bands - bi;
-      const ca = colorAt(bi / bands);
-      const cb = colorAt((bi + 1) / bands);
-      // checker dither in the last third of each band
-      for (let x = 0; x < W; x += 2) {
-        const d = frac > 0.66 && ((x >> 1) + y) % 2 === 0;
-        g.fillStyle = d ? cb : ca;
-        g.fillRect(x, y, 2, 1);
+      const ca = hexToRgb(colorAt(bi / bands));
+      const cb = hexToRgb(colorAt((bi + 1) / bands));
+      for (let x = 0; x < W; x++) {
+        // checker dither in the last third of each band, in 2px wide cells
+        const col = frac > 0.66 && ((x >> 1) + y) % 2 === 0 ? cb : ca;
+        const i = (y * W + x) * 4;
+        px[i] = col[0];
+        px[i + 1] = col[1];
+        px[i + 2] = col[2];
+        px[i + 3] = 255;
       }
     }
+    g.putImageData(img, 0, 0);
     if (skyCache.size > 40) skyCache.clear();
     skyCache.set(key, c);
   }
