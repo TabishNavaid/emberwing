@@ -1,7 +1,7 @@
 // the aurora: one ribbon for every guest who made it home, the curtains that are always there, and
 // the stars each celebration leaves in the sky
 import { VIEW, PAL } from '../config.js';
-import { makeCanvas, rgba, clamp, glow } from '../core/util.js';
+import { makeCanvas, rgba, clamp, glow, detail } from '../core/util.js';
 
 const { W, H } = VIEW;
 export const RIBBON_COLORS = [PAL.teal, PAL.violet, PAL.gold, PAL.rose, '#7fd6ff', PAL.seaGreen];
@@ -50,50 +50,64 @@ export function drawRibbon(ctx, pts, color, alpha, t = 0, len = 30) {
   for (let i = 0; i < pts.length - 1; i++) {
     const [x1, y1] = pts[i];
     const [x2, y2] = pts[i + 1];
-    const steps = Math.max(1, Math.ceil(Math.abs(x2 - x1) / 2));
+    // one 2px strip every 2px, or a 4px strip every 4px in low detail
+    const w = detail.low ? 4 : 2;
+    const steps = Math.max(1, Math.ceil(Math.abs(x2 - x1) / w));
     for (let s = 0; s < steps; s++) {
       const k = s / steps;
       const x = x1 + (x2 - x1) * k;
       const y = y1 + (y2 - y1) * k + Math.sin(x * 0.05 + t * 0.8) * 2;
       const sway = 0.75 + 0.25 * Math.sin(x * 0.13 + t * 1.3);
       ctx.globalAlpha = alpha * sway;
-      ctx.drawImage(tex, Math.round(x), Math.round(y), 2, len);
+      ctx.drawImage(tex, Math.round(x), Math.round(y), w, len);
     }
   }
   ctx.restore();
 }
 
-// every ribbon from tonight. redrawing 500 of them each frame is too slow so it's cached
-// and only rebuilt when a new one gets added
+// every ribbon from tonight. redrawing up to 500 of them every frame is far too slow, so they live on
+// a canvas that only changes when a ribbon is added. even that one redraw took 150ms+ with a full
+// sky (a visible hitch at home), so it's done a few ribbons a frame on a second canvas that swaps
+// in when it's finished
 export class AuroraWall {
   constructor(store) {
     this.store = store;
     this.key = '';
+    this.job = null;
     [this.canvas, this.g] = makeCanvas(W, H);
+    [this.next, this.ng] = makeCanvas(W, H);
     this.top = 14;
     this.height = 120;
   }
   // hideNewest leaves the newest ribbon(s) out while home is still animating it in
-  rebuild(hideNewest) {
-    const g = this.g;
-    g.clearRect(0, 0, W, H);
+  start(key, hideNewest) {
+    this.ng.clearRect(0, 0, W, H);
     const all = this.store.ribbons;
     const rs = all.slice(0, Math.max(0, all.length - hideNewest));
     const n = rs.length;
     // dimmer per ribbon as the night fills up, otherwise 100+ ribbons blow out to white
     const a = clamp(0.5 * Math.pow(10 / Math.max(10, n), 0.45), 0.12, 0.5);
-    rs.forEach((rib, i) => {
-      const pts = ribbonSkyPoints(rib, this.top, this.height);
-      const fresh = i >= n - 3 ? 1.35 : 1;
-      drawRibbon(g, pts, RIBBON_COLORS[rib.h % RIBBON_COLORS.length], a * fresh, i * 0.37, 26 + (i % 4) * 4);
-    });
+    this.job = { key, rs, n, a, i: 0 };
+  }
+  work(ms) {
+    const j = this.job;
+    const end = performance.now() + ms;
+    while (j.i < j.rs.length) {
+      const i = j.i++;
+      const rib = j.rs[i];
+      const fresh = i >= j.n - 3 ? 1.35 : 1;
+      drawRibbon(this.ng, ribbonSkyPoints(rib, this.top, this.height), RIBBON_COLORS[rib.h % RIBBON_COLORS.length], j.a * fresh, i * 0.37, 26 + (i % 4) * 4);
+      if (performance.now() > end) return;
+    }
+    [this.canvas, this.next, this.g, this.ng] = [this.next, this.canvas, this.ng, this.g];
+    this.key = j.key;
+    this.job = null;
   }
   draw(ctx, t, alpha = 1, hideNewest = 0) {
     const key = this.store.version + '|' + hideNewest;
-    if (key !== this.key) {
-      this.rebuild(hideNewest);
-      this.key = key;
-    }
+    if (key === this.key) this.job = null;
+    else if (this.job?.key !== key) this.start(key, hideNewest);
+    if (this.job) this.work(3);
     ctx.save();
     ctx.globalAlpha = alpha * (0.88 + 0.12 * Math.sin(t * 0.7));
     ctx.globalCompositeOperation = 'lighter';

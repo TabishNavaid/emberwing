@@ -1,6 +1,6 @@
 // the entry point: builds the game, scales the tiny 480x270 picture up to the screen, runs the
 // loop, and hangs a few hooks on window for the tests
-import { VIEW, LOOP, LEVELS } from './config.js';
+import { VIEW, LOOP, LEVELS, DETAIL } from './config.js';
 import { Input } from './input/Input.js';
 import { attachPointer, attachMocap, attachKeys } from './input/adapters.js';
 import { Beat } from './core/Beat.js';
@@ -13,10 +13,11 @@ import { Operator } from './core/Operator.js';
 import { Motion } from './core/Motion.js';
 import { Calibration } from './input/Calibration.js';
 import { SoundButton } from './input/SoundButton.js';
-import { mulberry32 } from './core/util.js';
+import { mulberry32, detail } from './core/util.js';
 import { fillLost } from './core/dragons.js';
 import { loadSprites } from './art/sprites.js';
 import { AuroraWall } from './art/aurora.js';
+import { warmSome } from './art/dragon.js';
 import { Attract } from './scenes/Attract.js';
 import { FindDragon } from './scenes/FindDragon.js';
 import { Choose } from './scenes/Choose.js';
@@ -28,31 +29,27 @@ import { EndCard } from './scenes/EndCard.js';
 const { W, H } = VIEW;
 const params = new URLSearchParams(location.search);
 
-// everything draws into a tiny 480x270 buffer, then it's scaled up with no smoothing
+// everything draws into a tiny 480x270 canvas and css scales it up with no smoothing. it used to be
+// redrawn into a full-screen canvas every frame, which on a weak laptop cost more than the game itself
 const display = document.getElementById('screen');
-const dctx = display.getContext('2d');
-const buffer = document.createElement('canvas');
-buffer.width = W;
-buffer.height = H;
-const ctx = buffer.getContext('2d');
+display.width = W;
+display.height = H;
+const ctx = display.getContext('2d', { alpha: false });
 ctx.imageSmoothingEnabled = false;
 
+// fit = where the picture sits on the screen, in device pixels
 let fit = { x: 0, y: 0, w: W, h: H, dpr: 1 };
 function resize() {
   const dpr = window.devicePixelRatio || 1;
-  const cw = window.innerWidth;
-  const ch = window.innerHeight;
-  display.width = Math.round(cw * dpr);
-  display.height = Math.round(ch * dpr);
-  display.style.width = cw + 'px';
-  display.style.height = ch + 'px';
-  let s = Math.min(display.width / W, display.height / H);
+  const cw = window.innerWidth * dpr;
+  const ch = window.innerHeight * dpr;
+  let s = Math.min(cw / W, ch / H);
   // snap to a whole number when we're close, uneven pixel sizes look wobbly on the projector
   if (s >= 2 && s - Math.floor(s) < 0.2) s = Math.floor(s);
   const w = Math.round(W * s);
   const h = Math.round(H * s);
-  fit = { x: Math.round((display.width - w) / 2), y: Math.round((display.height - h) / 2), w, h, dpr };
-  dctx.imageSmoothingEnabled = false;
+  fit = { x: Math.round((cw - w) / 2), y: Math.round((ch - h) / 2), w, h, dpr };
+  Object.assign(display.style, { width: w / dpr + 'px', height: h / dpr + 'px', left: fit.x / dpr + 'px', top: fit.y / dpr + 'px' });
 }
 window.addEventListener('resize', resize);
 resize();
@@ -172,10 +169,11 @@ function render() {
   // a short delay so a browser that starts audio a moment late doesn't flash the gate
   if (game.gate && game.time > 0.5) game.op.drawGate(ctx);
 
-  dctx.fillStyle = '#000';
-  dctx.fillRect(0, 0, display.width, display.height);
+  // screen shake moves the whole picture, in real screen pixels so it stays smooth
   const k = fit.w / W;
-  dctx.drawImage(buffer, fit.x + Math.round(game.cam.ox * k), fit.y + Math.round(game.cam.oy * k), fit.w, fit.h);
+  const shake = `translate(${Math.round(game.cam.ox * k) / fit.dpr}px, ${Math.round(game.cam.oy * k) / fit.dpr}px)`;
+  if (display.style.transform !== shake) display.style.transform = shake;
+  warmSome(2); // a couple of ms a frame making dragon sprites before they're needed
 }
 
 // it used to cap dt at 50ms, so below 20fps the whole game ran in slow motion and a run on
@@ -183,7 +181,11 @@ function render() {
 let last = performance.now();
 let paused = false;
 function frame(now) {
-  let left = Math.min(Math.max(0, (now - last) / 1000), LOOP.MAX_CATCHUP);
+  // ask for the next frame first, so one bad frame can't stop the loop and freeze the station
+  requestAnimationFrame(frame);
+  const gap = now - last;
+  watchDetail(gap);
+  let left = Math.min(Math.max(0, gap / 1000), LOOP.MAX_CATCHUP);
   last = now;
   while (!paused && left > 1e-6) {
     const dt = Math.min(left, LOOP.MAX_STEP);
@@ -191,7 +193,18 @@ function frame(now) {
     left -= dt;
   }
   render();
-  requestAnimationFrame(frame);
+}
+
+// switches to low detail when frames stay slow, and back once they're quick again on the start
+// screen. a gap over 250ms is a frozen or hidden tab, that says nothing about the laptop
+function watchDetail(ms) {
+  if (ms <= 0 || ms > 250 || paused) return;
+  const d = detail;
+  d.avg += (ms - d.avg) * 0.1;
+  d.slowT = d.avg > DETAIL.SLOW_MS ? d.slowT + ms / 1000 : 0;
+  d.fastT = d.avg < DETAIL.FAST_MS ? d.fastT + ms / 1000 : 0;
+  if (!d.low && d.slowT > DETAIL.SLOW_FOR) d.low = true;
+  if (d.low && d.fastT > DETAIL.FAST_FOR && game.scenes.name === 'attract') d.low = false;
 }
 
 // hooks for the playwright tests, guests never touch these
@@ -225,6 +238,7 @@ window.__emberwing = {
     level: game.level,
     gate: game.gate,
     sound: game.audio.status,
+    lowDetail: detail.low,
     runs: game.runs.slice(),
     target: game.scenes.current?.target?.(game) ?? null,
   }),

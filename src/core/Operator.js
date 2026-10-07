@@ -4,7 +4,7 @@ import { VIEW, PAL, INPUT } from '../config.js';
 import { drawText } from '../art/font.js';
 import { drawKnotRing } from '../art/knotwork.js';
 import { ROUTES } from '../art/routes.js';
-import { glow } from './util.js';
+import { glow, detail } from './util.js';
 import { CAL_TARGETS, CAL_NAMES } from '../input/Calibration.js';
 
 export class Operator {
@@ -122,6 +122,7 @@ export class Operator {
         `ROUTE ${ROUTES[g.route % ROUTES.length].name}`,
         `SOUND ${g.audio.status.toUpperCase()}${g.audio.ctx ? ' ' + g.audio.ctx.state.toUpperCase() : ''}`,
         `MOTION ${g.motion.label()}`,
+        `DETAIL ${detail.low ? 'LOW' : 'FULL'} FRAME ${detail.avg.toFixed(0)}MS`,
         `CAL ${this.cal ? `IN PROGRESS ${this.cal.step + 1}/4` : g.cal.label()}`,
       ];
       if (g.input.status) lines.push(g.input.status.toUpperCase().slice(0, 60));

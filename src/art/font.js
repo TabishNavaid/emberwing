@@ -106,6 +106,11 @@ function textSprite(str, scale, color, outline) {
   return c;
 }
 
+// makes a line's sprite ahead of time, so a scene can do it while it's still behind a fade
+export function warmText(str, { scale = 1, color = '#fff', outline = '#0b0f1a' } = {}) {
+  textSprite(str, scale, color, outline);
+}
+
 // y is the top of the letters
 export function drawText(ctx, str, x, y, { scale = 1, color = '#fff', outline = '#0b0f1a', align = 'left', alpha = 1 } = {}) {
   const s = textSprite(str, scale, color, outline);

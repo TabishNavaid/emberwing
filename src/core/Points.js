@@ -46,7 +46,9 @@ export class Points {
   update(dt) {
     this.pop = Math.max(0, this.pop - dt);
     for (const p of this.popups) p.t += dt;
-    this.popups = this.popups.filter((p) => p.t < 1.1);
+    let j = 0;
+    for (const p of this.popups) if (p.t < 1.1) this.popups[j++] = p;
+    this.popups.length = j;
   }
 
   // popups are in screen coords

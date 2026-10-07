@@ -3,7 +3,7 @@
 import { VIEW, DUR, PAL, FLOCK } from '../config.js';
 import { clamp, lerp, ease, invLerp, glow } from '../core/util.js';
 import { drawText, drawTextPop, textWidth, fitScale } from '../art/font.js';
-import { drawSpeck } from '../art/dragon.js';
+import { drawSpeck, warmUp } from '../art/dragon.js';
 import { flockOf, member, chirp, updateMember, drawMember } from '../art/flock.js';
 import { drawSky, SKY, makeStars, drawStars, drawSea, drawStone, makeCliff, drawCliff } from '../art/world.js';
 import { drawBaseAurora, drawRibbon, ribbonSkyPoints, RIBBON_COLORS, drawCelebrationStars } from '../art/aurora.js';
@@ -59,6 +59,7 @@ export class Home {
     this.ticked = false;
     // every 8th dragon home tonight gets the big celebration (its own scene, after this one)
     this.celebrate = this.count % FLOCK.CELEBRATE_EVERY === 0;
+    if (this.celebrate) warmUp(g.store.dragons, 'joy'); // get the celebration's sprites ready
     this.length = DUR.HOME;
     this.actAt = 3.5;
   }

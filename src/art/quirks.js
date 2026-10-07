@@ -39,9 +39,18 @@ export class Quirk {
     }
     return ev;
   }
+  // fills in and returns the same object every time, read it before the next call
   pose(flying = true) {
     const t = this.t;
-    const p = { dx: 0, dy: 0, rot: 0, sx: 1, sy: 1, blink: undefined, look: undefined, mood: undefined };
+    const p = (this.p ??= {});
+    p.dx = 0;
+    p.dy = 0;
+    p.rot = 0;
+    p.sx = 1;
+    p.sy = 1;
+    p.blink = undefined;
+    p.look = undefined;
+    p.mood = undefined;
     const k = this.act;
     if (this.kind === 'sparky' && k >= 0) {
       if (k < 0.32) {

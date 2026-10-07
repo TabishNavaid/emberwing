@@ -8,6 +8,13 @@ import { drawMember, chirp } from '../art/flock.js';
 const { W, H } = VIEW;
 const SPAWN_X = W + 40;
 
+// drops what fails ok() from the list in place (a new array every step was garbage)
+function keep(list, ok) {
+  let j = 0;
+  for (const it of list) if (ok(it)) list[j++] = it;
+  list.length = j;
+}
+
 // lives in the same world coordinates as the hoops
 export class Hazards {
   constructor(f, seed) {
@@ -134,7 +141,7 @@ export class Hazards {
         }
       }
     }
-    this.list = this.list.filter((it) => it.x > -40 && it.alpha > 0.02 && !(it.popT > 0.5));
+    keep(this.list, (it) => it.x > -40 && it.alpha > 0.02 && !(it.popT > 0.5));
     this.updateFire(g, dt);
     this.updateFriend(g, dt);
   }
@@ -262,7 +269,7 @@ export class Hazards {
       s.x += ((tg.x - s.x) / d) * v;
       s.y += ((tg.y - s.y) / d) * v;
     }
-    this.shots = this.shots.filter((s) => !s.dead);
+    keep(this.shots, (s) => !s.dead);
   }
 
   // a dragon from tonight's flock swoops across and pops everything on screen

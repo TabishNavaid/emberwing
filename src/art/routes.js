@@ -87,6 +87,22 @@ const seaStacks = {
 const SQUALL = [[0, '#141a24'], [0.55, '#262f3c'], [1, '#3c4756']];
 const CLEAR = [[0, '#2a4a8a'], [0.5, '#5a8ac8'], [0.82, '#e8b8a0'], [1, '#ffdca0']];
 export const RAINBOW = ['#ff6a6a', '#ffb04a', '#ffe86a', '#7ae07a', '#5ab0ff', '#9a7aff'];
+// the rainbow is a few thousand little additive squares, so it gets drawn once and reused
+let rainbow = null;
+function rainbowArc() {
+  if (!rainbow) {
+    let g;
+    [rainbow, g] = makeCanvas(W, SEA_Y + 36);
+    g.globalCompositeOperation = 'lighter';
+    g.globalAlpha = 0.22;
+    RAINBOW.forEach((c, i) => {
+      const r = 210 - i * 5;
+      g.fillStyle = c;
+      for (let a = Math.PI * 1.08; a < Math.PI * 1.92; a += 0.006) g.fillRect(Math.round(W * 0.5 + Math.cos(a) * r), Math.round(SEA_Y + 30 + Math.sin(a) * r * 0.72), 2, 4);
+    });
+  }
+  return rainbow;
+}
 const squall = {
   name: 'THROUGH THE SQUALL',
   setup(f, r) {
@@ -117,15 +133,10 @@ const squall = {
     if (clr > 0) drawRays(ctx, f.sunX, sunY - 60, s.t, '#fff4d0', 0.08 * clr * (1 - rise), 7, 360);
     if (f.swellFired) {
       // a rainbow over the sea at the swell
-      const k = s.swell * (1 - rise);
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      RAINBOW.forEach((c, i) => {
-        const r = 210 - i * 5;
-        ctx.globalAlpha = 0.22 * k;
-        ctx.fillStyle = c;
-        for (let a = Math.PI * 1.08; a < Math.PI * 1.92; a += 0.006) ctx.fillRect(Math.round(W * 0.5 + Math.cos(a) * r), Math.round(SEA_Y + 30 + Math.sin(a) * r * 0.72 + f.riseY), 2, 4);
-      });
+      ctx.globalAlpha = s.swell * (1 - rise);
+      ctx.drawImage(rainbowArc(), 0, Math.round(f.riseY));
       ctx.restore();
       drawRays(ctx, f.sunX, sunY, s.t, PAL.gold2, 0.18 * s.swell * (1 - rise) * (0.8 + 0.2 * g.beat.pulse), 11, 520);
     }

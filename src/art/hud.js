@@ -1,7 +1,7 @@
 // everything drawn over the flight that isn't the world: the score and stars, the hoop counter,
 // the lighthouse-to-home track, the instruction, and the arrows that teach steering
 import { VIEW, FLIGHT, PAL, POWER } from '../config.js';
-import { clamp, lerp, glow } from '../core/util.js';
+import { clamp, lerp, glow, makeCanvas } from '../core/util.js';
 import { drawText, drawTextPop, fitScale } from './font.js';
 import { drawKnotRing, drawKnotBand } from './knotwork.js';
 import { drawStarIcon } from './icons.js';
@@ -90,11 +90,22 @@ function drawCounter(ctx, f) {
 
 // lighthouse -> home track across the top. someone who glances over mid-flight gets
 // "it's flying home" without reading anything
+// the track's two bands are drawn once and reused, stamping them every frame was surprisingly slow
+const bands = {};
+function band(color) {
+  if (!bands[color]) {
+    const [c, g] = makeCanvas(188, 12);
+    drawKnotBand(g, 4, 6, 180, { color });
+    bands[color] = c;
+  }
+  return bands[color];
+}
+
 function drawJourney(ctx, f, p, t) {
   const x0 = 150, x1 = 330, y = 13;
   const px = Math.round(lerp(x0, x1, p));
-  drawKnotBand(ctx, x0, y, x1 - x0, { color: 'rgba(255,243,214,0.5)' });
-  if (px > x0) drawKnotBand(ctx, x0, y, px - x0);
+  ctx.drawImage(band('rgba(255,243,214,0.5)'), x0 - 4, y - 6);
+  if (px > x0) ctx.drawImage(band(PAL.gold), 0, 0, px - x0 + 4, 12, x0 - 4, y - 6, px - x0 + 4, 12);
   // tiny lighthouse
   ctx.fillStyle = '#e8e0cc';
   ctx.fillRect(x0 - 16, y - 6, 5, 12);

@@ -51,22 +51,28 @@ function sneeze(g, d, x, y, scale = 1, flip = false, quiet = false) {
   if (!quiet) g.audio.cue('sneeze');
 }
 
-// draws one member with its quirk on top of the scene's own pose
-export function drawMember(ctx, m, x, y, o = {}) {
+// draws one member with its quirk on top of the scene's own pose. opts gets reused (no garbage per
+// dragon per frame, the celebration draws a lot of them)
+const opts = {};
+export function drawMember(ctx, m, x, y, o) {
   const p = m.q.pose(o.flying ?? true);
   const flip = !!o.flip;
   const s = o.scale ?? 1;
   const dx = (flip ? -p.dx : p.dx) * s;
   const dy = p.dy * s;
-  drawDragon(ctx, x + dx, y + dy, m.d, {
-    ...o,
-    rot: (o.rot ?? 0) + (flip ? -p.rot : p.rot),
-    sx: (o.sx ?? 1) * p.sx,
-    sy: (o.sy ?? 1) * p.sy,
-    mood: p.mood ?? o.mood,
-    look: p.look ?? o.look,
-    blink: p.blink ?? o.blink,
-  });
+  opts.scale = o.scale;
+  opts.flip = o.flip;
+  opts.glow = o.glow;
+  opts.life = o.life;
+  opts.flap = o.flap;
+  opts.wing = o.wing;
+  opts.rot = (o.rot ?? 0) + (flip ? -p.rot : p.rot);
+  opts.sx = (o.sx ?? 1) * p.sx;
+  opts.sy = (o.sy ?? 1) * p.sy;
+  opts.mood = p.mood ?? o.mood;
+  opts.look = p.look ?? o.look;
+  opts.blink = p.blink ?? o.blink;
+  drawDragon(ctx, x + dx, y + dy, m.d, opts);
   if (m.chirpT >= 0) {
     const n = noseOffset(m.d, s, flip);
     drawChirp(ctx, x + dx + n.x, y + dy + n.y, m.chirpT / CHIRP, flip);

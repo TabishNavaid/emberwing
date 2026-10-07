@@ -1,13 +1,13 @@
 // the flight: the dragon follows the light through the level's hoops, past enemies and power-ups,
 // with the brass swell 2/3 of the way in and a climb into the aurora at the end
-import { VIEW, DUR, FLIGHT, PAL, MUSIC, MOTION, INPUT, LEVELS, SCORE, ENEMY, POWER } from '../config.js';
+import { VIEW, DUR, FLIGHT, PAL, MUSIC, MOTION, INPUT, LEVELS, SCORE, ENEMY, POWER, FLOCK } from '../config.js';
 import { Points } from '../core/Points.js';
 import { Hazards } from '../core/Hazards.js';
 import { drawPowerIcon, POWER_COLORS } from '../art/critters.js';
-import { clamp, lerp, approach, glow, ease, mix, invLerp, mulberry32 } from '../core/util.js';
+import { clamp, lerp, approach, glow, ease, mix, invLerp, mulberry32, detail, Trail } from '../core/util.js';
 import { drawText, drawTextPop } from '../art/font.js';
 import { drawKnotRing } from '../art/knotwork.js';
-import { drawDragon, drawSpeck } from '../art/dragon.js';
+import { drawDragon, drawSpeck, warmUp } from '../art/dragon.js';
 import { flockOf, member, chirp, updateMember, drawMember } from '../art/flock.js';
 import { makeStars, drawWind, drawRune } from '../art/world.js';
 import { ROUTES, RAINBOW } from '../art/routes.js';
@@ -56,7 +56,7 @@ export class Flight {
     this.squash = 0;
     this.path = [];
     this.pathT = 0;
-    this.trail = [];
+    this.trail = new Trail(90);
     this.swellFired = false;
     // scene objects get reused every run. done used to stay true after the first guest, so every
     // later flight never handed off to home (and never saved the ribbon)
@@ -79,7 +79,10 @@ export class Flight {
     // the swell brings out everyone who's already home tonight. nobody home yet = nobody comes,
     // the first dragon of the night does this part on its own
     const { near, far } = flockOf(g.store);
-    this.flock = near.reverse().map((d, i) => ({ ...member(d, i), x: -60 - i * 26, y: 50 + ((i * 37) % 160), ox: WEDGE[i][0], oy: WEDGE[i][1], trail: [] }));
+    // make the flock's sprites before the swell, and everyone's if this guest sets off a celebration
+    warmUp(near, 'fly');
+    if ((g.store.count + 1) % FLOCK.CELEBRATE_EVERY === 0) warmUp(g.store.dragons, 'joy');
+    this.flock = near.reverse().map((d, i) => ({ ...member(d, i), x: -60 - i * 26, y: 50 + ((i * 37) % 160), ox: WEDGE[i][0], oy: WEDGE[i][1], trail: new Trail(40) }));
     this.distant = far.map((d, i) => ({ d, x: -20 - ((i * 53) % 200), y: 18 + ((i * 29) % 70), ph: i * 1.7, sp: 0.9 + ((i * 7) % 5) * 0.06 }));
 
     // hoop 1 is the tutorial hoop: it parks above or below the dragon and waits to be flown through.
@@ -421,13 +424,11 @@ export class Flight {
       updateMember(g, f, dt, f.x, f.y, { scale: 0.72 });
       // light trails so the swoop-in reads from across the room
       if (on) {
-        f.trail.push({ x: this.camX + f.x, y: f.y });
-        if (f.trail.length > 40) f.trail.shift();
+        f.trail.push(this.camX + f.x, f.y);
       }
     }
 
-    this.trail.push({ x: this.camX + this.ex, y: this.ey });
-    if (this.trail.length > 90) this.trail.shift();
+    this.trail.push(this.camX + this.ex, this.ey);
     if (!this.tutorial) this.pathT -= dt;
     if (this.pathT <= 0) {
       this.pathT = this.T / 48; // ~48 points is plenty for a ribbon and keeps localStorage small
@@ -489,21 +490,25 @@ export class Flight {
     for (const ring of this.rings) this.drawRing(g, ctx, ring);
     this.hz.draw(ctx, t);
     for (const f of this.flock) {
-      for (let i = 1; i < f.trail.length; i++) {
-        const k = i / f.trail.length;
+      const tr = f.trail;
+      for (let i = 1; i < tr.len; i += detail.low ? 2 : 1) {
+        const k = i / tr.len;
         ctx.globalAlpha = k * 0.6;
         ctx.fillStyle = f.d.colors.wingLit;
-        ctx.fillRect(Math.round(f.trail[i].x - this.camX - 10), Math.round(f.trail[i].y + 3), 2, 1 + Math.round(k * 2));
+        ctx.fillRect(Math.round(tr.xAt(i) - this.camX - 10), Math.round(tr.yAt(i) + 3), 2, 1 + Math.round(k * 2));
       }
       ctx.globalAlpha = 1;
     }
     if (this.swellFired && this.swellT < 1.2) {
-      // shockwave rings, gold then teal
+      // shockwave rings, gold then teal. only the part on screen gets drawn
+      const a = this.toWorld(-8, -8);
+      const b = this.toWorld(W + 8, H + 8);
+      const clip = { x0: a.x, y0: a.y, x1: b.x, y1: b.y };
       for (const [delay, color] of [[0, PAL.gold], [0.15, PAL.teal]]) {
         const k = clamp((this.swellT - delay) / 0.9);
         if (k <= 0 || k >= 1) continue;
         ctx.globalAlpha = 1 - k;
-        drawKnotRing(ctx, this.swellX, this.swellY, 20 + ease.outCubic(k) * 300, 1, { lobes: 16, amp: 5, width: 2, on: color });
+        drawKnotRing(ctx, this.swellX, this.swellY, 20 + ease.outCubic(k) * 300, 1, { lobes: 16, amp: 5, width: 2, on: color, clip, density: detail.low ? 0.35 : 0.65 });
         ctx.globalAlpha = 1;
       }
     }
@@ -573,10 +578,10 @@ export class Flight {
   drawTrail(ctx, conf) {
     // this trail is what becomes the aurora ribbon at home, so it should look like one
     const tr = this.trail;
-    for (let i = 1; i < tr.length; i++) {
-      const k = i / tr.length;
-      const x = tr[i].x - this.camX - 12;
-      const y = tr[i].y + 3 + Math.sin(i * 0.5 + this.t * 6) * (1 - k) * 2;
+    for (let i = 1; i < tr.len; i++) {
+      const k = i / tr.len;
+      const x = tr.xAt(i) - this.camX - 12;
+      const y = tr.yAt(i) + 3 + Math.sin(i * 0.5 + this.t * 6) * (1 - k) * 2;
       const w = 1 + Math.round(k * 3);
       ctx.globalAlpha = k * (0.45 + conf * 0.45);
       // a speed burst leaves a rainbow trail
@@ -607,8 +612,12 @@ export class Flight {
     sy *= 1 - 0.1 * w;
     sxw *= 1 + 0.08 * w;
     if (this.cheerT > 0) y -= Math.sin((this.cheerT / 0.4) * Math.PI) * 5; // little hop
-    // barrel roll: squash the body through zero and out upside down, reads as a roll in 2d
-    if (this.rollT > 0) sy *= Math.cos((1 - this.rollT / 0.7) * Math.PI * 2);
+    // barrel roll: squash the body flat and out upside down, reads as a roll in 2d. it used to go
+    // all the way through zero, and for a few frames the dragon vanished and only its sparkles showed
+    if (this.rollT > 0) {
+      const roll = Math.cos((1 - this.rollT / 0.7) * Math.PI * 2);
+      sy *= Math.sign(roll || 1) * Math.max(Math.abs(roll), FLIGHT.ROLL_THIN);
+    }
     // bumped: a dizzy tumble (just a wobble in reduced motion)
     const tumble = this.tumbleT > 0 ? 1 - this.tumbleT / ENEMY.TUMBLE : 0;
     if (this.tumbleT > 0) rot += this.gentle ? Math.sin(tumble * Math.PI * 4) * 0.35 : tumble * Math.PI * 2;
@@ -628,6 +637,7 @@ export class Flight {
     const o = { mood, glow: 2, rot, sx: sxw, sy, life: t, ...(glide ? { wing: 'mid' } : { flap: this.flapPh }) };
     if (busy) drawDragon(ctx, x, y, this.d, o);
     else drawMember(ctx, this.me, x, y, o);
+    this.drawn = { x, y, sy, t }; // the smoothness test checks the dragon really got drawn every frame
     if (this.shield) {
       // a bubble that shimmers around it until it takes a hit
       ctx.fillStyle = '#c8f0ff';

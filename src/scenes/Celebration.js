@@ -1,9 +1,9 @@
 // every 8th dragon home: everyone saved tonight floods the screen, fireworks, a fanfare, this round's
 // names, and a new star that stays in the sky for the rest of the night
-import { VIEW, DUR, PAL, FLOCK } from '../config.js';
-import { clamp, lerp, ease, glow } from '../core/util.js';
-import { drawText, drawTextPop, textWidth, fitScale } from '../art/font.js';
-import { drawDragon } from '../art/dragon.js';
+import { VIEW, DUR, PAL, FLOCK, DETAIL } from '../config.js';
+import { clamp, lerp, ease, glow, detail } from '../core/util.js';
+import { drawText, drawTextPop, textWidth, fitScale, warmText } from '../art/font.js';
+import { drawDragon, drawSpeck } from '../art/dragon.js';
 import { flockOf, member, chirp, updateMember, drawMember } from '../art/flock.js';
 import { drawSky, SKY, makeStars, drawStars } from '../art/world.js';
 import { drawBaseAurora, drawFullAurora, drawCelebrationStar, drawCelebrationStars, celebrationStarSpot } from '../art/aurora.js';
@@ -33,6 +33,10 @@ export class Celebration {
     this.booms = 0;
     this.born = false;
     this.round.forEach((r, i) => chirp(this.dragons[this.dragons.length - this.round.length + i], 1 + i * 0.25));
+    // the names and the big line, made now while the fade from home still covers the screen
+    for (const r of this.round) warmText(r.d.name, { scale: 2, color: PAL.cream });
+    const msg = `${count} DRAGONS HOME!`;
+    warmText(msg, { scale: fitScale(msg, W - 12, 6, 4), color: PAL.gold2 });
     g.audio.section('celebration');
     g.audio.cue('fanfare');
     g.cam.shake(2.5);
@@ -43,7 +47,8 @@ export class Celebration {
   }
 
   // spiral position of dragon i: they swirl in from off screen, circle, then fly off at the end
-  pos(i, t) {
+  // fills in out (reused every frame, a big flock made a lot of garbage otherwise)
+  pos(i, t, out = {}) {
     const n = this.dragons.length;
     const k = Math.sqrt((i + 0.5) / n); // 0 in the middle .. 1 at the edge
     const spin = this.gentle ? 0.35 : 0.7;
@@ -51,14 +56,22 @@ export class Celebration {
     const swirlIn = ease.outCubic(clamp(t / 1.6));
     const flyOff = t > 6.6 ? ease.inCubic(clamp((t - 6.6) / 1.0)) : 0;
     const r = (40 + k * 190) * lerp(2.2, 1, swirlIn) * (1 + flyOff * 1.6);
-    return { x: C.x + Math.cos(a) * r, y: C.y + Math.sin(a) * r * 0.5, z: Math.sin(a), flip: Math.cos(a + 0.3) < 0 };
+    out.x = C.x + Math.cos(a) * r;
+    out.y = C.y + Math.sin(a) * r * 0.5;
+    out.z = Math.sin(a);
+    out.flip = Math.cos(a + 0.3) < 0;
+    return out;
   }
 
   update(g, dt) {
     const t = this.t;
+    const p = (this.p ??= {});
+    const o = (this.uo ??= { quiet: true });
+    o.scale = this.scale;
     this.dragons.forEach((m, i) => {
-      const p = this.pos(i, t);
-      updateMember(g, m, dt, p.x, p.y, { scale: this.scale, flip: p.flip, quiet: true });
+      this.pos(i, t, p);
+      o.flip = p.flip;
+      updateMember(g, m, dt, p.x, p.y, o);
     });
     // fireworks in the dragons' own colors, at most ~2 a second (fewer in reduced motion)
     this.boomT -= dt;
@@ -96,11 +109,31 @@ export class Celebration {
     drawCelebrationStars(ctx, this.nth - 1, t);
 
     // everyone tonight, far side of the spiral first
-    const drawers = this.dragons.map((m, i) => {
-      const p = this.pos(i, t);
-      return { z: p.z, f: () => drawMember(ctx, m, p.x, p.y, { mood: 'joy', flap: t * 2.8 + i * 0.17, life: t, glow: 2, scale: this.scale * (0.85 + 0.15 * (p.z + 1) / 2), flip: p.flip }) };
-    });
-    drawers.sort((a, b) => a.z - b.z).forEach((d) => d.f());
+    // low detail: the newest DETAIL.CROWD fly up close, everyone else is a speck (still all there)
+    const n = this.dragons.length;
+    const close = detail.low ? n - DETAIL.CROWD : 0;
+    const ps = (this.ps ??= []);
+    const order = (this.order ??= []);
+    order.length = n;
+    for (let i = 0; i < n; i++) {
+      ps[i] = this.pos(i, t, ps[i]);
+      order[i] = i;
+    }
+    order.sort((a, b) => ps[a].z - ps[b].z);
+    const o = (this.mo ??= { mood: 'joy', glow: 2 });
+    o.life = t;
+    for (const i of order) {
+      const p = ps[i];
+      if (i < close) {
+        drawSpeck(ctx, p.x, p.y, this.dragons[i].d, t + i);
+        continue;
+      }
+      o.flap = t * 2.8 + i * 0.17;
+      o.scale = this.scale * (0.85 + 0.15 * (p.z + 1) / 2);
+      o.flip = p.flip;
+      drawMember(ctx, this.dragons[i], p.x, p.y, o);
+    }
+    this.drawn = { count: n, t }; // the smoothness test reads this
     g.particles.draw(ctx);
 
     const msg = `${this.count} DRAGONS HOME!`;

@@ -63,6 +63,7 @@ export const FLIGHT = {
   ZOOM_START: 1.18,
   ZOOM_END: 0.86,
   CAM_FOLLOW: 0.12, // how much the camera drifts toward the dragon vertically, 0 = locked
+  ROLL_THIN: 0.25, // a barrel roll never squashes the dragon thinner than this, so it never disappears
 };
 
 // three levels, and picking one on the attract screen is how a run starts. hatchling is big slow
@@ -182,6 +183,16 @@ export const LOOP = {
   MAX_STEP: 1 / 30, // biggest single simulation step
   MAX_CATCHUP: 0.25, // most real time we'll catch up in one frame. past this (frozen or
   // backgrounded tab) we just drop the rest instead of jumping the scene ahead
+};
+
+// automatic low detail for a weak laptop. when frames stay slow the expensive extras (particles,
+// aurora strips, rays, trails, a huge celebration flock) get toned down. the game plays the same
+export const DETAIL = {
+  SLOW_MS: 30, // average frame time that counts as slow (about 33 fps)
+  SLOW_FOR: 1.5, // seconds of slow frames before switching to low detail
+  FAST_MS: 18, // back to full detail once frames are this quick...
+  FAST_FOR: 8, // ...for this long, and only on the start screen so it doesn't flicker mid-run
+  CROWD: 30, // in low detail the celebration draws this many dragons up close, the rest as specks
 };
 
 // reduced motion (OS setting or operator key G)

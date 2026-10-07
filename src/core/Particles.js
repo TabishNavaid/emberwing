@@ -1,20 +1,23 @@
 // sparks, glows and confetti. kinds: 'px' plain square, 'spark' square + glow, 'glow' soft blob
-import { glow } from './util.js';
+import { glow, detail } from './util.js';
 
 // layer lets flight draw some particles inside the zoomed camera and some outside
 export class Particles {
   constructor() {
     this.list = [];
+    this.pool = []; // dead particles get reused instead of making new ones (less garbage)
   }
   clear() {
+    for (const p of this.list) this.pool.push(p);
     this.list.length = 0;
   }
   add(p) {
-    this.list.push({
-      x: 0, y: 0, vx: 0, vy: 0, life: 1, max: 1, size: 1, color: '#fff',
-      drag: 0, grav: 0, kind: 'px', layer: 0, ...p,
-      max: p.life ?? 1,
-    });
+    const q = this.pool.pop() ?? {};
+    q.x = 0; q.y = 0; q.vx = 0; q.vy = 0; q.life = 1; q.size = 1; q.color = '#fff';
+    q.drag = 0; q.grav = 0; q.kind = 'px'; q.layer = 0;
+    for (const k in p) q[k] = p[k];
+    q.max = p.life ?? 1;
+    this.list.push(q);
   }
   burst(x, y, n, opts, rng) {
     const { speed = 60, spread = Math.PI * 2, angle = 0, colors = ['#fff'], life = 0.9, size = 1, ...rest } = opts;
@@ -37,6 +40,7 @@ export class Particles {
         // swap-remove, order doesn't matter
         L[i] = L[L.length - 1];
         L.pop();
+        this.pool.push(p);
         continue;
       }
       const d = Math.exp(-p.drag * dt);
@@ -47,7 +51,11 @@ export class Particles {
     }
   }
   draw(ctx, layer = 0) {
-    for (const p of this.list) {
+    const low = detail.low;
+    for (let i = 0; i < this.list.length; i++) {
+      // low detail draws every other particle and no glow halos, the game still moves them all
+      if (low && i % 2) continue;
+      const p = this.list[i];
       if (p.layer !== layer) continue;
       const t = p.life / p.max;
       const { x, y } = p;
@@ -59,7 +67,7 @@ export class Particles {
         ctx.globalAlpha = Math.min(1, t * 2.5);
         ctx.fillRect(Math.round(x - s / 2), Math.round(y - s / 2), s, s);
         ctx.globalAlpha = 1;
-        if (p.kind === 'spark') glow(ctx, x, y, 4 + s * 2, p.color, t * 0.5);
+        if (p.kind === 'spark' && !low) glow(ctx, x, y, 4 + s * 2, p.color, t * 0.5);
       }
     }
   }

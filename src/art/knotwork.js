@@ -10,12 +10,15 @@ function stamp(ctx, x, y, w) {
 // two strands along a path. pt(k, u) -> [x, y, f] for strand k at position u.
 // pass 1 dark edges, pass 2 colour, then at every crossing the "over" strand gets
 // redrawn on top (alternating), which is what makes it read as woven
-function weave(ctx, pt, { len, step, closed, crossAt, span, w, colorAt, edge }) {
+// clip: { x0, y0, x1, y1 } skips stamps outside it. the swell's shockwave rings are mostly off
+// screen and stamping all of them was the slowest thing in the whole game
+function weave(ctx, pt, { len, step, closed, crossAt, span, w, colorAt, edge, clip }) {
+  const off = clip ? (x, y) => x < clip.x0 || x > clip.x1 || y < clip.y0 || y > clip.y1 : () => false;
   const us = [];
   for (let u = 0; closed ? u < len : u <= len; u += step) us.push(u);
   ctx.fillStyle = edge;
-  for (let k = 0; k < 2; k++) for (const u of us) { const [x, y] = pt(k, u); stamp(ctx, x, y, w + 2); }
-  for (let k = 0; k < 2; k++) for (const u of us) { const [x, y, f] = pt(k, u); ctx.fillStyle = colorAt(f); stamp(ctx, x, y, w); }
+  for (let k = 0; k < 2; k++) for (const u of us) { const [x, y] = pt(k, u); if (!off(x, y)) stamp(ctx, x, y, w + 2); }
+  for (let k = 0; k < 2; k++) for (const u of us) { const [x, y, f] = pt(k, u); if (off(x, y)) continue; ctx.fillStyle = colorAt(f); stamp(ctx, x, y, w); }
   crossAt.forEach((c, i) => {
     const k = i % 2;
     const run = (pad, width, fill) => {
@@ -24,6 +27,7 @@ function weave(ctx, pt, { len, step, closed, crossAt, span, w, colorAt, edge }) 
         if (closed) v = (v + len) % len;
         else if (v < 0 || v > len) continue;
         const [x, y, f] = pt(k, v);
+        if (off(x, y)) continue;
         ctx.fillStyle = fill ?? colorAt(f);
         stamp(ctx, x, y, width);
       }
@@ -33,13 +37,14 @@ function weave(ctx, pt, { len, step, closed, crossAt, span, w, colorAt, edge }) 
   });
 }
 
-// progress 0..1 fills clockwise from 12 o'clock
+// progress 0..1 fills clockwise from 12 o'clock. o.density = stamps per px of ring, big rings can
+// get away with less (a stamp every 2px still looks solid)
 export function drawKnotRing(ctx, cx, cy, r, progress = 1, o = {}) {
   const lobes = o.lobes ?? 8;
   const amp = o.amp ?? Math.max(2, r * 0.14);
   const on = o.on ?? '#ffc94a';
   const off = o.off ?? 'rgba(255,255,255,0.18)';
-  const N = Math.max(64, Math.round(r * 2 * Math.PI * 1.3));
+  const N = Math.max(64, Math.round(r * 2 * Math.PI * (o.density ?? 1.3)));
   const crossings = lobes * 2;
   weave(ctx, (k, i) => {
     const th = (i / N) * TAU;
@@ -54,6 +59,7 @@ export function drawKnotRing(ctx, cx, cy, r, progress = 1, o = {}) {
     w: o.width ?? 2,
     colorAt: (f) => (f <= progress ? on : off),
     edge: o.edge ?? '#0b0f1a',
+    clip: o.clip,
   });
 }
 

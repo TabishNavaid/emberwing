@@ -12,12 +12,41 @@ export const ease = {
   inOutSine: (t) => -(Math.cos(Math.PI * t) - 1) / 2,
 };
 
+// low detail is on when the laptop can't keep up (see DETAIL in config.js and the loop in main.js).
+// the drawing code reads this directly so it doesn't have to be passed down everywhere
+export const detail = { low: false, avg: 1000 / 60, slowT: 0, fastT: 0 };
+
 // exponential ease toward a target, same feel at 30 or 144 fps
 export const approach = (cur, target, rate, dt) => cur + (target - cur) * (1 - Math.exp(-rate * dt));
 
 // hover-and-hold instead of clicking, a mocap prop can't click. drains a bit faster than it
 // fills so brushing past doesn't start anything
 export const dwell = (progress, hover, dt, seconds) => clamp(progress + (hover ? 1 : -1.5) * (dt / seconds));
+
+// the last n points of something (a trail), in a fixed buffer that gets written over. pushing
+// a new {x, y} object every frame made enough garbage for regular collection pauses
+export class Trail {
+  constructor(n) {
+    this.x = new Float64Array(n);
+    this.y = new Float64Array(n);
+    this.n = n;
+    this.len = 0;
+    this.head = 0;
+  }
+  push(x, y) {
+    this.x[this.head] = x;
+    this.y[this.head] = y;
+    this.head = (this.head + 1) % this.n;
+    this.len = Math.min(this.len + 1, this.n);
+  }
+  // point i, 0 = the oldest
+  xAt(i) {
+    return this.x[(this.head - this.len + i + this.n) % this.n];
+  }
+  yAt(i) {
+    return this.y[(this.head - this.len + i + this.n) % this.n];
+  }
+}
 
 export function mulberry32(seed) {
   let a = seed >>> 0;
@@ -39,6 +68,8 @@ function hexToRgb(hex) {
   if (!c) {
     const n = parseInt(hex.slice(1), 16);
     c = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    // mix() makes a new color most frames, so don't let this grow all night
+    if (rgbCache.size > 2000) rgbCache.clear();
     rgbCache.set(hex, c);
   }
   return c;
@@ -57,11 +88,13 @@ export function rgba(hex, a) {
   return `rgba(${r},${g},${b},${a})`;
 }
 
-export function makeCanvas(w, h) {
+// readBack: we'll call getImageData on it, so keep it on the cpu (reading pixels back from the gpu
+// stalls the whole frame)
+export function makeCanvas(w, h, readBack = false) {
   const c = document.createElement('canvas');
   c.width = Math.max(1, Math.ceil(w));
   c.height = Math.max(1, Math.ceil(h));
-  const ctx = c.getContext('2d');
+  const ctx = c.getContext('2d', { willReadFrequently: readBack });
   ctx.imageSmoothingEnabled = false;
   return [c, ctx];
 }
@@ -100,6 +133,7 @@ function glowSprite(color, r) {
     grad.addColorStop(1, rgba(color, 0));
     g.fillStyle = grad;
     g.fillRect(0, 0, r * 2, r * 2);
+    if (glowCache.size > 400) glowCache.clear();
     glowCache.set(key, c);
   }
   return c;

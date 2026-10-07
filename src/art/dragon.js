@@ -13,7 +13,6 @@ const ANCHOR_Y = 46;
 const OX = 6; // room for the wings when they're up
 const OY = 12;
 
-const cache = new Map();
 
 function ellipse(g, x, y, rx, ry, color, rot = 0) {
   g.fillStyle = color;
@@ -187,9 +186,19 @@ function drawHeadTop(g, d, C) {
   }
 }
 
+// the two in-between canvases get reused for every sprite, only the finished one is kept (making
+// three canvases per sprite was a big part of the garbage behind the celebration's collection pauses)
+let scratch = null;
 function render(d, o) {
   const C = d.colors;
-  const [raw, g] = makeCanvas(SPRITE_W, SPRITE_H);
+  scratch ??= { raw: makeCanvas(SPRITE_W, SPRITE_H, true), sil: makeCanvas(SPRITE_W, SPRITE_H) };
+  const [raw, g] = scratch.raw;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalAlpha = 1;
+  g.globalCompositeOperation = 'source-over';
+  g.clearRect(0, 0, SPRITE_W, SPRITE_H);
+  g.lineCap = 'butt';
+  g.lineWidth = 1;
   g.imageSmoothingEnabled = true;
   g.translate(OX, OY);
 
@@ -316,7 +325,8 @@ function render(d, o) {
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.putImageData(img, 0, 0);
 
-  const [sil, sg] = makeCanvas(SPRITE_W, SPRITE_H);
+  const [sil, sg] = scratch.sil;
+  sg.globalCompositeOperation = 'copy';
   sg.drawImage(raw, 0, 0);
   sg.globalCompositeOperation = 'source-in';
   sg.fillStyle = C.outline;
@@ -327,29 +337,39 @@ function render(d, o) {
   return outC;
 }
 
-function frame(d, o) {
-  const opts = {
-    mood: o.mood ?? 'curious',
-    wing: o.wing ?? 'folded',
-    glow: o.glow ?? 2,
-    blink: !!o.blink,
-    look: o.look ?? 0,
-  };
-  const key = `${d.key}|${opts.mood}|${opts.wing}|${opts.glow}|${opts.blink}|${opts.look}`;
-  let c = cache.get(key);
+// every dragon keeps its own sprites, keyed by a number for the pose. building a string key for
+// every dragon every frame made enough garbage to cause collection pauses in the celebration
+const MOODS = ['curious', 'scared', 'happy', 'joy', 'fly'];
+const POSES = ['folded', 'up', 'mid', 'down', 'burst'];
+const made = []; // [sprites, key] oldest first, so a whole night of dragons can't eat all the memory
+function frame(d, mood = 'curious', wing = 'folded', glow = 2, blink = false, look = 0) {
+  const key = (((MOODS.indexOf(mood) * 5 + POSES.indexOf(wing)) * 3 + glow) * 2 + (blink ? 1 : 0)) * 3 + (look + 1);
+  const sprites = (d.sprites ??= new Map());
+  let c = sprites.get(key);
   if (!c) {
-    c = render(d, opts);
-    // a whole night of dragons adds up, drop the oldest frames once there are a lot
-    if (cache.size > 1600) {
-      let n = 0;
-      for (const k of cache.keys()) {
-        cache.delete(k);
-        if (++n >= 400) break;
-      }
-    }
-    cache.set(key, c);
+    c = render(d, { mood, wing, glow, blink, look });
+    sprites.set(key, c);
+    made.push([sprites, key]);
+    if (made.length > 1600) for (const [m, k] of made.splice(0, 400)) m.delete(k);
   }
   return c;
+}
+
+// sprites get made the first time they're drawn. fine for one dragon, but the celebration with
+// 90 of them froze for most of a second. scenes queue up who's coming and a few get made each frame
+const warmQueue = [];
+// the poses everyone needs first, then blinks, then the shy ones glancing away (see quirks.js)
+export function warmUp(dragons, mood) {
+  const wings = ['up', 'mid', 'down'];
+  for (const blink of [false, true]) for (const wing of wings) for (const d of dragons) warmQueue.push([d, { mood, wing, glow: 2, blink }]);
+  for (const wing of wings) for (const d of dragons) if (d.quirk === 'shy') warmQueue.push([d, { mood: 'curious', wing, glow: 2, look: -1 }]);
+}
+export function warmSome(ms) {
+  const end = performance.now() + ms;
+  while (warmQueue.length && performance.now() < end) {
+    const [d, o] = warmQueue.shift();
+    frame(d, o.mood, o.wing, o.glow, !!o.blink, o.look);
+  }
 }
 
 export function flapPose(phase) {
@@ -378,7 +398,8 @@ export function blinkAt(t, seed = 0) {
 // x/y is the middle of the body. sx/sy = squash and stretch.
 // flap: wingbeat phase, picks the wing pose and stretches the body on the downstroke.
 // life: a clock for automatic blinking
-export function drawDragon(ctx, x, y, d, o = {}) {
+const NONE = {};
+export function drawDragon(ctx, x, y, d, o = NONE) {
   let sx = o.sx ?? 1;
   let sy = o.sy ?? 1;
   if (o.flap !== undefined) {
@@ -386,11 +407,9 @@ export function drawDragon(ctx, x, y, d, o = {}) {
     sy *= 1 + f * 0.06;
     sx *= 1 - f * 0.05;
   }
-  const img = frame(d, {
-    ...o,
-    wing: o.flap !== undefined ? flapPose(o.flap) : o.wing,
-    blink: o.blink ?? (o.life !== undefined && blinkAt(o.life, (d.seed % 97) / 7)),
-  });
+  const wing = o.flap !== undefined ? flapPose(o.flap) : o.wing;
+  const blink = o.blink ?? (o.life !== undefined && blinkAt(o.life, (d.seed % 97) / 7));
+  const img = frame(d, o.mood, wing, o.glow, !!blink, o.look);
   const s = (o.scale ?? 1) * d.size;
   ctx.save();
   ctx.translate(Math.round(x), Math.round(y));

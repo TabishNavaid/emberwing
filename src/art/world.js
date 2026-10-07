@@ -1,7 +1,7 @@
 // scenery every scene shares, all drawn in code: sky, stars, sea, cliffs, the lighthouse, standing
 // stones, sea stacks, clouds, wind, rays and fog
 import { VIEW, PAL } from '../config.js';
-import { makeCanvas, mix, mulberry32, clamp, TAU, glow, stampLine, disc, rgba } from '../core/util.js';
+import { makeCanvas, mix, mulberry32, clamp, TAU, glow, stampLine, disc, rgba, detail } from '../core/util.js';
 
 const { W, H } = VIEW;
 
@@ -233,48 +233,69 @@ export function drawStone(ctx, x, y, h, w, rune, glowAmt = 0) {
   if (glowAmt > 0.05) glow(ctx, x, y - h * 0.5, 10 + h * 0.2, PAL.teal, glowAmt * 0.6);
 }
 
-const stackCache = new Map();
-export function drawStack(ctx, x, baseY, w, h, seed = 1, colors = {}) {
-  const key = `${w}|${h}|${seed}|${colors.c1}`;
-  let c = stackCache.get(key);
-  if (!c) {
-    const r = mulberry32(seed);
+// stacks and clouds change color every frame as the sky warms up. caching a canvas per color
+// leaked thousands of canvases a flight (the laptop ran out of memory and hung after a few guests),
+// so only the shapes get cached, as white masks, and get colored in on the way to the screen
+const masks = new Map();
+function mask(key, w, h, paint) {
+  let m = masks.get(key);
+  if (!m) {
     let g;
-    [c, g] = makeCanvas(w + 8, h + 6);
-    const c1 = colors.c1 ?? '#233044';
-    const c2 = colors.c2 ?? '#34465f';
-    const cg = colors.grass ?? '#3d6b58';
+    [m, g] = makeCanvas(w, h);
+    g.fillStyle = '#fff';
+    paint(g);
+    // every flight has its own random clouds and stacks, so old shapes go once there are lots
+    if (masks.size > 300) for (const k of [...masks.keys()].slice(0, 100)) masks.delete(k);
+    masks.set(key, m);
+  }
+  return m;
+}
+let tinter = null;
+function drawTinted(ctx, m, color, x, y) {
+  if (!tinter || tinter[0].width < m.width || tinter[0].height < m.height) {
+    tinter = makeCanvas(Math.max(m.width, tinter?.[0].width ?? 0), Math.max(m.height, tinter?.[0].height ?? 0));
+  }
+  const [c, g] = tinter;
+  g.globalCompositeOperation = 'copy';
+  g.drawImage(m, 0, 0);
+  g.globalCompositeOperation = 'source-in';
+  g.fillStyle = color;
+  g.fillRect(0, 0, m.width, m.height);
+  ctx.drawImage(c, 0, 0, m.width, m.height, x, y, m.width, m.height);
+}
+
+// a sea stack: body, the lit side, and the grass on top, each its own mask
+export function drawStack(ctx, x, baseY, w, h, seed = 1, colors = {}) {
+  const key = `${w}|${h}|${seed}`;
+  const paint = (part) => (g) => {
+    const r = mulberry32(seed);
     const ph = r() * TAU;
     for (let i = 0; i < h; i++) {
       const k = i / h;
       const ww = Math.round(w * (1 - k * 0.35) + Math.sin(i * 0.25 + ph) * 2 + (r() < 0.08 ? 2 : 0));
       const x0 = Math.round((w + 8 - ww) / 2 + Math.sin(i * 0.05 + ph) * 2);
-      g.fillStyle = c1;
-      g.fillRect(x0, h + 6 - i, ww, 1);
-      g.fillStyle = c2;
-      g.fillRect(x0, h + 6 - i, Math.max(1, Math.round(ww * 0.28)), 1);
+      if (part === 'body') g.fillRect(x0, h + 6 - i, ww, 1);
+      else if (part === 'lit') g.fillRect(x0, h + 6 - i, Math.max(1, Math.round(ww * 0.28)), 1);
     }
-    g.fillStyle = cg;
-    const topW = Math.round(w * 0.65);
-    g.fillRect(Math.round((w + 8 - topW) / 2), 5, topW, 3);
-    g.fillRect(Math.round((w + 8 - topW) / 2) + 2, 4, topW - 4, 1);
-    stackCache.set(key, c);
-  }
-  ctx.drawImage(c, Math.round(x - c.width / 2), Math.round(baseY - c.height));
+    if (part === 'grass') {
+      const topW = Math.round(w * 0.65);
+      g.fillRect(Math.round((w + 8 - topW) / 2), 5, topW, 3);
+      g.fillRect(Math.round((w + 8 - topW) / 2) + 2, 4, topW - 4, 1);
+    }
+  };
+  const left = Math.round(x - (w + 8) / 2);
+  const top = Math.round(baseY - (h + 6));
+  drawTinted(ctx, mask(key + 'body', w + 8, h + 6, paint('body')), colors.c1 ?? '#233044', left, top);
+  drawTinted(ctx, mask(key + 'lit', w + 8, h + 6, paint('lit')), colors.c2 ?? '#34465f', left, top);
+  drawTinted(ctx, mask(key + 'grass', w + 8, h + 6, paint('grass')), colors.grass ?? '#3d6b58', left, top);
   ctx.fillStyle = rgba(PAL.foam, 0.6);
   ctx.fillRect(Math.round(x - w / 2 - 3), Math.round(baseY - 1), w + 6, 1);
 }
 
-const cloudCache = new Map();
 export function drawCloud(ctx, x, y, w, color, seed = 1, alpha = 1) {
-  const key = `${w}|${color}|${seed}`;
-  let c = cloudCache.get(key);
-  if (!c) {
+  const h = Math.round(w * 0.45);
+  const m = mask(`cloud${w}|${seed}`, w, h, (g) => {
     const r = mulberry32(seed);
-    const h = Math.round(w * 0.45);
-    let g;
-    [c, g] = makeCanvas(w, h);
-    g.fillStyle = color;
     const n = 5 + Math.floor(w / 14);
     for (let i = 0; i < n; i++) {
       const cx = w * (0.15 + 0.7 * (i / (n - 1)));
@@ -282,10 +303,9 @@ export function drawCloud(ctx, x, y, w, color, seed = 1, alpha = 1) {
       disc(g, cx, h - rr - 1, rr + 2);
     }
     g.fillRect(Math.round(w * 0.1), h - 3, Math.round(w * 0.8), 3);
-    cloudCache.set(key, c);
-  }
+  });
   ctx.globalAlpha = alpha;
-  ctx.drawImage(c, Math.round(x - c.width / 2), Math.round(y - c.height));
+  drawTinted(ctx, m, color, Math.round(x - m.width / 2), Math.round(y - m.height));
   ctx.globalAlpha = 1;
 }
 
@@ -318,6 +338,7 @@ export function drawRays(ctx, cx, cy, t, color, alpha = 0.3, n = 9, len = 420) {
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   for (let i = 0; i < n; i++) {
+    if (detail.low && i % 2) continue; // big additive fills are slow on a weak laptop
     const a = -Math.PI / 2 + ((i - (n - 1) / 2) / n) * 2.6 + Math.sin(t * 0.4 + i) * 0.03;
     const wA = 0.05 + (i % 3) * 0.02;
     ctx.globalAlpha = alpha * (0.6 + 0.4 * Math.sin(t * 0.8 + i * 1.7));
