@@ -26,7 +26,9 @@ npm run build && npm run preview
 
 That serves `dist/` at http://localhost:4173 (and on the LAN).
 
-Browsers won't play sound until someone presses a key, so on a laptop the game first says PRESS ANY KEY TO START. That key only starts the station, it doesn't skip anything (M starts it muted). Phones skip this step and the first touch turns the sound on.
+Browsers won't play sound until someone presses a key, so on a laptop the game first says PRESS ANY KEY TO START. That key only starts the station, it doesn't skip anything (M starts it muted). Phones skip this step and the first touch turns the sound on. On an iPhone the silent switch mutes it too, that's iOS and not a bug.
+
+If the laptop can't keep up, the game drops some of the sparkle by itself (the D overlay says DETAIL LOW) and brings it back on the start screen once frames are quick again.
 
 Handy URL options:
 
@@ -42,13 +44,15 @@ Handy URL options:
 
 ## How to play
 
-Nothing needs a click. Every button is "hold the light on it" and a ring fills up.
+Nothing needs a click. With the mocap prop or a mouse every button is "hold the light on it" and a ring fills up. Phones just tap (see below).
 
 1. Hold your light on a level on the right: HATCHLING (big slow hoops), FLIER (smaller moving hoops, a few silly enemies) or STORM RIDER (small hoops, more enemies, wind). Holding still near the middle for 2 seconds also starts HATCHLING.
 2. Pick which lost dragon you'll find. If nobody picks, one gets picked after 5 seconds.
 3. Find the dragon's two glowing eyes in the fog and hold still on them until the ring fills.
 4. Fly. The dragon follows your light. Steer through the hoops, fly through power-ups (fireball, speed, shield, magnet, flock friend) and around the grumpy clouds. A bump only makes it tumble.
 5. It lands home with everyone else from tonight and you get its card, with your score and 1 to 3 stars.
+
+**On a phone**, hold it sideways (upright you get a turn-your-phone screen and the game waits). Tap a level, a dragon or NEXT and it goes straight away. In the flight the light sits a little above your fingertip so your finger doesn't cover the dragon.
 
 Every 8th dragon home sets off a celebration and leaves a new star in the sky. If someone walks away mid-game it goes back to the start after 10 seconds. All the numbers we tuned in playtesting (levels, timings, scoring, enemies) are in `src/config.js`.
 
@@ -61,11 +65,12 @@ Guests never see these.
 | F | Fullscreen |
 | R | Back to the start screen |
 | S | Skip to the next scene |
-| D | Debug overlay: FPS, scene timer, pointer, idle time, sound, mocap status |
+| D | Debug overlay: FPS, frame time and detail level, scene timer, pointer, idle time, sound, mocap status |
 | C | Clear tonight's dragons, ribbons and best flights. It asks first: Y clears, anything else keeps |
 | M | Sound on/off, remembered after a refresh |
 | G | Reduced motion: auto (follows the OS), forced on, forced off. Also remembered |
 | K | Calibrate the mocap rig (see below) |
+| Q | A QR code on the start screen that opens the live site, so people waiting in line can play on their phones. Off until you press it, remembered |
 | Arrows, Space | Move the light and "hold", for testing at a desk |
 
 The speaker in the bottom left corner also turns sound on and off: click it, tap it, or hold the light on it. The night is saved in `localStorage`, so a refresh or a crashed tab doesn't lose the flock. It starts over by itself on a new day.
@@ -120,7 +125,7 @@ The build uses relative paths, so `dist/` also works on any other static host.
 npm test
 ```
 
-This builds the site and runs the Playwright tests, about 10 minutes since a lot of them play whole runs in real time. `npm run shots` saves a screenshot of every scene to `tests/screens/`. Keep the laptop plugged in and awake while it runs, long runs stall on battery or with the lid closed.
+This builds the site and runs the Playwright tests, about 12 minutes since a lot of them play whole runs in real time. `npm run shots` saves a screenshot of every scene to `tests/screens/`, at projector size and on an iPhone and a small Android held sideways. Keep the laptop plugged in and awake while it runs, long runs stall on battery or with the lid closed.
 
 ## Art
 
