@@ -14,6 +14,9 @@ const STAR_AT = 5.6; // the new star starts gathering
 const STAR_UP = 6.3; // ...and flies up to its spot in the sky
 // the whole sky is aurora here, so text gets a thin outline instead of a band behind it
 const NAME_TEXT = { scale: TEXT.S, color: PAL.cream, edge: 'outline' };
+// the two rows of rolling names. the lower one used to run right over the speaker button in the
+// bottom left corner, this keeps it a good 10px above it
+const NAME_ROWS = [182, 214];
 const BIG_TEXT = { color: PAL.gold2, edge: 'outline' };
 
 // nobody does anything here, the whole line just gets to watch (and cheer)
@@ -159,7 +162,7 @@ export class Celebration {
       const speed = travel / (DUR.CELEBRATE - 1.2);
       const off = (t - 0.8) * speed;
       let x = ri === 0 ? W - off : -total + off;
-      const y = ri === 0 ? 206 : 238;
+      const y = NAME_ROWS[ri];
       for (const it of items) {
         drawDragon(ctx, x + 12, y + 3, it.d, { mood: 'joy', flap: t * 3 + it.i, life: t, glow: 2, scale: 0.4, flip: ri === 1 });
         glow(ctx, x + 30 + (it.w - 44) / 2, y, 16, it.d.colors.wingLit, 0.35 * k);
