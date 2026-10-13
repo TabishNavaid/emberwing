@@ -53,9 +53,9 @@ const SHOTS = [
 // the projector, an iphone held sideways, and a small android held sideways
 // what a guest reads, not what the operator sees
 const GUEST = (scene, ptr, extra) => ptr !== 'calibrate' && extra !== 'gate' && extra !== 'qr';
-// the storybook's music page also names the piece and the walla walla symphony, which we keep on
-// purpose (it's their event)
-const MAX_WORDS = { attract: 22, end: 22, music: 31 };
+// the storybook's music page also names the piece and the walla walla symphony youth orchestra,
+// which we keep on purpose (it's their event)
+const MAX_WORDS = { attract: 22, end: 22, music: 33 };
 const SIZES = [
   ['projector', { width: 1920, height: 1080 }, 1, false],
   ['phone', { width: 844, height: 390 }, 3, true],

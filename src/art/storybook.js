@@ -205,14 +205,16 @@ export class Storybook {
   music(pg, t, g) {
     pg.fillStyle = '#1a1430';
     pg.fillRect(0, 0, BOOK.w, BOOK.h);
-    // the piece and the symphony's name (it's their event, so the name always stays). the
-    // caption under it says when. too wide for one line at this size, so it's split in two
-    glow(pg, BOOK.w / 2, 23, 70, PAL.gold, 0.25 + g.beat.pulse * 0.1);
-    drawHorn(pg, BOOK.w / 2 - 6, 21, 3);
-    drawSoundLines(pg, BOOK.w / 2 + 30, 21, 2, t);
-    drawText(pg, 'HOW TO TRAIN', BOOK.w / 2, 44, { scale: TEXT.S, align: 'center', color: PAL.gold });
-    drawText(pg, 'YOUR DRAGON', BOOK.w / 2, 60, { scale: TEXT.S, align: 'center', color: PAL.gold });
-    drawText(pg, 'WALLA WALLA', BOOK.w / 2, 82, { scale: TEXT.S, align: 'center', color: PAL.cream });
-    drawText(pg, 'SYMPHONY', BOOK.w / 2, 98, { scale: TEXT.S, align: 'center', color: PAL.cream });
+    // the piece and the orchestra's full name (it's the symphony's event, so the name always
+    // stays). the caption under it says when. the name is too wide for one line at this size, so
+    // it takes three, and the horn is a size smaller than on the other pages to make room
+    glow(pg, BOOK.w / 2, 17, 50, PAL.gold, 0.25 + g.beat.pulse * 0.1);
+    drawHorn(pg, BOOK.w / 2 - 4, 16, 2);
+    drawSoundLines(pg, BOOK.w / 2 + 22, 16, 2, t);
+    drawText(pg, 'HOW TO TRAIN', BOOK.w / 2, 34, { scale: TEXT.S, align: 'center', color: PAL.gold });
+    drawText(pg, 'YOUR DRAGON', BOOK.w / 2, 50, { scale: TEXT.S, align: 'center', color: PAL.gold });
+    drawText(pg, 'WALLA WALLA', BOOK.w / 2, 70, { scale: TEXT.S, align: 'center', color: PAL.cream });
+    drawText(pg, 'SYMPHONY', BOOK.w / 2, 86, { scale: TEXT.S, align: 'center', color: PAL.cream });
+    drawText(pg, 'YOUTH ORCHESTRA', BOOK.w / 2, 102, { scale: TEXT.S, align: 'center', color: PAL.cream });
   }
 }
