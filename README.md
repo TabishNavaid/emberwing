@@ -46,7 +46,7 @@ Handy URL options:
 
 Nothing needs a click. With the mocap prop or a mouse every button is "hold the light on it" and a ring fills up. Phones just tap (see below).
 
-1. Hold your light on a level on the right: HATCHLING (big slow hoops), FLIER (smaller moving hoops, a few silly enemies) or STORM RIDER (small hoops, more enemies, wind). Holding still near the middle for 2 seconds also starts HATCHLING.
+1. Hold your light on a level on the right for 1.5 seconds: HATCHLING (big slow hoops), FLIER (smaller moving hoops, a few silly enemies) or STORM RIDER (small hoops, more enemies, wind). Only the levels start a game, holding the light anywhere else does nothing. When the start screen comes back after a run it ignores the light for 2 seconds, and a light left resting on a level has to move off it and back before it counts, so the next guest always picks their own level.
 2. Pick which lost dragon you'll find. If nobody picks, one gets picked after 5 seconds.
 3. Find the dragon's two glowing eyes in the fog and hold still on them until the ring fills.
 4. Fly. The dragon follows your light. Steer through the hoops, fly through power-ups (fireball, speed, shield, magnet, flock friend) and around the grumpy clouds. A bump only makes it tumble.

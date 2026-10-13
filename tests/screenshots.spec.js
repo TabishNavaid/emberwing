@@ -40,7 +40,8 @@ const SHOTS = [
   ['attract', 3, null, 'flock'], // tonight's flock circling, countdown to the next celebration
   ['attract', 1, null, 'gate'], // press any key to start the station
   ['attract', 3, null, 'qr'], // the operator's Q key: a code for the live site
-  ['attract', 0.6, { x: 292, y: 130 }], // holding the light on FLIER
+  ['attract', 2.9, { x: 292, y: 130, after: 2.1 }], // the light comes onto FLIER after the handoff and holds
+  ['attract', 3, null, 'bests'], // tonight's best scores under the rings
   ['choose', 1.2, null], // who will you find?
   ['choose', 1.0, { x: 240, y: 104 }], // holding the light on the middle dragon
   ['flight', 6, 'follow', 'level=hatchling'], // puffs to pop, a power-up orb
@@ -85,9 +86,13 @@ for (const [label, viewport, dpr, touch] of SIZES) {
         inp.feed(300, 250, 'mouse');
         if (extra === 'scored') w.game.lastRun = { flown: true, level: 'flier', score: 2450, stars: 2 };
         // some dragons already home tonight (5), 7 so this one is the 8th, 8 for the celebration
-        const home = { flock: 5, seven: 7, eight: 8, scored: 3 }[extra] ?? 0;
+        const home = { flock: 5, seven: 7, eight: 8, scored: 3, bests: 5 }[extra] ?? 0;
         if (home) {
-          for (let i = 0; i < home; i++) w.game.store.add([[0, 0.5], [0.3, 0.3 + i * 0.05], [0.6, 0.6], [1, 0.4]], i % 6);
+          const runs = { 1: ['hatchling', 2280], 2: ['flier', 2875], 4: ['storm', 3460] };
+          for (let i = 0; i < home; i++) {
+            const run = extra === 'bests' && runs[i] ? { flown: true, level: runs[i][0], score: runs[i][1] } : null;
+            w.game.store.add([[0, 0.5], [0.3, 0.3 + i * 0.05], [0.6, 0.6], [1, 0.4]], i % 6, null, run);
+          }
           w.goto(scene);
         }
         if (extra === 'gate') w.game.gate = true;
@@ -101,9 +106,10 @@ for (const [label, viewport, dpr, touch] of SIZES) {
           for (let i = 0; i < 6; i++) w.game.store.add([[0, 0.5], [0.3, 0.3 + i * 0.05], [0.6, 0.6], [1, 0.4]], i);
           w.goto('attract', { reason: 'done' });
         }
-        if (ptr && ptr.x) inp.feed(ptr.x, ptr.y, 'mouse');
+        if (ptr && ptr.x && ptr.after === undefined) inp.feed(ptr.x, ptr.y, 'mouse');
         for (let i = 0; i < t * 20; i++) {
           const s = w.state();
+          if (ptr?.after !== undefined && i * 0.05 >= ptr.after) inp.feed(ptr.x + (i % 2), ptr.y, 'mouse');
           if ((ptr === 'target' || ptr === 'follow') && s.target) inp.feed(s.target.x, s.target.y, 'mouse');
           if (ptr === 'wander') inp.feed(70 + Math.sin(i * 0.15) * 40, 50 + Math.cos(i * 0.11) * 25, 'mouse');
           w.step(0.05);
@@ -118,6 +124,18 @@ for (const [label, viewport, dpr, touch] of SIZES) {
       expect(sizes.length).toBeLessThanOrEqual(3);
       const cap = lines.some(([str]) => str === 'YOUR DRAGON') ? MAX_WORDS.music : MAX_WORDS[scene];
       if (GUEST(scene, ptr, extra) && cap) expect(words).toBeLessThanOrEqual(cap);
+      // the start screen: no line of text sits on another one or on a shape (the book, the pips,
+      // a ring, the speaker, the QR code), checked by bounding box
+      if (scene === 'attract' && ptr !== 'calibrate') {
+        const { lines: texts, shapes } = await page.evaluate(() => window.__emberwing.layout());
+        const boxes = [...texts.filter(([, , b]) => b).map(([str, , b]) => [`"${str}"`, b]), ...shapes];
+        const hit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+        const overlaps = [];
+        for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+          if (hit(boxes[i][1], boxes[j][1])) overlaps.push(`${boxes[i][0]} x ${boxes[j][0]}`);
+        }
+        expect(overlaps).toEqual([]);
+      }
       await ctx.close();
     });
   }

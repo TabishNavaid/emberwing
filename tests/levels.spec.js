@@ -4,58 +4,144 @@ import { boot, state, startRun } from './helpers.js';
 
 // stepped by hand so it's quick. the real-mouse version of this is every full run below and in
 // fullrun.spec.js, which all start by holding the light on a level
+const STEP = 0.05;
 for (const level of ['hatchling', 'flier', 'storm']) {
-  test(`holding the light on ${level} starts a ${level} run`, async ({ page }) => {
+  test(`holding the light on ${level} for 1.5s starts a ${level} run`, async ({ page }) => {
     await boot(page);
-    const r = await page.evaluate((id) => {
+    const r = await page.evaluate(([id, STEP]) => {
       const w = window.__emberwing;
       const g = w.game;
       w.pause(true);
       w.goto('attract');
-      const at = g.scenes.current.levelTarget(id);
-      // raise the light from the bottom of the screen, then hold it on the level
-      for (let i = 0; i <= 20; i++) {
-        g.input.feed(200 + ((at.x - 200) * i) / 20, 250 + ((at.y - 250) * i) / 20, 'mouse');
-        w.step(0.05);
+      const a = g.scenes.current;
+      const at = a.levelTarget(id);
+      // wait out the handoff with the light down by the sea, then bring it up onto the level
+      while (a.inHandoff()) { g.input.feed(200, 250, 'mouse'); w.step(STEP); }
+      for (let i = 0; i <= 10; i++) { g.input.feed(200 + ((at.x - 200) * i) / 10, 250 + ((at.y - 250) * i) / 10, 'mouse'); w.step(STEP); }
+      let held = 0;
+      let at13 = null;
+      for (; held < 3 && !g.scenes.pending; held += STEP) {
+        if (at13 === null && held >= 1.3) at13 = g.scenes.pending?.name ?? g.scenes.name;
+        g.input.feed(at.x + (Math.round(held / STEP) % 2), at.y, 'mouse');
+        w.step(STEP);
       }
-      for (let i = 0; i < 40 && !g.scenes.pending; i++) {
-        g.input.feed(at.x + (i % 2), at.y, 'mouse');
-        w.step(0.05);
-      }
-      return { next: g.scenes.pending?.name ?? g.scenes.name, level: g.level };
-    }, level);
+      return { at13, held: +held.toFixed(2), next: g.scenes.pending?.name ?? g.scenes.name, level: g.level };
+    }, [level, STEP]);
+    expect(r.at13).toBe('attract'); // still filling at 1.3s
+    expect(r.held).toBeLessThanOrEqual(1.7);
     expect(r.next).toBe('choose');
     expect(r.level).toBe(level);
   });
 }
 
-test('holding the light still anywhere near the middle starts hatchling, a resting light never does', async ({ page }) => {
+test('only the levels start a game: a light resting anywhere else for 10s never does, and nothing fills off a level', async ({ page }) => {
   await boot(page);
-  const r = await page.evaluate(() => {
+  const r = await page.evaluate((STEP) => {
     const w = window.__emberwing;
     const g = w.game;
     w.pause(true);
-    const feed = (secs, x, y) => {
-      for (let i = 0; i < secs * 20; i++) {
-        g.input.feed(x, y, 'mouse');
-        w.step(0.05);
+    // the storybook, the middle, the tally, the sea, the sky above the levels, the speaker corner
+    const spots = [[120, 90], [200, 120], [80, 190], [240, 245], [300, 15], [420, 250], [60, 250]];
+    const out = [];
+    for (const [x, y] of spots) {
+      w.goto('attract');
+      const a = g.scenes.current;
+      // someone raises the light (a smooth sweep, like a real hand) and then holds it still there
+      for (let i = 0; i <= 20; i++) { g.input.feed(x + (20 - i) * 3, y + (20 - i) * 2, 'mouse'); w.step(STEP); }
+      let filled = 0;
+      for (let i = 0; i < 10 / STEP; i++) {
+        g.input.feed(x + Math.sin(i) * 1.5, y + Math.cos(i * 1.3) * 1.5, 'mouse');
+        w.step(STEP);
+        filled = Math.max(filled, ...a.rows.map((row) => row.progress));
+      }
+      out.push({ x, y, scene: g.scenes.pending?.name ?? g.scenes.name, filled });
+    }
+    return out;
+  }, STEP);
+  for (const spot of r) expect(spot).toEqual({ x: spot.x, y: spot.y, scene: 'attract', filled: 0 });
+});
+
+test('handoff: a light left on a level by the last guest never starts the next game, moving it off and back does', async ({ page }) => {
+  await boot(page);
+  const r = await page.evaluate((STEP) => {
+    const w = window.__emberwing;
+    const g = w.game;
+    w.pause(true);
+    const at = g.scenes.scenes.attract.levelTarget('flier');
+    const rest = (secs) => {
+      for (let i = 0; i < secs / STEP; i++) {
+        g.input.feed(at.x + Math.sin(i) * 1.5, at.y + Math.cos(i * 1.3) * 1.5, 'mouse'); // a prop on a table jitters a little
+        w.step(STEP);
       }
     };
-    // a prop that was already pointing at the middle when attract came up, never moving
+    // the last guest's dragon card, with the prop already put down pointing at FLIER, and the
+    // start screen coming back on its own
+    w.goto('end');
+    for (let i = 0; i < 20 / STEP && g.scenes.name !== 'attract'; i++) rest(STEP);
+    const back = g.scenes.name;
+    rest(10);
+    const after10 = g.scenes.pending?.name ?? g.scenes.name;
+    const filled = g.scenes.current.rows.find((row) => row.id === 'flier').progress;
+    // the next guest picks it up: off the level, then back onto it
+    for (let i = 0; i < 10; i++) { g.input.feed(at.x - 60, at.y + 70, 'mouse'); w.step(STEP); }
+    for (let i = 0; i < 2 / STEP && !g.scenes.pending; i++) { g.input.feed(at.x + (i % 2), at.y, 'mouse'); w.step(STEP); }
+    return { back, after10, filled, next: g.scenes.pending?.name ?? g.scenes.name, level: g.level };
+  }, STEP);
+  expect(r.back).toBe('attract');
+  expect(r.after10).toBe('attract');
+  expect(r.filled).toBe(0);
+  expect(r.next).toBe('choose');
+  expect(r.level).toBe('flier');
+});
+
+test('handoff: for 2s after the start screen comes back nothing fills, even a light moved onto a level', async ({ page }) => {
+  await boot(page);
+  const r = await page.evaluate((STEP) => {
+    const w = window.__emberwing;
+    const g = w.game;
+    w.pause(true);
+    g.input.feed(200, 250, 'mouse');
+    w.goto('attract', { reason: 'done' });
+    const a = g.scenes.current;
+    const at = a.levelTarget('hatchling');
+    let filled = 0;
+    // straight onto hatchling while the last guest is still walking off, and held there
+    for (let i = 0; a.inHandoff(); i++) {
+      g.input.feed(at.x + (i % 2), at.y, 'mouse');
+      w.step(STEP);
+      filled = Math.max(filled, a.rows[0].progress);
+    }
+    // it was already resting there when the handoff ended, so it stays dead
+    for (let i = 0; i < 3 / STEP; i++) { g.input.feed(at.x + (i % 2), at.y, 'mouse'); w.step(STEP); }
+    return { filled, scene: g.scenes.pending?.name ?? g.scenes.name, after: a.rows[0].progress };
+  }, STEP);
+  expect(r.filled).toBe(0);
+  expect(r.scene).toBe('attract');
+  expect(r.after).toBe(0);
+});
+
+test('sliding off a level cancels the fill quickly, coming back starts over', async ({ page }) => {
+  await boot(page);
+  const r = await page.evaluate((STEP) => {
+    const w = window.__emberwing;
+    const g = w.game;
+    w.pause(true);
     w.goto('attract');
-    feed(4, 200, 120);
-    const resting = g.scenes.name;
-    // someone raises the light (a smooth sweep, like a real hand) and holds it over the storybook
-    for (let i = 0; i <= 20; i++) feed(0.05, 80 + i * 6, 200 - i * 4);
-    feed(1.0, 200, 120);
-    const early = g.scenes.name;
-    feed(1.4, 200, 120);
-    return { resting, early, after: g.scenes.pending?.name ?? g.scenes.name, level: g.level };
-  });
-  expect(r.resting).toBe('attract');
-  expect(r.early).toBe('attract'); // 1s isn't enough
-  expect(r.after).toBe('choose'); // then "who will you find?"
-  expect(r.level).toBe('hatchling');
+    const a = g.scenes.current;
+    const at = a.levelTarget('storm');
+    const row = a.rows.find((x) => x.id === 'storm');
+    const hold = (secs, x, y) => { for (let i = 0; i < secs / STEP; i++) { g.input.feed(x + (i % 2), y, 'mouse'); w.step(STEP); } };
+    while (a.inHandoff()) hold(STEP, 200, 250);
+    hold(1.0, at.x, at.y);
+    const part = row.progress;
+    hold(0.35, at.x, 250); // slides down off the level
+    const gone = row.progress;
+    hold(1.0, at.x, at.y); // back on: another 1s isn't enough
+    return { part: +part.toFixed(2), gone, again: g.scenes.pending?.name ?? g.scenes.name };
+  }, STEP);
+  expect(r.part).toBeGreaterThan(0.6);
+  expect(r.gone).toBe(0); // drained in about 0.3s
+  expect(r.again).toBe('attract');
 });
 
 test('each level plays by its own numbers from config.js', async ({ page }) => {

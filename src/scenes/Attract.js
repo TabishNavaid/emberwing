@@ -1,9 +1,9 @@
 // the attract screen: tonight's flock and aurora, the storybook, and the level picker. holding the
 // light on a level is how a run starts
-import { DUR, PAL, FLOCK, LEVELS, LEVEL_ORDER, TEXT, QR } from '../config.js';
+import { DUR, INPUT, PAL, FLOCK, LEVELS, LEVEL_ORDER, TEXT, QR } from '../config.js';
 import { glow, clamp, dwell, makeCanvas } from '../core/util.js';
 import { makeQR } from '../core/qr.js';
-import { drawText, textWidth } from '../art/font.js';
+import { drawText, textWidth, logShape } from '../art/font.js';
 import { drawKnotRing } from '../art/knotwork.js';
 import { drawSpeck } from '../art/dragon.js';
 import { flockOf, member, chirp, updateMember, drawMember } from '../art/flock.js';
@@ -19,17 +19,14 @@ import { Storybook, BOOK } from '../art/storybook.js';
 // is small and dim
 const ROW_H = 58;
 const NAME_X = 288;
-// each row is a big target: the ring, the name and the line under it all count
+// each row is a big target for the prop: the ring, the name and the line under it all count.
+// holding the light anywhere else does nothing
 const ROWS = LEVEL_ORDER.map((id, i) => {
   const top = 58 + i * ROW_H;
   return { id, top, ring: { x: 255, y: top + 16, r: 16 }, x0: 236, x1: 479, y0: top - 6, y1: top + ROW_H - 6 };
 });
 const YOURS = { x: 400, y: 6 }; // the open sky in the top right corner
 const DIM = 'rgba(255,243,214,0.7)';
-// holding the light still for this long anywhere near the middle starts hatchling, for people
-// who don't aim at a lantern at all
-const HOLD_ANYWHERE = 2.0;
-const MIDDLE = { x0: 60, x1: 420, y0: 50, y1: 230 };
 
 // how many more dragons until the next celebration
 const untilCelebration = (n) => FLOCK.CELEBRATE_EVERY - (n % FLOCK.CELEBRATE_EVERY);
@@ -38,12 +35,9 @@ export class Attract {
   interactive = false;
 
   enter(g, data = {}) {
-    this.rows = ROWS.map((r) => ({ ...r, progress: 0, hover: false }));
-    this.anyHold = 0; // the hold-anywhere timer
-    this.anyAt = null;
-    this.moved = 0; // the light has to move a bit first, so a prop left resting can't start runs
-    this.lastX = g.input.rawX;
-    this.lastY = g.input.rawY;
+    // armed: the light has been seen properly off this level since the handoff, so landing on it
+    // now is someone choosing it, not a prop left resting there
+    this.rows = ROWS.map((r) => ({ ...r, progress: 0, hover: false, armed: false }));
     // the three lost dragons the next guest picks from. the storybook tells the first one's story
     fillLost(g);
     g.dragon = g.lost[0];
@@ -68,6 +62,11 @@ export class Attract {
 
   skip(g) {
     this.start(g, 'hatchling');
+  }
+
+  // true for the first DUR.HANDOFF seconds, while nothing can start (see updatePicker)
+  inHandoff() {
+    return this.t < DUR.HANDOFF;
   }
 
   start(g, level = 'hatchling') {
@@ -135,40 +134,28 @@ export class Attract {
   // started the station (the gate in main.js)
   updatePicker(g, dt) {
     const inp = g.input;
-    // on a phone a tap on a level picks it straight away
+    // on a phone a tap on a level picks it straight away (one guest per phone, no handoff)
     const tap = inp.tap;
     if (tap && !g.gate) {
       const r = this.rows.find((row) => this.onRow(row, tap.x, tap.y));
       if (r) return this.start(g, r.id);
     }
-    // only real movement of the device counts as "someone raised the light": the raw position (the
-    // smoothed light glides even when nothing moves), and not a jump (the light showing up for the
-    // first time, a rig reconnecting), or a resting prop would start a run after a reload
-    const step = Math.hypot(inp.rawX - this.lastX, inp.rawY - this.lastY);
-    if (step < 40) this.moved += step;
-    this.lastX = inp.rawX;
-    this.lastY = inp.rawY;
+    // the handoff between guests: for a moment nothing counts, then a level only fills once the
+    // light has come onto it from somewhere else. a prop left resting on a level never starts it,
+    // and neither does a light that shows up already on one (the rig reconnecting)
+    const handoff = this.inHandoff();
     let onRow = null;
     for (const r of this.rows) {
-      r.hover = !g.gate && inp.seen && this.onRow(r, inp.x, inp.y);
-      if (r.hover && !onRow) onRow = r;
-      else r.hover = false;
-      r.progress = dwell(r.progress, r.hover, dt, DUR.START_DWELL);
+      if (!inp.seen) r.armed = false;
+      else if (!handoff && !this.onRow(r, inp.x, inp.y, INPUT.START_ARM_PX)) r.armed = true;
+      r.hover = !g.gate && !handoff && r.armed && inp.seen && !onRow && this.onRow(r, inp.x, inp.y);
+      if (r.hover) onRow = r;
+      r.progress = dwell(r.progress, r.hover, dt, DUR.START_DWELL, DUR.START_CANCEL);
       if (r.progress >= 1) return this.start(g, r.id);
       if (r.hover && g.rng() < dt * 30) {
         const a = g.rng() * Math.PI * 2;
         g.particles.add({ x: r.ring.x + Math.cos(a) * r.ring.r, y: r.ring.y + Math.sin(a) * r.ring.r, vx: -Math.cos(a) * 20, vy: -Math.sin(a) * 20, life: 0.6, color: r.progress > 0.5 ? PAL.gold2 : PAL.gold, kind: 'spark', size: 1 });
       }
-    }
-    // held still anywhere near the middle (not on a level) for a couple of seconds = hatchling
-    const inMiddle = inp.x >= MIDDLE.x0 && inp.x <= MIDDLE.x1 && inp.y >= MIDDLE.y0 && inp.y <= MIDDLE.y1;
-    const can = !g.gate && inp.seen && !onRow && inMiddle && this.moved > 30 && !g.soundBtn.contains(inp.x, inp.y);
-    if (can && this.anyAt && Math.hypot(inp.x - this.anyAt.x, inp.y - this.anyAt.y) < 12) {
-      this.anyHold += dt;
-      if (this.anyHold >= HOLD_ANYWHERE) return this.start(g, 'hatchling');
-    } else {
-      this.anyAt = can ? { x: inp.x, y: inp.y } : null;
-      this.anyHold = 0;
     }
   }
 
@@ -199,14 +186,13 @@ export class Attract {
     this.book.draw(ctx, g, this.flock);
     this.drawPicker(g, ctx, t);
     // the name is a logo up in the corner, not something to read first
-    drawText(ctx, 'EMBERWING', BOOK.x + 1, 7, { scale: TEXT.S, color: PAL.ember3 });
+    drawText(ctx, 'EMBERWING', BOOK.x + 1, 3, { scale: TEXT.S, color: PAL.ember3 });
 
     this.drawTally(ctx, g.store.count, t);
     if (g.op.qr && !g.touch) this.drawQR(ctx);
 
     if (this.yoursT > 0) this.drawYours(ctx, t, g.beat.pulse);
     g.particles.draw(ctx);
-    this.drawHoldAnywhere(ctx, g.input, t);
     if (g.input.seen) drawCursorLight(ctx, g.input.x, g.input.y, t, 1);
   }
 
@@ -219,7 +205,10 @@ export class Attract {
     let cap = g.touch ? 'TAP ONE' : 'RAISE YOUR LIGHT';
     if (this.starting) cap = 'HERE WE GO!';
     else if (hover && !g.touch) cap = 'HOLD IT THERE';
-    if (!g.touch) drawFeet(ctx, 250, 37);
+    if (!g.touch) {
+      drawFeet(ctx, 250, 37);
+      logShape('feet', 236, 25, 28, 28);
+    }
     drawText(ctx, cap, g.touch ? 244 : 268, 31, { scale: TEXT.S, color: hover || this.starting ? PAL.gold2 : PAL.cream, alpha: hover ? 1 : 0.8 + 0.2 * pulse });
     for (const r of this.rows) {
       const L = LEVELS[r.id];
@@ -228,6 +217,12 @@ export class Attract {
         ctx.fillStyle = 'rgba(255,201,74,0.13)';
         ctx.fillRect(r.x0, r.y0, r.x1 - r.x0, r.y1 - r.y0);
       }
+      // the hold shows on the row being held, not just its ring: a glow sweeps across it as it
+      // fills, so it reads from the back of the line. it runs back quickly if the light slides off
+      if (r.progress > 0) {
+        ctx.fillStyle = 'rgba(255,201,74,0.2)';
+        ctx.fillRect(r.x0, r.y0, Math.round((r.x1 - r.x0) * r.progress), r.y1 - r.y0);
+      }
       const easy = r.id === 'hatchling';
       glow(ctx, r.ring.x, r.ring.y, 30 + (easy ? pulse * 6 : 0), PAL.gold, (easy ? 0.25 : 0.12) + r.progress * 0.4);
       ctx.fillStyle = 'rgba(8,10,24,0.75)';
@@ -235,47 +230,52 @@ export class Attract {
       ctx.arc(r.ring.x, r.ring.y, r.ring.r - 2, 0, Math.PI * 2);
       ctx.fill();
       drawKnotRing(ctx, r.ring.x, r.ring.y, r.ring.r, r.progress, { lobes: 7, amp: 2.5, width: 2, on: PAL.gold, off: lit ? 'rgba(255,226,138,0.75)' : 'rgba(255,226,138,0.5)' });
+      logShape(`ring ${r.id}`, r.ring.x - r.ring.r - 3, r.ring.y - r.ring.r - 3, r.ring.r * 2 + 6, r.ring.r * 2 + 6);
       drawLevelIcon(ctx, r.id, r.ring.x, r.ring.y, t);
       drawText(ctx, L.label, NAME_X, r.top + 3, { scale: TEXT.M, color: lit ? PAL.gold2 : PAL.gold });
       // hatchling's line is a small tag that says start here, the others say what's different
       if (easy) drawText(ctx, L.hint, NAME_X, r.top + 29, { scale: TEXT.S, color: PAL.gold2, alpha: 0.75 + 0.25 * pulse });
       else drawText(ctx, L.hint, NAME_X, r.top + 29, { scale: TEXT.S, color: DIM });
-      // tonight's best sits under the ring, clear of the next row's ring
+      // tonight's best sits under the ring, clear of the next row's ring, and nudged right if a
+      // long one would reach the book
       const best = g.store.best[r.id];
-      if (best) drawText(ctx, String(best.score), r.ring.x, r.top + 36, { scale: TEXT.S, align: 'center', color: DIM });
+      if (best) {
+        const str = String(best.score);
+        const x = Math.max(r.ring.x, BOOK.x + BOOK.w + 7 + Math.ceil(textWidth(str, TEXT.S) / 2));
+        drawText(ctx, str, x, r.top + 37, { scale: TEXT.S, align: 'center', color: DIM });
+      }
     }
   }
 
-  onRow(r, x, y) {
-    return (x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1) || Math.hypot(x - r.ring.x, y - r.ring.y) < r.ring.r + 8;
-  }
-
-  // the ring that fills on the light itself when someone holds still away from the levels
-  drawHoldAnywhere(ctx, inp, t) {
-    if (this.anyHold < 0.3 || this.starting) return;
-    const k = clamp((this.anyHold - 0.3) / (HOLD_ANYWHERE - 0.3));
-    drawKnotRing(ctx, inp.x, inp.y, 16, k, { lobes: 6, amp: 2, width: 2, on: PAL.gold, off: 'rgba(255,226,138,0.4)' });
-    drawText(ctx, 'HATCHLING', inp.x, inp.y + 22, { scale: 2, align: 'center', color: PAL.gold2, alpha: clamp(k * 3) });
+  // on the level's row, or within `near` px of it
+  onRow(r, x, y, near = 0) {
+    return (x >= r.x0 - near && x <= r.x1 + near && y >= r.y0 - near && y <= r.y1 + near) || Math.hypot(x - r.ring.x, y - r.ring.y) < r.ring.r + 8 + near;
   }
 
   // one quiet line under the book: a pip per dragon in this round of 8 (a full round = a
-  // celebration) and how far along it is. the dragons in the sky already show how many are home
+  // celebration) and how far along it is. the dragons in the sky already show how many are home.
+  // laid out from the real sizes, the pips and BE THE FIRST used to run into each other
   drawTally(ctx, n, t) {
     const every = FLOCK.CELEBRATE_EVERY;
     const done = n % every;
     const label = n === 0 ? 'BE THE FIRST' : `${done} / ${every}`;
-    const gap = 10;
-    const w = (every - 1) * gap + 12 + textWidth(label, TEXT.S);
-    const x0 = Math.round(BOOK.x + BOOK.w / 2 - w / 2 + 4);
+    const gap = 9; // pip to pip
+    const pad = 6; // a pip's ring at its biggest (the next one pulses), from its middle
+    const pipsW = (every - 1) * gap + pad * 2;
+    const space = 8; // between the last pip and the label
+    const w = pipsW + space + textWidth(label, TEXT.S);
+    const x0 = Math.round(BOOK.x + BOOK.w / 2 - w / 2);
     const y = BOOK.y + BOOK.h + 22;
     for (let i = 0; i < every; i++) {
       const on = i < done;
       const next = i === done;
       const r = next ? 4 + Math.sin(t * 4) * 0.6 : 3.5;
-      if (on) glow(ctx, x0 + i * gap, y, 8, PAL.gold, 0.5);
-      drawKnotRing(ctx, x0 + i * gap, y, r, on ? 1 : 0, { lobes: 3, amp: 1, width: 1, on: PAL.gold, off: next ? 'rgba(191,248,238,0.8)' : 'rgba(191,248,238,0.3)' });
+      const x = x0 + pad + i * gap;
+      if (on) glow(ctx, x, y, 8, PAL.gold, 0.5);
+      drawKnotRing(ctx, x, y, r, on ? 1 : 0, { lobes: 3, amp: 1, width: 1, on: PAL.gold, off: next ? 'rgba(191,248,238,0.8)' : 'rgba(191,248,238,0.3)' });
     }
-    drawText(ctx, label, x0 + (every - 1) * gap + 10, y - 7, { scale: TEXT.S, color: DIM });
+    logShape('pips', x0, y - pad, pipsW, pad * 2);
+    drawText(ctx, label, x0 + pipsW + space, y - 7, { scale: TEXT.S, color: DIM });
   }
 
   // the operator's Q key: a code for the live site under the tally, dark squares on a light card
@@ -296,8 +296,9 @@ export class Attract {
     const x = 40;
     const y = 268 - c.height;
     ctx.drawImage(c, x, y);
-    drawText(ctx, 'PLAY ON', x + c.width + 8, y + c.height / 2 - 16, { scale: TEXT.S, color: DIM });
-    drawText(ctx, 'YOUR PHONE', x + c.width + 8, y + c.height / 2, { scale: TEXT.S, color: DIM });
+    logShape('qr', x, y, c.width, c.height);
+    drawText(ctx, 'PLAY ON', x + c.width + 8, y + c.height / 2 - 17, { scale: TEXT.S, color: DIM });
+    drawText(ctx, 'YOUR PHONE', x + c.width + 8, y + c.height / 2 + 1, { scale: TEXT.S, color: DIM });
   }
 
   // the label lives in the open sky in the top right corner (anywhere else it landed on text or

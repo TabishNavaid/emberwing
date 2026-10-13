@@ -225,6 +225,18 @@ function watchDetail(ms) {
 }
 
 // hooks for the playwright tests, guests never touch these
+// draws the scene once more with the text log on, see textLog in art/font.js
+function layout() {
+  textLog.lines = [];
+  textLog.shapes = [];
+  textLog.screen = ctx;
+  textLog.on = true;
+  game.scenes.draw(ctx);
+  game.soundBtn.draw(ctx);
+  textLog.on = false;
+  return { lines: textLog.lines, shapes: textLog.shapes };
+}
+
 window.__emberwing = {
   game,
   LEVELS,
@@ -244,15 +256,10 @@ window.__emberwing = {
     for (let i = 0; i < n; i++) step(1 / fps);
     if (draw) render();
   },
-  // every line of text the next frame draws, as [text, size]. operator overlays aren't guest text
-  words: () => {
-    textLog.lines = [];
-    textLog.on = true;
-    game.scenes.draw(ctx);
-    game.soundBtn.draw(ctx);
-    textLog.on = false;
-    return textLog.lines;
-  },
+  // every line of text the next frame draws, as [text, size, box on screen]. operator overlays
+  // aren't guest text. layout() also gives the shapes text mustn't sit on, for the overlap test
+  words: () => layout().lines,
+  layout: () => layout(),
   state: () => ({
     scene: game.scenes.name,
     title: game.scenes.title?.text ?? null,

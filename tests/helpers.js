@@ -43,6 +43,9 @@ export async function hover(page, x, y, seconds) {
 export async function startRun(page, { level = 'hatchling', dragon = 0 } = {}) {
   const at = await page.evaluate((id) => window.__emberwing.game.scenes.scenes.attract.levelTarget(id), level);
   await moveTo(page, 200, 200, 10);
+  // like a guest stepping up after the last one: the start screen ignores everything for its first
+  // 2s, and a light already resting on a level when that's over doesn't count
+  await page.waitForFunction(() => !window.__emberwing.game.scenes.scenes.attract.inHandoff(), null, { timeout: 20_000, polling: 50 });
   await page.waitForTimeout(300);
   await moveTo(page, at.x, at.y, 12);
   await page.waitForFunction(() => window.__emberwing.state().scene !== 'attract', null, { timeout: 5000, polling: 50 }).catch(() => {});

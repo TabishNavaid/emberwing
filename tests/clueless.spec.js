@@ -23,7 +23,9 @@ test('clueless guests: the game teaches, never finishes itself, and everyone get
       py = start.y;
       tx = px;
       ty = py;
-      for (let i = 0; i < 40 && g.scenes.name === 'attract'; i++) { g.input.feed(start.x + (i % 2), start.y, 'mouse'); w.step(0.05, 60, false); }
+      // (after the start screen's 2s handoff, with the light somewhere else first)
+      while (g.scenes.scenes.attract.inHandoff()) { g.input.feed(240, 250, 'mouse'); w.step(0.05, 60, false); }
+      for (let i = 0; i < 60 && g.scenes.name === 'attract'; i++) { g.input.feed(start.x + (i % 2), start.y, 'mouse'); w.step(0.05, 60, false); }
       let left = false;
       for (let tick = 0; tick < 120 * 20; tick++) {
         if (pause > 0) pause -= 0.05;

@@ -17,7 +17,12 @@ export const VIEW = {
 export const TEXT = { S: 2, M: 3, L: 4 };
 
 export const DUR = {
-  START_DWELL: 1.0, // hold on a level's lantern to start
+  START_DWELL: 1.5, // hold the light on a level this long to start it (a phone just taps)
+  START_CANCEL: 0.3, // a full ring drains back this fast once the light slides off the level
+  // when the start screen comes back the last guest is often still holding the prop or has just put
+  // it down. for this long nothing can start, and a level the light is resting on when it's over
+  // stays dead until the light moves INPUT.START_ARM_PX away and comes back
+  HANDOFF: 2.0,
   CHOOSE: 5.0, // "who will you find?" picks a dragon for you after this, so the line keeps moving
   CHOOSE_DWELL: 1.2, // hold the light on a dragon this long to pick it
   ATTRACT_PAGE: 4.5, // per storybook page
@@ -214,6 +219,7 @@ export const MUSIC = {
 export const INPUT = {
   IDLE_RESET: 10.0, // no input this long during play -> back to attract
   IDLE_MOVE_EPS: 3, // internal px. smaller than this is jitter, not a person
+  START_ARM_PX: 10, // internal px off a level before it can start again (see DUR.HANDOFF). a prop resting on the table jitters 2-3px
   GONE_AFTER: 3.0, // flight autopilot only after the pointer's been still this long (was 1.5)
   STEADY_SPEED: 0.35, // screen-widths/sec. under this counts as holding steady
   LOCK_RADIUS: 26, // internal px from the dragon's eyes

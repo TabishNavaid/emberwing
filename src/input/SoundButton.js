@@ -3,7 +3,7 @@
 import { PAL, TEXT } from '../config.js';
 import { glow } from '../core/util.js';
 import { drawKnotRing } from '../art/knotwork.js';
-import { drawText } from '../art/font.js';
+import { drawText, logShape } from '../art/font.js';
 import { drawSpeaker } from '../art/icons.js';
 
 // it used to be just a picture. people clicked it and nothing happened
@@ -59,6 +59,7 @@ export class SoundButton {
     const { x, y, w, h } = SOUND_BTN;
     ctx.fillStyle = 'rgba(5,7,13,0.7)';
     ctx.fillRect(x - w / 2, y - h / 2, w, h);
+    logShape('speaker', x - w / 2, y - h / 2, w, h);
     ctx.fillStyle = state === 'on' ? 'rgba(255,226,138,0.7)' : 'rgba(255,243,214,0.35)';
     ctx.fillRect(x - w / 2, y - h / 2, w, 1);
     ctx.fillRect(x - w / 2, y + h / 2 - 1, w, 1);

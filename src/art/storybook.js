@@ -2,7 +2,7 @@
 // what the game is: the storm, the lost dragons, a ghost player doing it, home, the act II line
 import { DUR, PAL, TEXT } from '../config.js';
 import { makeCanvas, glow, clamp, ease, lerp } from '../core/util.js';
-import { drawText } from './font.js';
+import { drawText, logShape } from './font.js';
 import { drawKnotRing, drawKnotFrame } from './knotwork.js';
 import { drawDragon, eyeOffset } from './dragon.js';
 import { drawSky, SKY, makeStars, drawStars, drawSea, drawLighthouse, drawStone, drawCloud, drawFog } from './world.js';
@@ -72,8 +72,11 @@ export class Storybook {
     drawKnotFrame(ctx, BOOK.x, BOOK.y, BOOK.w, BOOK.h, { color: PAL.gold });
     for (let i = 0; i < PAGES.length; i++) {
       ctx.fillStyle = i === this.page ? PAL.gold : 'rgba(255,243,214,0.35)';
-      ctx.fillRect(BOOK.x + BOOK.w / 2 - PAGES.length * 5 + i * 10, BOOK.y + BOOK.h + 5, i === this.page ? 6 : 4, i === this.page ? 6 : 4);
+      ctx.fillRect(BOOK.x + BOOK.w / 2 - PAGES.length * 5 + i * 10, BOOK.y + BOOK.h + 7, i === this.page ? 6 : 4, i === this.page ? 6 : 4);
     }
+    // the frame's knots reach 6px past the page, and the page dots sit under it
+    logShape('book', BOOK.x - 6, BOOK.y - 6, BOOK.w + 12, BOOK.h + 12);
+    logShape('page dots', BOOK.x + BOOK.w / 2 - PAGES.length * 5, BOOK.y + BOOK.h + 7, PAGES.length * 10, 6);
   }
 
 

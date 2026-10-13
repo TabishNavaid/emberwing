@@ -106,30 +106,40 @@ export function warmText(str, { scale = 1, color = '#fff', outline = '#0b0f1a', 
   textSprite(str, scale, color, outline, edge);
 }
 
-// the word-budget test turns this on to see every line a screen draws, and at what size
-export const textLog = { on: false, lines: [] };
+// the word-budget and overlap tests turn this on to see every line a screen draws: [text, size,
+// box]. box is where it landed on the screen, null for text drawn inside something else (the
+// storybook's pages). shapes are the non-text things text mustn't sit on, from logShape
+export const textLog = { on: false, lines: [], shapes: [], screen: null };
+export function logShape(name, x, y, w, h) {
+  if (textLog.on) textLog.shapes.push([name, { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) }]);
+}
 
 // y is the top of the letters
 export function drawText(ctx, str, x, y, { scale = 1, color = '#fff', outline = '#0b0f1a', edge = 'shadow', align = 'left', alpha = 1 } = {}) {
-  if (textLog.on && alpha * ctx.globalAlpha > 0.05) textLog.lines.push([String(str), scale]);
   const s = textSprite(str, scale, color, outline, edge);
   const o = outline ? 1 : 0;
   let dx = x - o;
   if (align === 'center') dx = x - Math.floor(textWidth(str, scale) / 2) - o;
   else if (align === 'right') dx = x - textWidth(str, scale) - o;
+  const at = [Math.round(dx), Math.round(y - o)];
+  if (textLog.on && alpha * ctx.globalAlpha > 0.05) textLog.lines.push([String(str), scale, ctx === textLog.screen ? { x: at[0], y: at[1], w: s.width, h: s.height } : null]);
   const pa = ctx.globalAlpha;
   ctx.globalAlpha = pa * alpha;
-  ctx.drawImage(s, Math.round(dx), Math.round(y - o));
+  ctx.drawImage(s, at[0], at[1]);
   ctx.globalAlpha = pa;
 }
 
 // springy pop-in for the big one-word moments (SOAR!, PIP IS HOME!)
 export function drawTextPop(ctx, str, x, y, t, opts = {}) {
   const scale = opts.scale ?? 3;
-  if (textLog.on && (opts.alpha ?? 1) * ctx.globalAlpha > 0.05) textLog.lines.push([String(str), scale]);
   const s = textSprite(str, scale, opts.color ?? '#fff', opts.outline ?? '#0b0f1a', opts.edge ?? 'shadow');
   const k = t >= 1 ? 1 : 1 + Math.pow(2, -8 * t) * Math.sin((t * 8 - 0.75) * 2.1) * 0.6;
   const kk = Math.max(0.01, t < 0.12 ? t / 0.12 : k);
+  if (textLog.on && (opts.alpha ?? 1) * ctx.globalAlpha > 0.05) {
+    const w = Math.round(s.width * kk);
+    const h = Math.round(s.height * kk);
+    textLog.lines.push([String(str), scale, ctx === textLog.screen ? { x: Math.round(x - w / 2), y: Math.round(y - h / 2), w, h } : null]);
+  }
   const pa = ctx.globalAlpha;
   ctx.globalAlpha = pa * (opts.alpha ?? 1);
   ctx.drawImage(s, Math.round(x - (s.width * kk) / 2), Math.round(y - (s.height * kk) / 2), Math.round(s.width * kk), Math.round(s.height * kk));

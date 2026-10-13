@@ -20,8 +20,8 @@ export const detail = { low: false, avg: 1000 / 60, slowT: 0, fastT: 0 };
 export const approach = (cur, target, rate, dt) => cur + (target - cur) * (1 - Math.exp(-rate * dt));
 
 // hover-and-hold instead of clicking, a mocap prop can't click. drains a bit faster than it
-// fills so brushing past doesn't start anything
-export const dwell = (progress, hover, dt, seconds) => clamp(progress + (hover ? 1 : -1.5) * (dt / seconds));
+// fills so brushing past doesn't start anything (or in `drain` seconds from full, if given)
+export const dwell = (progress, hover, dt, seconds, drain = seconds / 1.5) => clamp(progress + (hover ? dt / seconds : -dt / drain));
 
 // the last n points of something (a trail), in a fixed buffer that gets written over. pushing
 // a new {x, y} object every frame made enough garbage for regular collection pauses
