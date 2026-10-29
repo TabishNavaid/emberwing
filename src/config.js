@@ -23,8 +23,12 @@ export const DUR = {
   // it down. for this long nothing can start, and a level the light is resting on when it's over
   // stays dead until the light moves INPUT.START_ARM_PX away and comes back
   HANDOFF: 2.0,
-  CHOOSE: 5.0, // "who will you find?" picks a dragon for you after this, so the line keeps moving
-  CHOOSE_DWELL: 1.2, // hold the light on a dragon this long to pick it
+  CHOOSE: 8.0, // "who will you find?" picks a dragon for you after this, so the line keeps moving
+  CHOOSE_DWELL: 1.5, // hold the light on a dragon this long to pick it (same as a level)
+  // the light is still wherever the level was, which is over a dragon card. for this long nothing
+  // counts, and a card the light is resting on when it's over stays dead until the light moves off
+  // it and back. testers kept getting the middle dragon 1.2s in, before they'd picked anything
+  CHOOSE_LOCK: 1.0,
   ATTRACT_PAGE: 4.5, // per storybook page
   ATTRACT_DEMO_PAGE: 6.5, // ghost demo needs longer to play out
   YOURS_LABEL: 15, // "YOURS!" points at the newest ribbon after a run, so you can show your friends

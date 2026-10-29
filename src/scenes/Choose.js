@@ -1,5 +1,5 @@
 // "who will you find?": three lost dragons side by side, hold the light on one to pick it
-import { VIEW, DUR, PAL, LEVELS, TEXT } from '../config.js';
+import { VIEW, DUR, INPUT, PAL, LEVELS, TEXT } from '../config.js';
 import { clamp, glow, ease, dwell } from '../core/util.js';
 import { drawText, drawTextPop, textWidth } from '../art/font.js';
 import { drawKnotRing, drawKnotBand } from '../art/knotwork.js';
@@ -21,7 +21,7 @@ export class Choose {
 
   enter(g) {
     this.level = g.level;
-    this.options = g.lost.slice(0, 3).map((d, i) => ({ d, me: member(d, i), x: CARD_X[i], progress: 0, hover: false }));
+    this.options = g.lost.slice(0, 3).map((d, i) => ({ d, me: member(d, i), x: CARD_X[i], progress: 0, hover: false, armed: false }));
     this.picked = null;
     this.going = false;
     this.stars = makeStars(41, 60, 120);
@@ -38,6 +38,11 @@ export class Choose {
 
   skip(g) {
     if (!this.picked) this.pick(g, this.options[1] ?? this.options[0]);
+  }
+
+  // true for the first DUR.CHOOSE_LOCK seconds, while nothing can be picked
+  locked() {
+    return this.t < DUR.CHOOSE_LOCK;
   }
 
   pick(g, opt) {
@@ -63,15 +68,21 @@ export class Choose {
       return;
     }
     const inp = g.input;
-    const inCard = (o, x, y) => Math.abs(x - o.x) < CARD.w / 2 && y > CARD.y0 && y < CARD.y1;
+    const inCard = (o, x, y, near = 0) => Math.abs(x - o.x) < CARD.w / 2 + near && y > CARD.y0 - near && y < CARD.y1 + near;
+    // the first moment nothing counts, not even a tap, so nobody picks before they've looked
+    const locked = this.locked();
     // on a phone a tap on a dragon picks it straight away
-    if (inp.tap) {
+    if (inp.tap && !locked) {
       const o = this.options.find((opt) => inCard(opt, inp.tap.x, inp.tap.y));
       if (o) return this.pick(g, o);
     }
+    // same rule as the levels on the start screen: a card only fills once the light has come onto
+    // it from somewhere else after the lock, never from where it was resting
     let on = null;
     for (const o of this.options) {
-      o.hover = inp.seen && !on && inCard(o, inp.x, inp.y);
+      if (!inp.seen) o.armed = false;
+      else if (!locked && !inCard(o, inp.x, inp.y, INPUT.START_ARM_PX)) o.armed = true;
+      o.hover = !locked && o.armed && inp.seen && !on && inCard(o, inp.x, inp.y);
       if (o.hover) on = o;
       o.progress = dwell(o.progress, o.hover, dt, DUR.CHOOSE_DWELL);
       if (o.progress >= 1) return this.pick(g, o);

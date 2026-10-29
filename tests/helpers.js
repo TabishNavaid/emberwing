@@ -54,6 +54,8 @@ export async function startRun(page, { level = 'hatchling', dragon = 0 } = {}) {
   let deadline = Date.now() + 15_000;
   while ((await state(page)).scene === 'attract' && Date.now() < deadline) await hover(page, at.x, at.y, 0.3);
   await waitScene(page, 'choose', 20_000);
+  // the choose screen ignores the light for its first second, then the guest moves onto a dragon
+  await page.waitForFunction(() => !window.__emberwing.game.scenes.scenes.choose.locked(), null, { timeout: 20_000, polling: 50 });
   const pick = await page.evaluate((i) => window.__emberwing.game.scenes.scenes.choose.optionTarget(i), dragon);
   await moveTo(page, pick.x, pick.y, 8);
   deadline = Date.now() + 30_000;

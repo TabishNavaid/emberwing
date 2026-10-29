@@ -15,9 +15,11 @@ export const BOOK = { x: 10, y: 26, w: 216, h: 140 };
 
 const PAGES = [
   { id: 'storm', caption: 'A STORM...' },
-  { id: 'lost', caption: null }, // "PIP IS LOST", set per dragon
+  // no page names a dragon or asks which one: the choose screen is the only place you pick, and
+  // naming the next one here made testers think they'd already been given a dragon
+  { id: 'lost', caption: 'DRAGONS ARE LOST' },
   { id: 'demo', caption: '' }, // sets its own caption as it goes
-  { id: 'home', caption: null }, // "GUIDE PIP HOME"
+  { id: 'home', caption: 'GUIDE THEM HOME' },
   { id: 'music', caption: 'HEAR IT IN ACT II' },
 ];
 
@@ -134,7 +136,6 @@ export class Storybook {
     drawLantern(pg, lx, 64, 1, t);
     pg.fillStyle = 'rgba(92,114,140,0.25)';
     for (let i = 0; i < 4; i++) pg.fillRect(0, 80 + i * 16 + Math.round(Math.sin(t + i) * 3), BOOK.w, 6);
-    return 'WHO WILL YOU FIND?';
   }
 
   demo(pg, t, g, d) {
@@ -185,7 +186,7 @@ export class Storybook {
     drawLantern(pg, ghost.x, ghost.y, 0.8, t);
     pg.globalAlpha = 1;
     drawText(pg, 'YOU', ghost.x, ghost.y - 28, { scale: TEXT.S, align: 'center', color: PAL.gold2 });
-    return t < FIND ? `FIND ${d.name}` : 'FLY HOME!';
+    return t < FIND ? 'FIND THE EYES' : 'FLY HOME!';
   }
 
   home(pg, t, g, d, flock) {
@@ -202,7 +203,6 @@ export class Storybook {
       drawDragon(pg, x, y, m.d, { mood: 'joy', flap: t * 2.5 + i * 0.3, life: t, glow: 2, scale: 0.7, flip: Math.sin(a) > 0 });
     });
     drawDragon(pg, BOOK.w / 2, 78 + Math.sin(t * 3) * 3, d, { mood: 'happy', flap: t * 2.5, glow: 2 });
-    return `GUIDE ${d.name} HOME`;
   }
 
   music(pg, t, g) {

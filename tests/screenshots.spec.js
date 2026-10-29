@@ -43,7 +43,7 @@ const SHOTS = [
   ['attract', 2.9, { x: 292, y: 130, after: 2.1 }], // the light comes onto FLIER after the handoff and holds
   ['attract', 3, null, 'bests'], // tonight's best scores under the rings
   ['choose', 1.2, null], // who will you find?
-  ['choose', 1.0, { x: 240, y: 104 }], // holding the light on the middle dragon
+  ['choose', 2.0, { x: 240, y: 104, after: 1.1 }], // the light comes onto the middle dragon after the first second and holds
   ['flight', 6, 'follow', 'level=hatchling'], // puffs to pop, a power-up orb
   ['flight', 8, 'follow', 'level=flier'], // smaller moving hoops, the first enemies
   ['flight', 9, 'follow', 'level=storm'], // small hoops, enemies, gusts

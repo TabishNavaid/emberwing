@@ -47,6 +47,7 @@ test.describe.serial('whole runs on a phone with a finger', () => {
       await tapAt(page, cdp, at.x, at.y);
       await waitScene(page, 'choose');
       expect((await state(page)).level).toBe(level);
+      await page.waitForFunction(() => !window.__emberwing.game.scenes.current.locked(), null, { polling: 50 });
       const pick = await page.evaluate(() => window.__emberwing.game.scenes.current.optionTarget(0));
       await tapAt(page, cdp, pick.x, pick.y);
       await waitScene(page, 'find');
@@ -69,7 +70,7 @@ test.describe.serial('whole runs on a phone with a finger', () => {
   }
 });
 
-test('tap to pick: a level, a dragon, and NEXT on the card all go on the first tap, a mouse still has to hold', async ({ browser }) => {
+test('tap to pick: a level, a dragon (after its first second), and NEXT on the card all go on the first tap, a mouse still has to hold', async ({ browser }) => {
   const { ctx, page, cdp } = await open(browser);
   const r = await page.evaluate(() => {
     window.__emberwing.pause(true);
@@ -79,9 +80,10 @@ test('tap to pick: a level, a dragon, and NEXT on the card all go on the first t
   const afterTap = await page.evaluate(() => { const w = window.__emberwing; w.step(0.05); return { next: w.game.scenes.pending?.name ?? w.game.scenes.name, level: w.game.level }; });
   expect(afterTap).toEqual({ next: 'choose', level: 'storm' });
   // jump straight to each screen (paused, so the fade from the tap above never finishes)
-  const jump = (name) => page.evaluate((n) => { const w = window.__emberwing; w.game.scenes.pending = null; w.goto(n); }, name);
+  const jump = (name) => page.evaluate((n) => { const w = window.__emberwing; Object.assign(w.game.scenes, { pending: null, fade: 0, fadeDir: 0 }); w.goto(n); }, name);
   await jump('choose');
-  const pick = await page.evaluate(() => { const w = window.__emberwing; return { at: w.game.scenes.current.optionTarget(2), name: w.game.scenes.current.options[2].d.name }; });
+  // (past the choose screen's first second, which ignores taps)
+  const pick = await page.evaluate(() => { const w = window.__emberwing; w.step(1.1); return { at: w.game.scenes.current.optionTarget(2), name: w.game.scenes.current.options[2].d.name }; });
   await tapAt(page, cdp, pick.at.x, pick.at.y);
   expect(await page.evaluate(() => { const w = window.__emberwing; w.step(0.05); return w.game.scenes.current.picked?.d.name; })).toBe(pick.name);
   await jump('end');
