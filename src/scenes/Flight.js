@@ -167,7 +167,7 @@ export class Flight {
     this.streak = 0;
     this.points.bumps++;
     this.points.add(SCORE.BUMP, at.x, at.y - 10, `WHOA! ${SCORE.BUMP}`);
-    this.push += dir * 110;
+    this.push += dir * ENEMY.BUMP_PUSH;
     g.audio.cue('bump');
     g.cam.shake(2);
   }
@@ -341,7 +341,7 @@ export class Flight {
 
     // a little looser at first, snappier as the dragon gets confident. tumbling it barely
     // steers, a speed burst makes it snappier still
-    const follow = FLIGHT.FOLLOW * lerp(0.85, 1, conf) * (this.tumbleT > 0 ? 0.3 : 1) * (this.speedT > 0 ? POWER.SPEED_STEER : 1);
+    const follow = FLIGHT.FOLLOW * lerp(0.85, 1, conf) * (this.tumbleT > 0 ? ENEMY.TUMBLE_STEER : 1) * (this.speedT > 0 ? POWER.SPEED_STEER : 1);
     let ny = approach(this.ey, ty, follow, dt);
     // a gust (or a bump) shoves it off course for a moment
     ny = clamp(ny + this.push * dt, top - 4, FLIGHT.FLOOR + 2);

@@ -167,6 +167,11 @@ export const LEVEL_ORDER = ['hatchling', 'flier', 'storm'];
 // and the streak, then it carries on. the dragon always gets home
 export const ENEMY = {
   TUMBLE: 0.7, // seconds of tumbling after a bump
+  // how well it steers while it tumbles (1 = normally), and the shove away from the enemy (px/sec,
+  // fades out like a gust's). at 0.3 and 110 a bump half a second before a hoop cost that hoop
+  // a third of the time as well, on top of the 50 and the streak
+  TUMBLE_STEER: 0.6,
+  BUMP_PUSH: 60,
   SAFE: 1.3, // can't be bumped again this soon
   HIT_R: 13, // how close counts as a bump (internal px). smaller than they look, they visibly touch at about 20
   // nothing hits out of nowhere: an enemy gathers (faint, specks closing in on it) for this long

@@ -372,3 +372,40 @@ test('a zapper can be beaten: fly ahead and through the hoop first, or pop the c
   expect(r.pop.popped).toBe(true);
   expect(r.pop.state).not.toBe('zapped');
 });
+
+// a bump costs 50 and the streak and knocks the dragon about for a moment, but not the next hoop
+// as well: bumped half a second before a hoop, a guest who keeps aiming at it still makes it
+const AFTER_BUMP = `
+  const out = [];
+  for (const level of ['flier', 'storm']) {
+    for (const seed of [11, 23, 37, 41]) {
+      const f = flight(level, seed);
+      noHazards(f);
+      let n = 0;
+      for (let i = 0; i < 80 * 30 && flying(); i++) {
+        const ring = f.nextRing();
+        const at = f.toScreen(150, ring ? yAhead(f, ring, 1 / 12) : 120);
+        g.input.feed(at.x, at.y, 'mouse');
+        w.step(1 / 30, 30, false);
+        // whatever bumped it, shoving it up or down. every hoop it can be bumped before (one
+        // bump can't follow another that soon)
+        const next = f.nextRing();
+        if (next && !next.tutorial && !next.bumped && f.safeT <= 0 && f.p < w.FLIGHT.RISE_AT && (f.ringX(next) - f.ex) / f.L.scroll <= 0.5) {
+          next.bumped = true;
+          f.bump(g, n++ % 2 ? 1 : -1, { kind: 'gust' });
+        }
+      }
+      for (const r of f.rings) if (r.bumped) out.push({ level, seed, state: r.state, moving: !!r.move });
+    }
+  }
+  return out;
+`;
+
+test('a bump costs 50 and the streak, not the next hoop as well: bumped half a second before one, you can still make it', async ({ page }) => {
+  await boot(page);
+  const r = await run(page, AFTER_BUMP);
+  const made = r.filter((x) => x.state === 'hit').length;
+  console.log(`bumped half a second before a hoop, then made it: ${made} of ${r.length} (${r.filter((x) => x.moving).length} of them moving)`);
+  expect(r.length).toBeGreaterThan(30);
+  expect(made).toBe(r.length);
+});
