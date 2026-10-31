@@ -22,10 +22,15 @@ const HOOPS = 'FLY THROUGH THE HOOPS';
 const WEDGE = [[-36, -30], [-44, 28], [-70, -4], [-78, -50], [-84, 46], [-106, 14], [-112, -28], [-128, 60], [-138, -62], [-142, -6], [-162, 34], [-170, -40]];
 
 const { W, H } = VIEW;
-// the gate: every hoop is judged when it crosses this x, exactly on its beat. it used to be
-// judged at the dragon's x, and the dragon could chase the light to x=320, so the first hoop could
-// arrive 0.8s into the flight while the screen was still fading in
+// the gate: every hoop crosses this x exactly on its beat, so the music lines up. (the dragon used
+// to chase the light out to x=320, and the first hoop could arrive 0.8s into the flight while the
+// screen was still fading in. now it stays within FLIGHT.X_PLAY of here.) hoops are judged where
+// the dragon is, not here: judged on this line, a dragon ahead of it flew right through a hoop and
+// was scored on wherever it was 0.3s later, and one behind it saw hoops vanish before it got there
 const REF_X = 150;
+// how wavy a hoop's rope is drawn, and how much it swells on the beat
+const ropeAmp = (r) => Math.min(2 + r * 0.08, r * 0.2);
+const PULSE = 0.06;
 
 export class Flight {
   interactive = true;
@@ -47,6 +52,9 @@ export class Flight {
     this.swellP = this.swellAt / this.T;
     this.ex = REF_X - 30;
     this.ey = data.fromY ? clamp(data.fromY, 80, 200) : 150;
+    // last step's dragon, counted and drawn, so a hoop can't slip past between two steps
+    this.lx = this.ldx = this.ex;
+    this.ly = this.ldy = this.ey;
     this.vy = 0;
     this.camX = 0;
     this.loopT = 0;
@@ -202,13 +210,49 @@ export class Flight {
   ringY(ring) {
     return ring.move ? ring.y + ring.move.amp * Math.sin(ring.move.w * this.tt + ring.move.ph) : ring.y;
   }
+  // how far from a hoop's middle the dragon can go through and still count: out to the rope at its
+  // biggest on the beat, plus the rope's 1px of thickness and the level's slack. it used to stop
+  // at the rope's resting size. out to the tips of the rope's waves was tried too, and on flier the
+  // wobbly kid then scored more than the teen
+  ringReach(ring, magnet = this.magnetT > 0) {
+    return this.ringR(ring) * (1 + PULSE) + 1 + this.L.slack + (magnet ? POWER.MAGNET_REACH : 0);
+  }
+  get busy() {
+    return this.loopT > 0 || this.rollT > 0 || this.tumbleT > 0;
+  }
+  // where the body is drawn, which isn't quite where the game steers it: the early wobble, the
+  // loop after a miss and the hop after a hoop. the same object every call
+  bodyAt(t) {
+    const b = (this.body ??= {});
+    const wob = FLIGHT.WOBBLE * (1 - this.conf);
+    b.x = this.ex + Math.sin(t * 9.3) * wob * 0.5;
+    b.y = this.ey + Math.sin(t * 7.1) * wob + Math.sin(t * 13) * wob * 0.3;
+    if (this.loopT > 0) {
+      const k = 1 - this.loopT / 0.75;
+      b.y -= Math.sin(k * Math.PI) * 18;
+      b.x += Math.sin(k * Math.PI * 2) * 8;
+    }
+    if (this.cheerT > 0) b.y -= Math.sin((this.cheerT / 0.4) * Math.PI) * 5; // little hop
+    return b;
+  }
+  // ...and with its quirk on top, which goes on whenever it isn't busy (a loopy dragon's loop
+  // goes 14px up). where the guest sees it
+  drawnAt(t = this.t) {
+    const b = this.bodyAt(t);
+    if (!this.busy) {
+      const q = this.me.q.pose(true);
+      b.x += q.dx;
+      b.y += q.dy;
+    }
+    return b;
+  }
   // the pointer is in screen space but the dragon lives in the zoomed world
   toWorld(x, y) {
     const z = this.zoom;
     return { x: (x - W / 2) / z + W / 2, y: (y - H / 2) / z + H / 2 + this.camY };
   }
   nextRing() {
-    return this.rings.find((r) => r.state === 'coming' && (r.tutorial || this.ringX(r) > REF_X - 4));
+    return this.rings.find((r) => r.state === 'coming' && (r.tutorial || this.ringX(r) > this.ex - 4));
   }
   target() {
     const r = this.nextRing();
@@ -317,30 +361,58 @@ export class Flight {
     for (const k of ['fireT', 'speedT', 'magnetT', 'tumbleT', 'safeT']) this[k] = Math.max(0, this[k] - dt);
     this.hz.update(g, dt);
 
+    const d = this.drawnAt();
     for (const ring of this.rings) {
-      if (ring.state !== 'coming') {
-        ring.fx += dt;
+      if (ring.tutorial) {
+        if (ring.state !== 'coming') ring.fx += dt;
         continue;
       }
-      if (ring.tutorial) continue;
       const rx = this.ringX(ring);
+      const ry = this.ringY(ring);
       // when it first shows up on screen (the cold-run test checks every hoop gets real warning)
       if (ring.seenAt === undefined && (rx - W / 2) * this.zoom + W / 2 < W) ring.seenAt = this.t;
-      if (rx <= REF_X) {
+      // and when it crosses the gate, on its beat (the music test checks these), whoever is flying it
+      if (ring.gateAt === undefined && rx <= REF_X) {
         ring.gateAt = this.t;
-        const r = this.ringR(ring);
-        // a little slack so grazing the edge still counts (less of it on the harder levels)
-        const hit = Math.abs(this.ey - this.ringY(ring)) < r + this.L.slack + (this.magnetT > 0 ? POWER.MAGNET_REACH : 0);
-        this.resolveRing(g, ring, rx, hit);
+        ring.beat = g.beat.beat;
       }
+      if (ring.state !== 'coming') ring.fx += dt;
+      else if (ring.lx !== undefined) this.judge(g, ring, rx, ry, d);
+      ring.lx = rx;
+      ring.ly = ry;
     }
+    this.lx = this.ex;
+    this.ly = this.ey;
+    this.ldx = d.x;
+    this.ldy = d.y;
     this.updateTail(g, dt, p, conf);
   }
 
-  resolveRing(g, ring, rx, hit) {
+  // how far off a hoop's middle the dragon went through it, if the hoop passed it between last step
+  // and this one (where exactly in between, so nothing slips through at a low frame rate). -1 if not
+  cross(ring, rx, ry, ax, ay, bx, by) {
+    const ra = ring.lx - ax;
+    const rb = rx - bx;
+    if (!(ra > 0 && rb <= 0)) return -1;
+    return Math.abs(lerp(ay - ring.ly, by - ry, ra / (ra - rb)));
+  }
+
+  // a hoop is judged once it's gone past the dragon the game steers and the one on screen (or is
+  // well past both, in case the dragon jumped). it counts if either went through, scored on
+  // whichever got closer to the middle
+  judge(g, ring, rx, ry, d) {
+    const a = this.cross(ring, rx, ry, this.lx, this.ly, this.ex, this.ey);
+    const b = this.cross(ring, rx, ry, this.ldx, this.ldy, d.x, d.y);
+    if (a >= 0) ring.offA = Math.min(ring.offA ?? Infinity, a);
+    if (b >= 0) ring.offB = Math.min(ring.offB ?? Infinity, b);
+    if ((ring.offA === undefined || ring.offB === undefined) && rx >= Math.min(this.ex, d.x) - 30) return;
+    const off = Math.min(ring.offA ?? Infinity, ring.offB ?? Infinity);
+    this.resolveRing(g, ring, rx, off < this.ringReach(ring), off);
+  }
+
+  resolveRing(g, ring, rx, hit, off) {
     const r = this.ringR(ring);
     ring.state = hit ? 'hit' : 'miss';
-    ring.beat = g.beat.beat; // the music test checks these land on the beat
     ring.hitX = rx;
     ring.hitY = this.ringY(ring);
     const gold = ring.p > FLIGHT.WOBBLY_UNTIL;
@@ -352,7 +424,7 @@ export class Flight {
       this.streak++;
       if (this.streak % 3 === 0) this.rollT = 0.7;
       const at = this.toScreen(rx, ring.hitY);
-      this.points.hoop(at.x, at.y, this.streak, Math.abs(this.ey - ring.hitY) < r * SCORE.PERFECT_ZONE, this.speedT > 0 ? 2 : 1);
+      this.points.hoop(at.x, at.y, this.streak, off < r * SCORE.PERFECT_ZONE, this.speedT > 0 ? 2 : 1);
       g.audio.cue('ring');
       g.cam.shake(1 + ring.p * 2);
       g.particles.burst(rx, ring.hitY, 26 + Math.round(ring.p * 20), { speed: 80 + ring.p * 60, colors: gold ? [PAL.gold, PAL.gold2, '#fff6d8'] : ['#bff8ee', PAL.teal, '#ffffff'], kind: 'spark', size: 2, drag: 2.5, life: 0.8 }, g.rng);
@@ -380,7 +452,8 @@ export class Flight {
     const inside = Math.abs(this.ey - ring.y) < this.L.tutR;
     if ((parked && inside) || this.tutT >= FLIGHT.TUT_CAP) {
       ring.gateAt = this.t;
-      this.resolveRing(g, ring, this.ringX(ring), parked && inside);
+      ring.beat = g.beat.beat;
+      this.resolveRing(g, ring, this.ringX(ring), parked && inside, Math.abs(this.ey - ring.y));
       this.tutorial = false;
       // the timeline snaps to the nearest beat (at most a quarter second early or late) so every
       // hoop and the swell land right on the music. waiting for the next beat instead added up
@@ -560,16 +633,16 @@ export class Flight {
     // a fog wisp sitting on it makes it hard to see for a moment
     if (ring.hidden) ctx.globalAlpha = 0.2;
     if (ring.state === 'coming') {
-      const pulse = 1 + g.beat.pulse * 0.06;
+      const pulse = 1 + g.beat.pulse * PULSE;
       // the waiting tutorial hoop breathes so it's obviously the thing to aim for
       if (ring.tutorial) glow(ctx, x, ry, r * 2.2, PAL.teal, 0.25 + 0.2 * Math.sin(this.t * 5));
       glow(ctx, x, ry, r * 1.6, gold > 0.5 ? PAL.gold : PAL.teal, 0.25 + 0.15 * g.beat.pulse);
-      drawKnotRing(ctx, x, ry, r * pulse, 1, { lobes: 6 + Math.round(gold * 4), amp: Math.min(2 + r * 0.08, r * 0.2), width: 2, on: color });
+      drawKnotRing(ctx, x, ry, r * pulse, 1, { lobes: 6 + Math.round(gold * 4), amp: ropeAmp(r), width: 2, on: color });
       drawRune(ctx, x, ry, Math.max(6, r * 0.55), ring.rune, mix('#e8fffb', PAL.gold2, gold), 1);
       // while a magnet's on, a faint outer ring shows how much further out the hoop counts
       if (this.magnetT > 0 && !ring.tutorial) {
         ctx.globalAlpha = clamp(this.magnetT) * 0.45;
-        drawKnotRing(ctx, x, ry, r + POWER.MAGNET_REACH, 1, { lobes: 10, amp: 1, width: 1, on: PAL.gold2 });
+        drawKnotRing(ctx, x, ry, this.ringReach(ring), 1, { lobes: 10, amp: 1, width: 1, on: PAL.gold2 });
         ctx.globalAlpha = ring.hidden ? 0.2 : 1;
       }
       // little up/down ticks on the bobbing ones so it reads as "this one moves"
@@ -604,18 +677,9 @@ export class Flight {
   }
 
   drawFlyer(g, ctx, t, conf) {
-    const wob = FLIGHT.WOBBLE * (1 - conf);
-    const wx = Math.sin(t * 9.3) * wob * 0.5;
-    const wy = Math.sin(t * 7.1) * wob + Math.sin(t * 13) * wob * 0.3;
     let rot = clamp(this.vy * 0.004, -0.5, 0.5) + Math.sin(t * 6) * 0.15 * (1 - conf);
-    let x = this.ex + wx;
-    let y = this.ey + wy;
-    if (this.loopT > 0) {
-      const k = 1 - this.loopT / 0.75;
-      rot = -k * Math.PI * 2;
-      y -= Math.sin(k * Math.PI) * 18;
-      x += Math.sin(k * Math.PI * 2) * 8;
-    }
+    const { x, y } = this.bodyAt(t);
+    if (this.loopT > 0) rot = -(1 - this.loopT / 0.75) * Math.PI * 2;
     const s = this.squash;
     let sy = 1 - s * 0.2;
     let sxw = 1 + s * 0.25;
@@ -623,7 +687,6 @@ export class Flight {
     const w = this.windup;
     sy *= 1 - 0.1 * w;
     sxw *= 1 + 0.08 * w;
-    if (this.cheerT > 0) y -= Math.sin((this.cheerT / 0.4) * Math.PI) * 5; // little hop
     // barrel roll: squash the body flat and out upside down, reads as a roll in 2d. it used to go
     // all the way through zero, and for a few frames the dragon vanished and only its sparkles showed
     if (this.rollT > 0) {
@@ -645,9 +708,8 @@ export class Flight {
       if (Math.floor(t * 12) % 2 === 0) drawPowerIcon(ctx, 'fireball', x + 22 * this.d.size, y - 7, t);
     }
     // its quirk goes on top, except while it's busy with a hoop trick or tumbling
-    const busy = this.loopT > 0 || this.rollT > 0 || this.tumbleT > 0;
     const o = { mood, glow: 2, rot, sx: sxw, sy, life: t, ...(glide ? { wing: 'mid' } : { flap: this.flapPh }) };
-    if (busy) drawDragon(ctx, x, y, this.d, o);
+    if (this.busy) drawDragon(ctx, x, y, this.d, o);
     else drawMember(ctx, this.me, x, y, o);
     this.drawn = { x, y, sy, t }; // the smoothness test checks the dragon really got drawn every frame
     if (this.shield) {

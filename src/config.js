@@ -105,7 +105,7 @@ export const LEVELS = {
     hoopBeats: 4, // a hoop every 4 beats (2s). at 2 beats first-timers had no time to steer
     ringR: [24, 34], // hoop radius, grows over the flight (was 15, too small for little kids)
     tutR: 30, // the tutorial hoop
-    slack: 4, // px of grace past the hoop's edge that still counts
+    slack: 4, // px of grace past the outside of the drawn hoop that still counts
     scroll: 110, // how fast the hoops come at you, internal px/sec
     magnet: 0.35, // gentle pull toward the next hoop, 0 = none
     moving: 0, // share of hoops that bob up and down

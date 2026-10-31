@@ -132,7 +132,7 @@ test('touch targets are at least 44 css px and the hoops a fair size on a small 
       w.pause(true);
       const css = (w.toScreen(100, 0).x - w.toScreen(0, 0).x) / 100; // css px per game px
       // fly each level by hand and measure every hoop as it reaches the dragon: how tall it looks
-      // and how tall the band that counts as a hit is (the hoop plus its slack), both on screen
+      // and how tall the band that counts as a hit is (out to the drawn rope plus its slack), both on screen
       const hoops = {};
       for (const id of ['hatchling', 'flier', 'storm']) {
         g.level = id;
@@ -141,11 +141,11 @@ test('touch targets are at least 44 css px and the hoops a fair size on a small 
         let drawn = Infinity;
         let band = Infinity;
         const resolve = f.resolveRing.bind(f);
-        f.resolveRing = (g, ring, rx, hit) => {
+        f.resolveRing = (g, ring, ...rest) => {
           const r = f.ringR(ring);
           drawn = Math.min(drawn, 2 * r * f.zoom * css);
-          band = Math.min(band, 2 * (r + f.L.slack) * f.zoom * css);
-          resolve(g, ring, rx, hit);
+          band = Math.min(band, 2 * f.ringReach(ring, false) * f.zoom * css);
+          resolve(g, ring, ...rest);
         };
         for (let i = 0; i < 60 * 120 && g.scenes.name === 'flight'; i++) {
           const s = w.state();

@@ -148,8 +148,8 @@ test('shield shrugs off one hit, then it is gone', async ({ page }) => {
 test('magnet makes hoops count from further out without steering for you, speed burst doubles hoop points', async ({ page }) => {
   await boot(page);
   const r = await run(page, `
-    // a near miss: the dragon passes 5px outside what normally counts. hatchling, so no enemy can
-    // get in the way of the measurement
+    // a near miss: the dragon passes 5px outside what normally counts (the one the game steers and
+    // the one on screen both). hatchling, so no enemy can get in the way of the measurement
     const nearMiss = (magnet) => {
       w.reseed(5);
       const f = fly('hatchling');
@@ -157,7 +157,7 @@ test('magnet makes hoops count from further out without steering for you, speed 
       const ring = f.rings.find((x) => !x.tutorial && x.state === 'coming');
       for (let i = 0; i < 80 && ring.state === 'coming'; i++) {
         g.input.feed(200, 150, 'mouse');
-        ring.y = f.ey - (f.ringR(ring) + f.L.slack + 5);
+        ring.y = Math.min(f.ey, f.drawnAt().y) - (f.ringReach(ring, false) + 5);
         w.step(0.05, 60, false);
       }
       return ring.state;
