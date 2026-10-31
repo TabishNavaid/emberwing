@@ -174,3 +174,77 @@ test('touch targets are at least 44 css px and the hoops a fair size on a small 
     expect(d.hoops.storm.band).toBeGreaterThanOrEqual(30); // small on purpose, it's the hard level
   }
 });
+
+
+// the address bar eats a landscape phone screen. android gets a fullscreen button (a tap, the
+// Fullscreen API); an iphone can't go fullscreen from a page, so it doesn't get one there
+test('fullscreen button: shown on a touch screen that can go fullscreen, tapping it asks for fullscreen; never on the projector or an iphone', async ({ browser }) => {
+  const check = async (device, { iphone = false } = {}) => {
+    const ctx = await browser.newContext(device);
+    if (iphone) await ctx.addInitScript(() => Object.defineProperty(Document.prototype, 'fullscreenEnabled', { get: () => false }));
+    await ctx.addInitScript(() => {
+      window.__fullscreenAsked = 0;
+      Element.prototype.requestFullscreen = function () { window.__fullscreenAsked++; return Promise.resolve(); };
+    });
+    const page = await ctx.newPage();
+    await page.goto('./?seed=5');
+    await page.waitForFunction(() => document.body.classList.contains('ready'), null, { polling: 50 });
+    const shown = await page.evaluate(() => window.__emberwing.game.fullBtn.shown);
+    let asked = 0;
+    if (shown) {
+      const cdp = await ctx.newCDPSession(page);
+      const p = await screenAt(page, 51, 256);
+      await finger(cdp, 'touchStart', p);
+      await finger(cdp, 'touchEnd', p);
+      asked = await page.evaluate(() => window.__fullscreenAsked);
+    }
+    await ctx.close();
+    return { shown, asked };
+  };
+  expect(await check(ANDROID)).toEqual({ shown: true, asked: 1 });
+  expect(await check(IPHONE, { iphone: true })).toEqual({ shown: false, asked: 0 });
+  expect(await check({ viewport: { width: 1920, height: 1080 } })).toEqual({ shown: false, asked: 0 });
+});
+
+test('add to home screen: manifest (fullscreen, landscape), icons and the apple tags are all there', async ({ page, request }) => {
+  await page.goto('./?seed=5');
+  const head = await page.evaluate(() => ({
+    manifest: document.querySelector('link[rel=manifest]')?.href,
+    capable: document.querySelector('meta[name=apple-mobile-web-app-capable]')?.content,
+    bar: document.querySelector('meta[name=apple-mobile-web-app-status-bar-style]')?.content,
+    icon: document.querySelector('link[rel=apple-touch-icon]')?.href,
+    viewport: document.querySelector('meta[name=viewport]')?.content,
+  }));
+  expect(head.capable).toBe('yes');
+  expect(head.bar).toBe('black-translucent');
+  expect(head.viewport).toContain('viewport-fit=cover');
+  const m = await (await request.get(head.manifest)).json();
+  expect(m.display).toBe('fullscreen');
+  expect(m.orientation).toBe('landscape');
+  for (const icon of m.icons) expect((await request.get(new URL(icon.src, head.manifest).href)).status()).toBe(200);
+  expect((await request.get(head.icon)).status()).toBe(200);
+});
+
+test('the game fills the full height of a sideways phone, notch and home bar or not', async ({ browser }) => {
+  const out = {};
+  for (const [name, device, insets] of [['iphone', IPHONE, null], ['iphone notch', IPHONE, [47, 47, 21]], ['android', ANDROID, null]]) {
+    const { ctx, page } = await open(browser, device);
+    out[name] = await page.evaluate((insets) => {
+      if (insets) {
+        const root = document.documentElement.style;
+        root.setProperty('--safe-left', insets[0] + 'px');
+        root.setProperty('--safe-right', insets[1] + 'px');
+        root.setProperty('--safe-bottom', insets[2] + 'px');
+        window.dispatchEvent(new Event('resize'));
+      }
+      const b = document.getElementById('screen').getBoundingClientRect();
+      const free = { w: innerWidth - (insets ? insets[0] + insets[1] : 0), h: innerHeight - (insets ? insets[2] : 0) };
+      return { canvas: [Math.round(b.width), Math.round(b.height)], free: [free.w, free.h], ofScreen: Math.round((100 * b.width * b.height) / (innerWidth * innerHeight)) };
+    }, insets);
+    await ctx.close();
+  }
+  console.log('screen used:', JSON.stringify(out));
+  // 16:9 on a wider screen: it uses all the height there is (bars only at the sides), or up to 5%
+  // less when that lands it on whole pixels (VIEW.SNAP), like 4x on an iphone with the notch
+  for (const d of Object.values(out)) expect(d.canvas[1]).toBeGreaterThanOrEqual(Math.floor(Math.min(d.free[1], (d.free[0] * 9) / 16) * 0.95));
+});

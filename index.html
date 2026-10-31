@@ -5,12 +5,20 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
     <meta name="theme-color" content="#05070d" />
+    <!-- installed to the home screen it opens with no browser bar (iphone: these tags, android: the manifest) -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Emberwing" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <meta name="description" content="Emberwing: The Way Home. Guide a young dragon home under the aurora. A lobby interactive for Symphonicon." />
     <title>Emberwing: The Way Home</title>
     <style>
       /* no scrolling, pinch zoom, double tap zoom or pull to refresh while someone is playing */
       html, body { margin: 0; height: 100%; background: #05070d; overflow: hidden; overscroll-behavior: none; touch-action: none; }
-      body { position: fixed; inset: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; cursor: none; }
+      /* dvh/dvw follow a phone's address bar as it comes and goes, so the game gets all the room there is */
+      body { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; width: 100dvw; height: 100dvh; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; cursor: none; }
       canvas { image-rendering: crisp-edges; image-rendering: pixelated; }
       canvas#screen { position: fixed; display: block; }
       /* main.js reads the notch and home bar insets off this. the tests set --safe-* to fake them */

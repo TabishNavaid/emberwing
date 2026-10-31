@@ -12,7 +12,7 @@ import { Audio } from './audio/Audio.js';
 import { Operator } from './core/Operator.js';
 import { Motion } from './core/Motion.js';
 import { Calibration } from './input/Calibration.js';
-import { SoundButton } from './input/SoundButton.js';
+import { SoundButton, FullscreenButton } from './input/SoundButton.js';
 import { mulberry32, detail } from './core/util.js';
 import { fillLost } from './core/dragons.js';
 import { loadSprites } from './art/sprites.js';
@@ -47,8 +47,11 @@ function resize() {
   const inset = getComputedStyle(safe);
   const l = parseFloat(inset.paddingLeft) || 0;
   const t = parseFloat(inset.paddingTop) || 0;
-  const cw = (window.innerWidth - l - (parseFloat(inset.paddingRight) || 0)) * dpr;
-  const ch = (window.innerHeight - t - (parseFloat(inset.paddingBottom) || 0)) * dpr;
+  // the visual viewport is what's actually visible, under a phone's address bar (not while a
+  // trackpad pinch has zoomed in, then it's only part of the page)
+  const vv = window.visualViewport?.scale === 1 ? window.visualViewport : null;
+  const cw = ((vv ? vv.width : window.innerWidth) - l - (parseFloat(inset.paddingRight) || 0)) * dpr;
+  const ch = ((vv ? vv.height : window.innerHeight) - t - (parseFloat(inset.paddingBottom) || 0)) * dpr;
   let s = Math.min(cw / W, ch / H);
   if (s >= 2 && (s - Math.floor(s)) / s < VIEW.SNAP) s = Math.floor(s);
   const w = Math.round(W * s);
@@ -57,6 +60,8 @@ function resize() {
   Object.assign(display.style, { width: w / dpr + 'px', height: h / dpr + 'px', left: fit.x / dpr + 'px', top: fit.y / dpr + 'px' });
 }
 window.addEventListener('resize', resize);
+window.visualViewport?.addEventListener('resize', resize);
+document.addEventListener('fullscreenchange', () => setTimeout(resize, 50));
 resize();
 
 const toView = (cx, cy) => ({
@@ -109,6 +114,7 @@ game.scenes = new SceneManager(game, {
 });
 game.op = new Operator(game);
 game.soundBtn = new SoundButton(game);
+game.fullBtn = new FullscreenButton(game);
 
 // clicking or tapping the speaker toggles sound. registered before the gate below, so while
 // "press any key" is up a click only starts the station. touches use the real finger spot,
@@ -118,6 +124,7 @@ window.addEventListener('pointerdown', (e) => {
   const p = toView(e.clientX, e.clientY);
   // a finger gets a bigger target, at least 44 css px on a small phone
   if (game.soundBtn.contains(p.x, p.y, e.pointerType === 'touch' ? 9 : 3)) game.soundBtn.press();
+  else if (e.pointerType === 'touch' && game.fullBtn.contains(p.x, p.y, 9)) game.fullBtn.press();
 });
 // ios safari ignores user-scalable=no, this stops pinch zoom there
 document.addEventListener('gesturestart', (e) => e.preventDefault());
@@ -176,6 +183,7 @@ function render() {
   ctx.fillRect(0, 0, W, H);
   game.scenes.draw(ctx);
   game.soundBtn.draw(ctx);
+  game.fullBtn.draw(ctx);
   game.op.draw(ctx);
   // a short delay so a browser that starts audio a moment late doesn't flash the gate
   if (game.gate && game.time > 0.5) game.op.drawGate(ctx);
@@ -233,6 +241,7 @@ function layout() {
   textLog.on = true;
   game.scenes.draw(ctx);
   game.soundBtn.draw(ctx);
+  game.fullBtn.draw(ctx);
   textLog.on = false;
   return { lines: textLog.lines, shapes: textLog.shapes };
 }
