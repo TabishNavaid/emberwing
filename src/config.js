@@ -76,7 +76,12 @@ export const FLIGHT = {
   TUT_SLIDE: 1.5, // the tutorial hoop glides in this long, then waits for you
   TUT_CAP: 5.0, // ...but never longer than this, then the timeline starts anyway
   FOLLOW: 12, // how tightly the dragon chases the light. 7.5 felt like steering a boat
-  X_PLAY: 40, // how far the dragon can drift left/right of the gate (internal px)
+  // where the light can steer the dragon, in screen px so it stays the same while the camera zooms.
+  // it used to be in world px, and as the camera pulled back for the swell the band shrank on
+  // screen: the top of the screen stopped doing anything and steering felt mushy halfway through
+  X_PLAY: 46, // how far it can drift left/right of the gate
+  STEER_TOP: 16, // highest it goes on screen (just under the hud)
+  FLOOR: 212, // lowest it goes, in world px: just above the sea (routes SEA_Y is 222), wherever the sea is on screen
   WOBBLE: 3, // px of early wobble, fades out as it gets confident (7 fought the guest's steering)
   ZOOM_START: 1.18,
   ZOOM_END: 0.86,
@@ -174,7 +179,9 @@ export const POWER = {
   SPEED: 3.5, // seconds
   SPEED_STEER: 1.8, // steering that much snappier, and hoops worth double
   MAGNET: 5.0, // seconds
-  MAGNET_PULL: 0.75,
+  // hoops count from this much further out while it lasts. it used to steer the dragon toward the
+  // hoop instead, which took the light away from the guest for 5s mid-flight
+  MAGNET_REACH: 10,
   FRIEND: 1.4, // seconds a flock friend takes to swoop across
 };
 

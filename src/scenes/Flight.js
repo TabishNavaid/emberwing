@@ -257,17 +257,21 @@ export class Flight {
     // autopilot only when the pointer is really gone, not just resting for a second
     const gone = inp.idle > INPUT.GONE_AFTER;
 
-    // follow the light. if nobody's pointing, autopilot to the next ring so it still looks good
-    const w = this.toWorld(inp.x, inp.y);
-    // the dragon mostly steers up and down near the gate, a little sideways play so it feels alive
-    let tx = clamp(w.x, REF_X - FLIGHT.X_PLAY, REF_X + FLIGHT.X_PLAY);
-    let ty = clamp(w.y, 34, 212);
+    // follow the light. if nobody's pointing, autopilot to the next ring so it still looks good.
+    // the steering band is in screen px (see FLIGHT.X_PLAY), the floor is the sea in world px
+    const top = this.toWorld(0, FLIGHT.STEER_TOP).y;
+    const gate = this.toScreen(REF_X, 0).x;
+    const w = this.toWorld(clamp(inp.x, gate - FLIGHT.X_PLAY, gate + FLIGHT.X_PLAY), inp.y);
+    let tx = w.x;
+    let ty = clamp(w.y, top, FLIGHT.FLOOR);
     const next = this.nextRing();
     if (next) {
       const dx = this.ringX(next) - this.ex;
-      // a magnet power-up pulls a lot harder and from further out
-      const magnet = this.magnetT > 0 ? POWER.MAGNET_PULL * clamp(1 - dx / 200) : this.L.magnet * clamp(1 - dx / 120);
-      const pull = next.tutorial ? 0 : magnet * (gone ? 0 : 1);
+      // the level's gentle pull toward the next hoop only helps once the light is already lined up
+      // near it. it used to pull whatever the light was doing, so steering away from a hoop (for an
+      // orb, round an enemy) felt like the dragon wasn't listening
+      const near = clamp(1 - Math.abs(ty - this.ringY(next)) / (this.ringR(next) * 2));
+      const pull = next.tutorial || gone ? 0 : this.L.magnet * clamp(1 - dx / 120) * near;
       ty = lerp(ty, this.ringY(next), pull);
       if (gone) {
         tx = lerp(this.ex, REF_X, 0.5);
@@ -289,7 +293,7 @@ export class Flight {
     const follow = FLIGHT.FOLLOW * lerp(0.85, 1, conf) * (this.tumbleT > 0 ? 0.3 : 1) * (this.speedT > 0 ? POWER.SPEED_STEER : 1);
     let ny = approach(this.ey, ty, follow, dt);
     // a gust (or a bump) shoves it off course for a moment
-    ny = clamp(ny + this.push * dt, 30, 214);
+    ny = clamp(ny + this.push * dt, top - 4, FLIGHT.FLOOR + 2);
     this.push = approach(this.push, 0, 3, dt);
     this.vy = (ny - this.ey) / dt;
     this.ex = approach(this.ex, tx, follow * 0.6, dt);
@@ -324,7 +328,7 @@ export class Flight {
         ring.gateAt = this.t;
         const r = this.ringR(ring);
         // a little slack so grazing the edge still counts (less of it on the harder levels)
-        const hit = Math.abs(this.ey - this.ringY(ring)) < r + this.L.slack;
+        const hit = Math.abs(this.ey - this.ringY(ring)) < r + this.L.slack + (this.magnetT > 0 ? POWER.MAGNET_REACH : 0);
         this.resolveRing(g, ring, rx, hit);
       }
     }
@@ -560,6 +564,12 @@ export class Flight {
       glow(ctx, x, ry, r * 1.6, gold > 0.5 ? PAL.gold : PAL.teal, 0.25 + 0.15 * g.beat.pulse);
       drawKnotRing(ctx, x, ry, r * pulse, 1, { lobes: 6 + Math.round(gold * 4), amp: Math.min(2 + r * 0.08, r * 0.2), width: 2, on: color });
       drawRune(ctx, x, ry, Math.max(6, r * 0.55), ring.rune, mix('#e8fffb', PAL.gold2, gold), 1);
+      // while a magnet's on, a faint outer ring shows how much further out the hoop counts
+      if (this.magnetT > 0 && !ring.tutorial) {
+        ctx.globalAlpha = clamp(this.magnetT) * 0.45;
+        drawKnotRing(ctx, x, ry, r + POWER.MAGNET_REACH, 1, { lobes: 10, amp: 1, width: 1, on: PAL.gold2 });
+        ctx.globalAlpha = ring.hidden ? 0.2 : 1;
+      }
       // little up/down ticks on the bobbing ones so it reads as "this one moves"
       if (ring.move) {
         ctx.fillStyle = color;

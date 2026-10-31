@@ -145,22 +145,37 @@ test('shield shrugs off one hit, then it is gone', async ({ page }) => {
   expect(r.second).toEqual({ tumble: true, bumps: 1 });
 });
 
-test('magnet pulls the dragon into the next hoop, speed burst doubles hoop points', async ({ page }) => {
+test('magnet makes hoops count from further out without steering for you, speed burst doubles hoop points', async ({ page }) => {
   await boot(page);
   const r = await run(page, `
-    // light held way off at the bottom and the next hoop up high: the magnet pulls the dragon
-    // a lot closer to it. hatchling, so no enemy can get in the way of the measurement
-    const offBy = (magnet) => {
+    // a near miss: the dragon passes 5px outside what normally counts. hatchling, so no enemy can
+    // get in the way of the measurement
+    const nearMiss = (magnet) => {
+      w.reseed(5);
+      const f = fly('hatchling');
+      if (magnet) f.powerUp(g, 'magnet', f.ex, f.ey);
+      const ring = f.rings.find((x) => !x.tutorial && x.state === 'coming');
+      for (let i = 0; i < 80 && ring.state === 'coming'; i++) {
+        g.input.feed(200, 150, 'mouse');
+        ring.y = f.ey - (f.ringR(ring) + f.L.slack + 5);
+        w.step(0.05, 60, false);
+      }
+      return ring.state;
+    };
+    // the light held low with the next hoop way up high: the dragon stays with the light either way
+    const settle = (magnet) => {
       w.reseed(5);
       const f = fly('hatchling');
       if (magnet) f.powerUp(g, 'magnet', f.ex, f.ey);
       const ring = f.rings.find((x) => !x.tutorial && x.state === 'coming');
       ring.y = 70;
-      for (let i = 0; i < 80 && ring.state === 'coming'; i++) { g.input.feed(200, 262, 'mouse'); w.step(0.05, 60, false); }
-      return Math.abs(ring.hitY - f.ey);
+      for (let i = 0; i < 30; i++) { g.input.feed(200, 200, 'mouse'); w.step(0.05, 60, false); }
+      return f.ey;
     };
-    const without = offBy(false);
-    const withMagnet = offBy(true);
+    const missWithout = nearMiss(false);
+    const missWith = nearMiss(true);
+    const without = settle(false);
+    const withMagnet = settle(true);
     // points for exactly the next hoop, aiming at its middle
     const nextHoop = (f) => {
       const h = f.points.hits;
@@ -178,9 +193,11 @@ test('magnet pulls the dragon into the next hoop, speed burst doubles hoop point
     const normalHoop = nextHoop(f);
     f.powerUp(g, 'speed', f.ex, f.ey);
     const speedHoop = nextHoop(f);
-    return { without, withMagnet, normalHoop, speedHoop };
+    return { missWithout, missWith, without, withMagnet, normalHoop, speedHoop };
   `);
-  expect(r.withMagnet).toBeLessThan(r.without);
+  expect(r.missWithout).toBe('miss');
+  expect(r.missWith).toBe('hit');
+  expect(Math.abs(r.withMagnet - r.without)).toBeLessThan(1);
   expect(r.speedHoop).toBeGreaterThanOrEqual(r.normalHoop * 1.8);
 });
 

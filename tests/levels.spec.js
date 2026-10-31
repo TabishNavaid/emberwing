@@ -251,3 +251,39 @@ test.describe.serial('run times per level', () => {
     expect(times.storm ?? 0).toBeLessThanOrEqual(s.runs[0]);
   });
 });
+
+// "partway through the flight the dragon flies less according to your movements" (playtest). a
+// guest sweeps the light up and down over everything above the sea, all flight, on every level
+// and route. how far the dragon trails the light on screen mustn't get worse in the second half.
+// moments when a bump or a gust is shoving it are left out, that's the level being hard on purpose
+test('steering is as tight at the end of the flight as at the start, on every level and route', async ({ page }) => {
+  await boot(page);
+  const r = await page.evaluate(() => {
+    const w = window.__emberwing;
+    const g = w.game;
+    const inp = g.input;
+    w.pause(true);
+    const out = [];
+    for (const level of ['hatchling', 'flier', 'storm']) for (const route of [0, 1, 2]) {
+      g.level = level;
+      g.route = route;
+      w.reseed(7);
+      w.goto('flight');
+      const f = g.scenes.current;
+      const half = [[], []];
+      for (let i = 0; i < 60 * 90 && g.scenes.name === 'flight'; i++) {
+        const tt = i / 60;
+        inp.feed(150 + Math.sin(tt * 0.9) * 25, 110 + Math.sin(tt * 2.1) * 85, 'mouse');
+        w.step(1 / 60, 60, false);
+        if (f.tutorial || f.p < 0.03 || f.p > 0.88 || f.tumbleT > 0 || Math.abs(f.push) > 5) continue;
+        const at = f.toScreen(f.ex, f.ey);
+        half[f.p < 0.455 ? 0 : 1].push(Math.abs(at.y - inp.y));
+      }
+      const mean = (a) => a.reduce((s, x) => s + x, 0) / a.length;
+      out.push({ level, route, first: +mean(half[0]).toFixed(1), second: +mean(half[1]).toFixed(1) });
+    }
+    return out;
+  });
+  console.log('trailing the light, screen px:', r.map((x) => `${x.level} route ${x.route}: ${x.first} -> ${x.second}`).join(', '));
+  for (const x of r) expect(x.second).toBeLessThanOrEqual(x.first * 1.05 + 0.3); // it was 14-30% worse before the fix
+});
