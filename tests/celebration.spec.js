@@ -11,7 +11,7 @@ test('the 8th dragon home: every saved dragon in the spiral, the names from this
     g.store.clear();
     for (let i = 0; i < 15; i++) g.store.add([[0, 0.5], [1, 0.4]], i % 6);
     w.goto('home'); // the 16th
-    w.step(5.2);
+    w.step(6.2); // home is 5.4s, then the fade into the celebration
     const scene = g.scenes.name;
     const c = g.scenes.current;
     const seen = c.visibleDragons();
@@ -42,7 +42,7 @@ test('the rolling names stay clear of the speaker button', async ({ page }) => {
     g.store.clear();
     for (let i = 0; i < 7; i++) g.store.add([[0, 0.5], [1, 0.4]], i % 6);
     w.goto('home'); // the 8th
-    w.step(5.2);
+    w.step(6.4);
     const c = g.scenes.current;
     // draw only the names, all the way through, and look at the speaker (30x24 at 17,256) plus 8px all round
     const can = document.createElement('canvas');
@@ -88,7 +88,7 @@ test('reduced motion: the celebration still plays, calmer', async ({ page }) => 
     g.store.clear();
     for (let i = 0; i < 7; i++) g.store.add([[0, 0.5], [1, 0.4]], i % 6);
     w.goto('home');
-    w.step(5.2);
+    w.step(6.4);
     const c = g.scenes.current;
     w.step(3);
     return { scene: g.scenes.name, gentle: c.gentle, booms: c.booms, shake: g.cam.shakeAmt };

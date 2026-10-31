@@ -113,13 +113,70 @@ test('title cards between scenes, and the next scene waits underneath them', asy
     const w = window.__emberwing;
     w.pause(true);
     w.game.scenes.go('flight', {}, { title: 'NOW FLY HOME!' });
-    w.step(0.6); // fade out, then the card
+    w.step(0.8); // fade out (0.6s), then the card
     const during = { title: w.state().title, flightT: w.game.scenes.current.t };
-    w.step(1.5);
+    w.step(2.4); // the card is up 2.2s
     return { during, after: { title: w.state().title, flightT: w.game.scenes.current.t } };
   });
   expect(r.during.title).toBe('NOW FLY HOME!');
   expect(r.during.flightT).toBe(0); // the flight hasn't started yet
   expect(r.after.title).toBe(null);
   expect(r.after.flightT).toBeGreaterThan(0);
+});
+
+// playtesters said the menus moved too fast to follow. every screen that moves on by itself (title
+// cards, "YOU FOUND PIP!", home, the dragon card) and the choose screen leave each line up long
+// enough to read. under a fade that's more than half covered doesn't count as readable
+test('every screen that moves on by itself leaves its words up long enough to read', async ({ page }) => {
+  await boot(page);
+  const r = await page.evaluate(() => {
+    const w = window.__emberwing;
+    const g = w.game;
+    const inp = g.input;
+    w.pause(true);
+    w.goto('attract');
+    const a = g.scenes.current;
+    while (a.inHandoff()) { inp.feed(200, 250, 'mouse'); w.step(0.05); }
+    const lvl = a.levelTarget('hatchling');
+    while (g.scenes.name === 'attract') { inp.feed(lvl.x + (Math.round(a.t * 20) % 2), lvl.y, 'mouse'); w.step(0.05); }
+    // [scene or title] -> text -> [longest readable stretch, current stretch]
+    const seen = {};
+    const CHECK = ['choose', 'title', 'found', 'home', 'end'];
+    let picked = false;
+    for (let i = 0; i < 20 * 120 && g.scenes.name !== 'attract'; i++) {
+      const s = w.state();
+      const c = g.scenes.current;
+      if (g.scenes.name === 'choose' && !picked) {
+        // a guest who reads for 3s and then picks the left dragon
+        const at = c.optionTarget(0);
+        if (c.t > 3) inp.feed(at.x + (i % 2), at.y, 'mouse');
+        else inp.feed(240, 20, 'mouse');
+        picked = !!c.picked;
+      } else if (g.scenes.name === 'end') inp.feed(240, 20, 'mouse'); // never touches NEXT
+      else if (s.target) inp.feed(s.target.x, s.target.y, 'mouse');
+      w.step(0.05, 60, i % 2 === 0);
+      if (i % 2) continue;
+      const title = g.scenes.title?.text;
+      const where = title ? 'title' : g.scenes.name === 'find' && c.found ? 'found' : g.scenes.name;
+      if (!CHECK.includes(where)) continue;
+      const readable = title || g.scenes.fade < 0.5;
+      const now = new Set(readable ? w.words().map(([str]) => str) : []);
+      const box = (seen[where] ??= {});
+      for (const str of now) (box[str] ??= [0, 0])[1] += 0.1;
+      for (const [str, v] of Object.entries(box)) if (!now.has(str)) { v[0] = Math.max(v[0], v[1]); v[1] = 0; }
+    }
+    const out = {};
+    for (const [where, box] of Object.entries(seen)) out[where] = Object.fromEntries(Object.entries(box).map(([str, v]) => [str, +Math.max(v[0], v[1]).toFixed(1)]));
+    return { out, back: g.scenes.name };
+  });
+  console.log('seconds each line was readable:', JSON.stringify(r.out));
+  expect(r.back).toBe('attract');
+  for (const where of ['choose', 'title', 'found', 'home', 'end']) expect(Object.keys(r.out[where] ?? {}).length).toBeGreaterThan(0);
+  for (const [where, box] of Object.entries(r.out)) {
+    for (const [str, secs] of Object.entries(box)) {
+      // the hatchling badge on the choose screen and the score count up, everything else is a line to read
+      if (/^\d+$/.test(str)) continue;
+      expect(secs, `"${str}" on ${where}`).toBeGreaterThanOrEqual(where === 'end' ? 5 : 2);
+    }
+  }
 });

@@ -34,7 +34,7 @@ const SHOTS = [
   ['home', 3.6, null, 'flock'], // counter lands, flock circling
   ['home', 4.2, null], // first guest: one dragon, an empty sky
   ['home', 4.8, null], // act II banner
-  ['home', 5.4, null, 'seven'], // 7 already home, so this is the 8th: on to the celebration
+  ['home', 5.2, null, 'seven'], // 7 already home, so this is the 8th: on to the celebration
   ['end', 1.2, null], // the dragon card, first guest of the night
   ['end', 1.6, null, 'flock'], // the dragon card, 6th home
   ['attract', 3, null, 'flock'], // tonight's flock circling, countdown to the next celebration

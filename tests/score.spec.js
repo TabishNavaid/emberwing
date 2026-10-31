@@ -58,7 +58,7 @@ test('the dragon card shows the score and stars, attract shows the best flight p
     const kid = g.dragon.name;
     flyIt(0);
     w.step(1); // into home
-    w.step(5); // home -> card
+    w.step(6.2); // home (5.4s) -> card
     const card = g.scenes.current;
     const onCard = { scene: g.scenes.name, score: card.run.score, stars: card.run.stars, name: card.d.name };
     w.goto('attract');

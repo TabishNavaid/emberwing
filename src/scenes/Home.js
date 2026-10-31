@@ -61,7 +61,7 @@ export class Home {
     this.celebrate = this.count % FLOCK.CELEBRATE_EVERY === 0;
     if (this.celebrate) warmUp(g.store.dragons, 'joy'); // get the celebration's sprites ready
     this.length = DUR.HOME;
-    this.actAt = 3.5;
+    this.actAt = 3.2; // right as "PIP IS HOME!" goes, so it's up a good 2s before the scene moves on
   }
 
   skip(g) {

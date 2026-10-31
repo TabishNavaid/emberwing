@@ -5,8 +5,9 @@ import { boot, state, startRun, findDragon, fly, watch, waitScene, hover, reload
 const MIN = 35;
 const MAX = 50;
 // worst case (guest never finds the dragon). runs got a bit longer on purpose (picking a level
-// and a dragon), aiming for ~45s on hatchling, so the worst case on hatchling is now ~55s
-const ASSISTED_MAX = 56;
+// and a dragon, then slower fades and title cards after playtesting), ~49s on hatchling, so the
+// worst case on hatchling is now ~58s
+const ASSISTED_MAX = 60;
 
 const seen = (page) => page.evaluate(() => window.__emberwing.game.scenes.current.visibleDragons());
 // when each hoop showed up on screen and when it reached the gate
@@ -67,7 +68,7 @@ test('first two guests of the night: 35-50s, the first dragon flies home alone, 
   expect((await state(page)).count).toBe(2);
 });
 
-test('a guest who never finds the dragon is helped and still finishes within 56s', async ({ page }) => {
+test('a guest who never finds the dragon is helped and still finishes within 60s', async ({ page }) => {
   await boot(page);
   await startRun(page);
   await findDragon(page, { neverFind: true });

@@ -61,7 +61,7 @@ export class Choose {
     for (const o of this.options) updateMember(g, o.me, dt, o.x, RING.dy, { flying: false });
     if (this.picked) {
       this.pickT += dt;
-      if (this.pickT > 0.9 && !this.going) {
+      if (this.pickT > DUR.PICKED && !this.going) {
         this.going = true;
         g.scenes.go('find', {}, { title: `${g.dragon.name} IS LOST!` });
       }

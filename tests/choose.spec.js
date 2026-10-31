@@ -31,7 +31,7 @@ test('three lost dragons to pick from, the light picks one, the other two stay l
     const picked = c.picked?.d.name ?? null;
     const dragon = g.dragon.name;
     const left = g.lost.map((d) => d.name);
-    w.step(1.0);
+    w.step(2.0); // the name and NEXT TIME stay up 1.8s
     const next = g.scenes.pending?.name ?? g.scenes.name;
     // that dragon makes it home, the next guest sees the other two plus one new one
     w.goto('home');

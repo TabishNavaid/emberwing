@@ -29,6 +29,7 @@ export const DUR = {
   // counts, and a card the light is resting on when it's over stays dead until the light moves off
   // it and back. testers kept getting the middle dragon 1.2s in, before they'd picked anything
   CHOOSE_LOCK: 1.0,
+  PICKED: 1.8, // after a pick: the name pops and the other two say NEXT TIME (0.9 was too quick to read)
   ATTRACT_PAGE: 4.5, // per storybook page
   ATTRACT_DEMO_PAGE: 6.5, // ghost demo needs longer to play out
   YOURS_LABEL: 15, // "YOURS!" points at the newest ribbon after a run, so you can show your friends
@@ -45,21 +46,25 @@ export const DUR = {
   FIND_PULL_MAX: 0.35, // ...but only this fraction of the way, you still have to get there
   FIND_LAST_RESORT: 10.5, // the dragon flutters into your beam, you still do the hold (done ~12.5-13s)
   FIND_HARD_CAP: 13.0, // truly stuck (light parked off in a corner), the ring fills anyway
-  FIND_BURST: 1.6, // the "YOU FOUND PIP!" moment, everything holds still for this long
+  FIND_BURST: 2.1, // the "YOU FOUND PIP!" moment, everything holds still for this long (1.6 was too quick to read)
 
   // (how long the flight runs is set per level, see LEVELS)
-  // home was 6.5. the dragon card carries the act II line for 5s, so home only has to land the
-  // ribbon and the counter. 4.6 and not 5 because the flight snaps to the beat (up to 0.25s
-  // later) and the worst-case run has to stay under 50s
-  HOME: 4.6,
+  // home was 6.5. the dragon card carries the act II line too, so home only has to land the
+  // ribbon and the counter. at 4.6 the act II line was only up for a second before it faded, so
+  // it's longer now and the act II line comes in earlier (Home.js). 5.6 took a hatchling run past
+  // 50s, at 5.4 every line is still up about 2.5s. a hatchling run is ~49s
+  HOME: 5.4,
   CELEBRATE: 7.6, // every FLOCK.CELEBRATE_EVERY-th dragon gets its own celebration after home
-  END: 5.0, // the dragon card, long enough to snap a photo of it
+  END: 5.4, // the dragon card, long enough to read it and snap a photo (NEXT skips it)
   END_SKIP_DWELL: 1.0,
 
-  FADE: 0.4, // every scene change. was up to 0.6, that's dead air nobody enjoys
+  // every scene change. playtesters said the menus moved too fast to follow at 0.4, so it's a
+  // little slower again. 0.6 took a hatchling run past 50s (each fade out adds to the run, the fade
+  // in plays over the next scene), so keep an eye on that
+  FADE: 0.5,
   // title card between scenes ("NOW FLY HOME!"). playtesting the live site, the hard cuts
   // made people think the game had glitched or ended
-  TITLE: 1.3,
+  TITLE: 2.2, // 1.3 was gone before people had read it
 };
 
 // fractions of the level's timeline (LEVELS), seconds where it says so

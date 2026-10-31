@@ -88,7 +88,7 @@ test('every 8th dragon home gets a celebration, and attract counts down to it', 
       const left = w.game.scenes.current.visibleDragons().untilCelebration;
       w.goto('home');
       const h = w.game.scenes.current;
-      w.step(5.2); // home is over, on to whatever comes next
+      w.step(6.2); // home is over (5.4s and a fade), on to whatever comes next
       out[before] = { left, celebrate: h.celebrate, next: g.scenes.name };
       g.scenes.pending = null;
       g.scenes.fadeDir = 0;
@@ -173,14 +173,14 @@ test('the dragon card shows the rescued dragon and its number tonight, then goes
     w.goto('end');
     const card = g.scenes.current;
     const shown = { name: card.d.name, nth: card.nth };
-    w.step(4.5);
+    w.step(5.0);
     const stillUp = g.scenes.name;
-    w.step(1.2);
+    w.step(1.4);
     return { lost, shown, stillUp, after: g.scenes.name, saved: g.store.dragons.at(-1).name };
   });
   expect(r.shown.name).toBe(r.lost);
   expect(r.saved).toBe(r.lost);
   expect(r.shown.nth).toBe(9); // "THE 9TH EMBERWING HOME TONIGHT"
-  expect(r.stillUp).toBe('end'); // holds about 5s
+  expect(r.stillUp).toBe('end'); // holds 5.4s, long enough to read it
   expect(r.after).toBe('attract');
 });
