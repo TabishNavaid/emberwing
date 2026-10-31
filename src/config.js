@@ -168,10 +168,24 @@ export const LEVEL_ORDER = ['hatchling', 'flier', 'storm'];
 export const ENEMY = {
   TUMBLE: 0.7, // seconds of tumbling after a bump
   SAFE: 1.3, // can't be bumped again this soon
-  HIT_R: 13, // how close counts as a bump (internal px)
-  ZAP_AFTER: 0.35, // a grumpy cloud zaps a hoop that slides under it for this long
+  HIT_R: 13, // how close counts as a bump (internal px). smaller than they look, they visibly touch at about 20
+  // nothing hits out of nowhere: an enemy gathers (faint, specks closing in on it) for this long
+  // after it shows up on screen, and can't bump anyone until it's done
+  WARN: 1.0,
+  // no enemy's bump circle comes within this many px of a hoop's opening, in it or in the stretch
+  // the dragon flies for the last APPROACH seconds before it, so there's always a way through
+  CLEAR: 2,
+  APPROACH: 0.6,
+  HOME_UNTIL: 60, // a gust sprite stops drifting toward the dragon's height this far out (px), so it can be dodged
+  // a zapper's spark grows for this long before the hoop goes, timed to zap when the hoop is
+  // ZAP_LEAD px ahead of the gate. the dragon can fly FLIGHT.X_PLAY ahead (39 to 53 world px), so
+  // flying ahead to meet the hoop saves it, and so does popping the cloud. it used to zap after a
+  // 0.5s spark with the hoop still up to a second away, too far to get to first
+  ZAP_CHARGE: 1.2,
+  ZAP_LEAD: 24,
   WISP_HIDE: 1.6, // a fog wisp hides a hoop this long, then drifts off
-  GUST_WARN: 0.8, // wind streaks show this long before a gust pushes
+  WISP_GATHER: 1.0, // ...and the fog thickens over this long, so the hoop never just vanishes
+  GUST_WARN: 1.0, // wind streaks show this long before a gust pushes (0.8 was under the second every warning gets)
 };
 
 // power-ups, collected by flying through them

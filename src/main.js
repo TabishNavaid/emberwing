@@ -1,6 +1,6 @@
 // the entry point: builds the game, scales the tiny 480x270 picture up to the screen, runs the
 // loop, and hangs a few hooks on window for the tests
-import { VIEW, LOOP, LEVELS, DETAIL, PAL } from './config.js';
+import { VIEW, LOOP, LEVELS, DETAIL, PAL, ENEMY, FLIGHT } from './config.js';
 import { Input } from './input/Input.js';
 import { attachPointer, attachMocap, attachKeys } from './input/adapters.js';
 import { Beat } from './core/Beat.js';
@@ -252,6 +252,8 @@ function layout() {
 window.__emberwing = {
   game,
   LEVELS,
+  ENEMY,
+  FLIGHT,
   levelFor,
   goto: (name, data) => game.scenes.enter(name, data || {}),
   pause: (p = true) => (paused = p),

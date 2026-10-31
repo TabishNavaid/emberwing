@@ -305,6 +305,10 @@ export class Audio {
     } else if (name === 'shield') {
       bell(ac, out, 81, t, 0.08);
       bell(ac, out, 88, t + 0.05, 0.06);
+    } else if (name === 'charge') {
+      // a zapper starting to charge up: a soft rising whistle, a second before the zap
+      whistle(ac, out, 81, t, 0.25, 0.03);
+      whistle(ac, out, 86, t + 0.2, 0.35, 0.03);
     } else if (name === 'zap') {
       for (let i = 0; i < 3; i++) bell(ac, out, 95 - i * 5, t + i * 0.04, 0.04);
     } else if (name === 'gust') {

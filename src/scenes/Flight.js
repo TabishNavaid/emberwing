@@ -217,6 +217,11 @@ export class Flight {
   ringReach(ring, magnet = this.magnetT > 0) {
     return this.ringR(ring) * (1 + PULSE) + 1 + this.L.slack + (magnet ? POWER.MAGNET_REACH : 0);
   }
+  // the hoop's opening: inside the inner edge of its drawn rope (enemies keep out of it)
+  ringOpen(ring) {
+    const r = this.ringR(ring);
+    return r - ropeAmp(r) - 1;
+  }
   get busy() {
     return this.loopT > 0 || this.rollT > 0 || this.tumbleT > 0;
   }
@@ -629,9 +634,11 @@ export class Flight {
     if (x > W / 2 + (W / 2) / this.zoom + r + 10) return;
     const gold = invLerp(FLIGHT.WOBBLY_UNTIL * 0.6, this.swellP, ring.p);
     const ry = this.ringY(ring);
-    const color = mix('#bff8ee', PAL.gold, gold);
-    // a fog wisp sitting on it makes it hard to see for a moment
-    if (ring.hidden) ctx.globalAlpha = 0.2;
+    // a zapper charging up on it turns it grey, the way a zapped one goes
+    const color = mix(mix('#bff8ee', PAL.gold, gold), '#8a96b8', (ring.charge ?? 0) * 0.6);
+    // a fog wisp sitting on it makes it hard to see for a moment (the fog thickens, never all at once)
+    const fogged = 1 - 0.8 * (ring.fog ?? 0);
+    ctx.globalAlpha = fogged;
     if (ring.state === 'coming') {
       const pulse = 1 + g.beat.pulse * PULSE;
       // the waiting tutorial hoop breathes so it's obviously the thing to aim for
@@ -643,7 +650,7 @@ export class Flight {
       if (this.magnetT > 0 && !ring.tutorial) {
         ctx.globalAlpha = clamp(this.magnetT) * 0.45;
         drawKnotRing(ctx, x, ry, this.ringReach(ring), 1, { lobes: 10, amp: 1, width: 1, on: PAL.gold2 });
-        ctx.globalAlpha = ring.hidden ? 0.2 : 1;
+        ctx.globalAlpha = fogged;
       }
       // little up/down ticks on the bobbing ones so it reads as "this one moves"
       if (ring.move) {

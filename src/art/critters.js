@@ -28,8 +28,9 @@ function blob(ctx, x, y, parts, fill, edge = OUT) {
 }
 
 const CLOUD = [[-7, 1, 6], [0, -3, 7], [7, 1, 6], [-2, 3, 6], [4, 3, 5]];
+const ZAP = [[0, 9], [-1, 10], [-2, 11], [-1, 12], [0, 13], [1, 14], [0, 15], [-1, 16]];
 
-// grumpy storm cloud: frowny brows, a little drizzle. zap = 0..1 while it zaps a hoop
+// grumpy storm cloud: frowny brows, a little drizzle. zap = 0..1 while it charges up to zap a hoop
 export function drawGrumpyCloud(ctx, x, y, t, zap = 0) {
   x = Math.round(x);
   y = Math.round(y);
@@ -49,10 +50,11 @@ export function drawGrumpyCloud(ctx, x, y, t, zap = 0) {
   ctx.fillRect(x - 3, y + 6, 1, 1);
   ctx.fillRect(x + 2, y + 6, 1, 1);
   if (zap > 0) {
-    // one small spark down onto the hoop, no flashing
+    // one small spark that grows down onto the hoop as it charges, no flashing
     ctx.fillStyle = PAL.gold2;
-    for (const [a, b] of [[0, 9], [-1, 10], [-2, 11], [-1, 12], [0, 13], [1, 14], [0, 15], [-1, 16]]) ctx.fillRect(x + a, y + b, 2, 1);
-    glow(ctx, x, y + 14, 8, PAL.gold, 0.5 * zap);
+    const n = Math.ceil(zap * ZAP.length);
+    for (let i = 0; i < n; i++) ctx.fillRect(x + ZAP[i][0], y + ZAP[i][1], 2, 1);
+    glow(ctx, x, y + 8 + n, 4 + zap * 6, PAL.gold, 0.2 + 0.4 * zap);
   }
 }
 

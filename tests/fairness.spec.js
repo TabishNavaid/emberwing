@@ -193,3 +193,182 @@ test('recorded flights: every hoop the dragon is drawn flying through counts, an
   expect(notCounted).toEqual([]);
   expect(far).toEqual([]);
 });
+
+// the light on the middle of every hoop, every enemy left in: a dragon lined up with a hoop for the
+// last ENEMY.APPROACH seconds before it gets there, anywhere in the hoop's opening, never touches a
+// cloud or a gust sprite. enemies can make lining up harder, never impossible
+const CORRIDOR = `
+  const E = w.ENEMY;
+  const out = { rings: 0, near: 0, blocked: [] };
+  for (const level of ['flier', 'storm']) {
+    for (const seed of [11, 23, 37, 41]) {
+      const f = flight(level, seed);
+      const fps = 30;
+      for (let i = 0; i < 80 * fps && flying(); i++) {
+        const ring = f.nextRing();
+        const at = f.toScreen(150, ring ? yAhead(f, ring, 1 / 12) : 120);
+        g.input.feed(at.x, at.y, 'mouse');
+        w.step(1 / fps, fps, false);
+        for (const r of f.rings) {
+          if (r.tutorial || r.state !== 'coming') continue;
+          const ahead = (f.ringX(r) - f.ex) / f.L.scroll;
+          if (ahead < -0.05 || ahead > E.APPROACH) continue;
+          if (ahead < 0.05) out.rings++;
+          const open = f.ringOpen(r);
+          for (const it of f.hz.list) {
+            if (it.popT !== undefined || (it.kind !== 'cloud' && it.kind !== 'gust')) continue;
+            const dx = it.x - f.ex;
+            const dy = Math.max(0, Math.abs(it.y - f.ringY(r)) - open);
+            const d = Math.hypot(dx, dy);
+            if (d < E.HIT_R + 10) out.near++;
+            if (d < E.HIT_R) out.blocked.push({ level, seed, ring: f.rings.indexOf(r), kind: it.kind, guard: !!(it.ring === r && !it.zapper), zapper: !!it.zapper, ahead: +ahead.toFixed(2), d: +d.toFixed(1) });
+          }
+        }
+      }
+    }
+  }
+  return out;
+`;
+
+test('no cloud or gust sprite ever sits in the opening of a hoop or in the way of it, while the dragon would be flying through', async ({ page }) => {
+  const all = [];
+  for (const v of ['', '&v=b']) {
+    await boot(page, v);
+    all.push(await run(page, CORRIDOR));
+  }
+  console.log('hoop openings checked:', all.map((x) => `${x.rings} hoops, ${x.near} times an enemy came close`).join(' / '));
+  if (all.some((x) => x.blocked.length)) console.log('in the way:', JSON.stringify(all.flatMap((x) => x.blocked)));
+  // enemies really did come close, so the check means something
+  for (const x of all) expect(x.near).toBeGreaterThan(20);
+  for (const x of all) expect(x.blocked).toEqual([]);
+});
+
+// what a guest sees before anything costs them: every bump comes from an enemy that's been on
+// screen gathering for a second, every zap from a spark that charged for over a second, every
+// wind gust after a second of streaks and arrows. and each cost says what it was
+const WARNINGS = `
+  const E = w.ENEMY;
+  const PROFILES = {
+    kid: { follow: 2.2, noise: 26, seed: 1 },
+    teen: { follow: 6, noise: 10, seed: 2 },
+    chaser: { follow: 6, noise: 6, seed: 4, onHoop: true },
+  };
+  const out = { bumps: [], zaps: [], gusts: [], saved: 0 };
+  const fps = 30;
+  for (const level of ['flier', 'storm']) {
+    for (const [who, P] of Object.entries(PROFILES)) {
+      for (const seed of [11, 23, 37, 41]) {
+        const f = flight(level, seed);
+        const proto = Object.getPrototypeOf(f);
+        const bump = proto.bump;
+        f.bump = (gg, dir, by) => {
+          const ready = f.safeT <= 0 && f.p <= w.FLIGHT.RISE_AT;
+          const shown = f.points.popups.length;
+          bump.call(f, gg, dir, by);
+          if (ready) out.bumps.push({ level, who, seed, kind: by.kind, onScreen: +(f.t - by.firstSeen).toFixed(2), said: f.points.popups.slice(shown).map((p) => p.text) });
+        };
+        const charging = new Map();
+        let px = 240, py = 150;
+        for (let i = 0; i < 80 * fps && flying(); i++) {
+          const t = i / fps;
+          const ring = f.nextRing();
+          let aim = f.toScreen(150, 120);
+          if (ring) aim = f.toScreen(P.onHoop && !ring.tutorial ? f.ringX(ring) : 150, f.ringY(ring));
+          const k = 1 - Math.exp(-P.follow / fps);
+          px += (aim.x - px) * k;
+          py += (aim.y + P.noise * Math.sin(t * 1.3 + P.seed * 7) - py) * k;
+          g.input.feed(px, py, 'mouse');
+          const before = f.rings.map((r) => r.state);
+          const shown = f.points.popups.length;
+          const pushes = f.hz.gusts.map((e) => e.fired);
+          w.step(1 / fps, fps, false);
+          // the test's own idea of when each enemy first showed up on screen
+          for (const it of f.hz.list) if (it.firstSeen === undefined && f.toScreen(it.x, it.y).x < 480) it.firstSeen = f.t;
+          f.rings.forEach((r, n) => {
+            if (r.charge > 0 && !charging.has(r)) charging.set(r, f.t);
+            if (before[n] === 'coming' && r.state === 'zapped') {
+              const cloud = f.hz.list.find((it) => it.ring === r && it.zapper);
+              out.zaps.push({ level, who, seed, ring: n, charged: +(f.t - charging.get(r)).toFixed(2), onScreen: +(f.t - cloud.firstSeen).toFixed(2), said: f.points.popups.slice(shown).map((p) => p.text) });
+            }
+          });
+          if (f.points.popups.slice(shown).some((p) => p.text === 'SAVED!')) out.saved++;
+          f.hz.gusts.forEach((e, n) => {
+            if (!pushes[n] && e.fired) out.gusts.push({ level, who, seed, warned: +(f.tt - e.at).toFixed(2) });
+          });
+        }
+        delete f.bump;
+      }
+    }
+  }
+  return out;
+`;
+
+test('every bump, every zapped hoop and every wind gust comes after a warning of a second or more, and says what it was', async ({ page }) => {
+  await boot(page);
+  const r = await run(page, WARNINGS);
+  const min = (list, k) => Math.min(...list.map((x) => x[k]));
+  console.log(`bumps: ${r.bumps.length} (on screen at least ${min(r.bumps, 'onScreen')}s first)  zaps: ${r.zaps.length} (spark charging at least ${min(r.zaps, 'charged')}s)  saved by flying through first: ${r.saved}  wind gusts: ${r.gusts.length} (warned at least ${min(r.gusts, 'warned')}s)`);
+  expect(r.bumps.length).toBeGreaterThan(5);
+  expect(r.zaps.length).toBeGreaterThan(3);
+  expect(r.gusts.length).toBeGreaterThan(5);
+  for (const b of r.bumps) {
+    expect(b.onScreen).toBeGreaterThanOrEqual(1);
+    expect(b.said.some((s) => s === 'WHOA! -50' || s === 'BLOCKED!')).toBe(true);
+  }
+  for (const z of r.zaps) {
+    expect(z.charged).toBeGreaterThanOrEqual(1);
+    expect(z.onScreen).toBeGreaterThanOrEqual(1);
+    expect(z.said).toContain('ZAPPED!');
+  }
+  for (const e of r.gusts) expect(e.warned).toBeGreaterThanOrEqual(1);
+});
+
+test('a zapper can be beaten: fly ahead and through the hoop first, or pop the cloud. hold back and it zaps, not your miss', async ({ page }) => {
+  await boot(page);
+  const r = await run(page, `
+    // a zapper on a hoop that's still well off to the right. the light holds the hoop's height,
+    // ahead of the gate as far as the dragon can go (ahead), at the gate (hold), or at the gate with
+    // a fireball aimed at the cloud (pop)
+    const tryIt = (how) => {
+      const f = flight('flier', 23);
+      noHazards(f);
+      for (let i = 0; i < 400 && f.tutorial; i++) {
+        const s = w.state();
+        if (s.target) g.input.feed(s.target.x, s.target.y, 'mouse');
+        w.step(1 / 30, 30, false);
+      }
+      const ring = f.hz.ringIn(480, 760);
+      ring.taken = true;
+      const cloud = { kind: 'cloud', zapper: true, ring, x: f.ringX(ring), y: f.ringY(ring) - 40, vx: 0, t: 0, alpha: 1 };
+      f.hz.list.push(cloud);
+      if (how === 'pop') f.powerUp(g, 'fireball', f.ex, f.ey);
+      const misses = f.points.misses;
+      let chargedFor = 0;
+      const said = [];
+      // (and a few steps after it's gone, for what it says)
+      for (let i = 0, after = 0; i < 6 * 30 && after < 10; i++) {
+        const gate = f.toScreen(150, f.ringY(ring));
+        const x = how === 'ahead' ? gate.x + w.FLIGHT.X_PLAY : gate.x;
+        // a fireball goes where the light points: at the cloud
+        const at = how === 'pop' ? f.toScreen(cloud.x, cloud.y) : { x, y: gate.y };
+        g.input.feed(at.x, at.y, 'mouse');
+        const shown = f.points.popups.length;
+        w.step(1 / 30, 30, false);
+        if (ring.charge > 0 && ring.state === 'coming') chargedFor += 1 / 30;
+        said.push(...f.points.popups.slice(shown).map((p) => p.text));
+        if (ring.state !== 'coming') after++;
+      }
+      return { state: ring.state, popped: cloud.popT !== undefined, misses: f.points.misses - misses, chargedFor: +chargedFor.toFixed(2), said };
+    };
+    return { ahead: tryIt('ahead'), hold: tryIt('hold'), pop: tryIt('pop') };
+  `);
+  console.log('zapper:', JSON.stringify(r));
+  expect(r.ahead.state).toBe('hit');
+  expect(r.ahead.said).toContain('SAVED!');
+  expect(r.hold.state).toBe('zapped');
+  expect(r.hold.misses).toBe(0);
+  expect(r.hold.chargedFor).toBeGreaterThanOrEqual(1.15);
+  expect(r.hold.said).toContain('ZAPPED!');
+  expect(r.pop.popped).toBe(true);
+  expect(r.pop.state).not.toBe('zapped');
+});

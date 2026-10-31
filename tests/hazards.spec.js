@@ -31,9 +31,10 @@ const SETUP = `
       w.step(0.05, 60, false);
     }
   };
-  // drops a critter right where it'll meet the dragon
+  // drops a critter right where it'll meet the dragon. one that's been on screen a while (a new
+  // enemy gathers for a second before it can bump, the fairness tests check that)
   const put = (f, kind, extra = {}) => {
-    const it = { kind, x: f.ex + 4, y: f.ey, vx: 0, t: 0, alpha: 1, ...extra };
+    const it = { kind, x: f.ex + 4, y: f.ey, vx: 0, t: 0, alpha: 1, warm: 9, ...extra };
     f.hz.list.push(it);
     return it;
   };
@@ -93,21 +94,28 @@ test('a grumpy cloud zaps a hoop it sits on (not counted as your miss), a fog wi
   const r = await run(page, `
     const f = fly('flier');
     steer(f, 1);
-    const ring = f.hz.ringIn(250, 700);
+    // a hoop still well off to the right, so the cloud can settle on it and charge up in full
+    const ring = f.hz.ringIn(480, 760);
+    ring.taken = true;
     const missesBefore = f.points.misses;
-    f.hz.list.push({ kind: 'cloud', zapper: true, ring, x: f.ringX(ring), y: f.ringY(ring) - 20, vx: 0, t: 0, alpha: 1 });
-    steer(f, 1.2);
+    f.hz.list.push({ kind: 'cloud', zapper: true, ring, x: f.ringX(ring), y: f.ringY(ring) - 40, vx: 0, t: 0, alpha: 1 });
+    for (let i = 0; i < 100 && ring.state === 'coming'; i++) steer(f, 0.05);
     const zapped = ring.state;
     const ring2 = f.hz.ringIn(250, 700);
+    ring2.taken = true;
     f.hz.list.push({ kind: 'wisp', ring: ring2, x: f.ringX(ring2), y: f.ringY(ring2), vx: 0, t: 0, alpha: 1 });
     steer(f, 0.3);
+    // the fog is still thickening, the hoop doesn't just vanish
     const hidden = ring2.hidden;
+    const fog = ring2.fog;
     steer(f, 2.0);
-    return { zapped, misses: f.points.misses - missesBefore, hidden, after: ring2.hidden };
+    return { zapped, misses: f.points.misses - missesBefore, hidden, fog, after: ring2.hidden };
   `);
   expect(r.zapped).toBe('zapped');
   expect(r.misses).toBe(0);
   expect(r.hidden).toBe(true);
+  expect(r.fog).toBeGreaterThan(0);
+  expect(r.fog).toBeLessThan(0.5);
   expect(r.after).toBe(false);
 });
 
