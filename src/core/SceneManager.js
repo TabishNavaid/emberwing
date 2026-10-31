@@ -23,6 +23,7 @@ export class SceneManager {
   enter(name, data = {}) {
     const g = this.game;
     this.current?.exit?.(g);
+    g.log?.enter(g, this.name, name, data);
     g.particles.clear();
     g.cam.reset();
     this.current = this.scenes[name];

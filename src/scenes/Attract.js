@@ -1,6 +1,6 @@
 // the attract screen: tonight's flock and aurora, the storybook, and the level picker. holding the
 // light on a level is how a run starts
-import { DUR, INPUT, PAL, FLOCK, LEVELS, LEVEL_ORDER, TEXT, QR } from '../config.js';
+import { DUR, INPUT, PAL, FLOCK, LEVELS, LEVEL_ORDER, TEXT, QR, LOG } from '../config.js';
 import { glow, clamp, dwell, makeCanvas } from '../core/util.js';
 import { makeQR } from '../core/qr.js';
 import { drawText, textWidth, logShape } from '../art/font.js';
@@ -57,6 +57,7 @@ export class Attract {
     this.book = new Storybook();
     this.stars = makeStars(7, 90, 150);
     this.starting = null;
+    this.arrived = null; // when this guest's light started moving, for the run log
     g.runStart = 0;
   }
 
@@ -76,6 +77,7 @@ export class Attract {
     g.runStart = g.time;
     // the three flight routes take turns, so guests in a row each see a different one
     g.route = g.routePin ?? g.store.count % ROUTES.length;
+    g.log.begin(g, level, this.t - (this.arrived ?? this.t));
     g.audio.cue('start');
     const row = this.rows.find((r) => r.id === level) ?? this.rows[0];
     g.particles.burst(row.ring.x, row.ring.y, 40, { speed: 90, colors: [PAL.gold, PAL.gold2, '#fff6d8'], kind: 'spark', size: 2, drag: 2, life: 1 }, g.rng);
@@ -127,6 +129,9 @@ export class Attract {
       updateMember(g, m, dt, p.x, p.y, { scale: 0.3, flip: p.z > 0, quiet: true });
     });
     this.book.update(dt);
+    // a light that's been still a while is nobody, so the next guest's time starts when it moves
+    if (g.input.idle > LOG.AWAY) this.arrived = null;
+    else this.arrived ??= this.t;
     if (!this.starting) this.updatePicker(g, dt);
   }
 

@@ -1,6 +1,6 @@
 # Emberwing: The Way Home
 
-A lobby game we made for the Walla Walla Symphony's Symphonicon (Nov 5, Cordiner Hall). In Act II the youth orchestra plays music from *How to Train Your Dragon*, so while people wait for the concert they get to rescue a lost baby dragon of their own. You're the lighthouse keeper: point your light to find the dragon in the fog, then guide it home through a string of hoops. A run takes about 45 seconds and nobody can lose. Every dragon that gets home joins tonight's flock and leaves a ribbon in the aurora. It's built for a 10 ft projector and a motion-capture lantern prop, but a mouse or a phone works too. There are three levels so little kids, teens and grandparents can all have a go.
+A lobby game we made for the Walla Walla Symphony's Symphonicon (Nov 5, Cordiner Hall). In Act II the youth orchestra plays music from *How to Train Your Dragon*, so while people wait for the concert they get to rescue a lost baby dragon of their own. You're the lighthouse keeper: point your light to find the dragon in the fog, then guide it home through a string of hoops. A run takes under a minute and nobody can lose. Every dragon that gets home joins tonight's flock and leaves a ribbon in the aurora. It's built for a 10 ft projector and a motion-capture lantern prop, but a mouse or a phone works too. There are three levels so little kids, teens and grandparents can all have a go.
 
 ![The attract screen](screenshots/attract.png)
 
@@ -41,18 +41,19 @@ Handy URL options:
 | `?level=storm` | Pick the level when jumping to a scene: `hatchling`, `flier`, `storm` |
 | `?route=1` | Always use one flight route (0, 1 or 2) instead of taking turns |
 | `?seed=5` | Same random dragons and hoops every time, for testing |
+| `?v=b` | Version B of the A/B test (see below). `?v=a` or nothing is A |
 
 ## How to play
 
 Nothing needs a click. With the mocap prop or a mouse every button is "hold the light on it" and a ring fills up. Phones just tap (see below).
 
 1. Hold your light on a level on the right for 1.5 seconds: HATCHLING (big slow hoops), FLIER (smaller moving hoops, a few silly enemies) or STORM RIDER (small hoops, more enemies, wind). Only the levels start a game, holding the light anywhere else does nothing. When the start screen comes back after a run it ignores the light for 2 seconds, and a light left resting on a level has to move off it and back before it counts, so the next guest always picks their own level.
-2. Pick which lost dragon you'll find. If nobody picks, one gets picked after 5 seconds.
+2. Pick which lost dragon you'll find. The first second is ignored (so a light carried over from the level doesn't pick one), and if nobody picks, one gets picked after 8 seconds.
 3. Find the dragon's two glowing eyes in the fog and hold still on them until the ring fills.
 4. Fly. The dragon follows your light. Steer through the hoops, fly through power-ups (fireball, speed, shield, magnet, flock friend) and around the grumpy clouds. A bump only makes it tumble.
 5. It lands home with everyone else from tonight and you get its card, with your score and 1 to 3 stars.
 
-**On a phone**, hold it sideways (upright you get a turn-your-phone screen and the game waits). Tap a level, a dragon or NEXT and it goes straight away. In the flight the light sits a little above your fingertip so your finger doesn't cover the dragon.
+**On a phone**, hold it sideways (upright you get a turn-your-phone screen and the game waits). Tap a level, a dragon or NEXT and it goes straight away. In the flight the light sits a little above your fingertip so your finger doesn't cover the dragon. On Android a button next to the speaker makes it fullscreen. An iPhone can't do that from a web page, but Share > Add to Home Screen opens it with no browser bars (that works on Android too).
 
 Every 8th dragon home sets off a celebration and leaves a new star in the sky. If someone walks away mid-game it goes back to the start after 10 seconds. All the numbers we tuned in playtesting (levels, timings, scoring, enemies) are in `src/config.js`.
 
@@ -71,9 +72,28 @@ Guests never see these.
 | G | Reduced motion: auto (follows the OS), forced on, forced off. Also remembered |
 | K | Calibrate the mocap rig (see below) |
 | Q | A QR code on the start screen that opens the live site, so people waiting in line can play on their phones. Off until you press it, remembered |
+| L | The run log as a table (see the A/B test below). L again closes it |
+| X | Clear the run log. It asks first like C |
 | Arrows, Space | Move the light and "hold", for testing at a desk |
 
 The speaker in the bottom left corner also turns sound on and off: click it, tap it, or hold the light on it. The night is saved in `localStorage`, so a refresh or a crashed tab doesn't lose the flock. It starts over by itself on a new day.
+
+## The A/B test
+
+After the usability tests we're comparing two versions at the event:
+
+- A: https://tabishnavaid.github.io/emberwing/ (or `?v=a`)
+- B: https://tabishnavaid.github.io/emberwing/?v=b
+
+What's different in B:
+
+- The storybook on the start screen shows only the music page. No story pages and no ghost player showing how to play. RAISE YOUR LIGHT is still there.
+- Every level is about 30% longer: 10, 17 and 26 hoops instead of 8, 13 and 20, on the same beat, the same size and the same speed, with enemies just as often. The star scores go up to match.
+- It keeps its own sky, flock and best flights, so the two never mix.
+
+Everything that differs is the `AB` block in `src/config.js`. With the D overlay on, a small A or B sits in the bottom right corner.
+
+Every run is logged in `localStorage` (the last 500, both versions in one list): the version, the level, seconds on each screen (start, choose, find, flight, home, card), the total, hoops hit, and whether it finished or idled out (and where). The start screen time counts from when the guest's light started moving. Press L to see it as a table with averages for A and B on top, and X to clear it.
 
 ## Hooking up the mocap cursor
 
@@ -125,7 +145,7 @@ The build uses relative paths, so `dist/` also works on any other static host.
 npm test
 ```
 
-This builds the site and runs the Playwright tests, about 12 minutes since a lot of them play whole runs in real time. `npm run shots` saves a screenshot of every scene to `tests/screens/`, at projector size and on an iPhone and a small Android held sideways. Keep the laptop plugged in and awake while it runs, long runs stall on battery or with the lid closed.
+This builds the site and runs the Playwright tests, about 15 minutes since a lot of them play whole runs in real time. `npm run shots` saves a screenshot of every scene to `tests/screens/`, at projector size and on an iPhone and a small Android held sideways. Keep the laptop plugged in and awake while it runs, long runs stall on battery or with the lid closed.
 
 ## Art
 

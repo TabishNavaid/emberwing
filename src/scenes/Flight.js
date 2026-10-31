@@ -1,6 +1,7 @@
 // the flight: the dragon follows the light through the level's hoops, past enemies and power-ups,
 // with the brass swell 2/3 of the way in and a climb into the aurora at the end
-import { VIEW, DUR, FLIGHT, PAL, MUSIC, MOTION, INPUT, LEVELS, SCORE, ENEMY, POWER, FLOCK, TEXT } from '../config.js';
+import { VIEW, DUR, FLIGHT, PAL, MUSIC, MOTION, INPUT, SCORE, ENEMY, POWER, FLOCK, TEXT } from '../config.js';
+import { levelFor } from '../core/version.js';
 import { Points } from '../core/Points.js';
 import { Hazards } from '../core/Hazards.js';
 import { drawPowerIcon, POWER_COLORS } from '../art/critters.js';
@@ -35,9 +36,10 @@ export class Flight {
     this.me = member(this.d);
     this.follows = `${this.d.name} FOLLOWS YOUR LIGHT`;
     const r = mulberry32(g.rng.int(1, 1e6));
-    // the level picked on the attract screen: hoop size, speed, how many move, enemies...
+    // the level picked on the attract screen: hoop size, speed, how many move, enemies... (B of the
+    // a/b test stretches it, see AB in config.js)
     this.levelId = g.level;
-    this.L = LEVELS[this.levelId];
+    this.L = levelFor(this.levelId);
     this.T = this.L.timeline;
     // the swell lands on a bar downbeat near 2/3 of the way through (12s on hatchling)
     const bar = (4 * 60) / MUSIC.BPM;

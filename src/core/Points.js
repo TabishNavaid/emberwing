@@ -1,5 +1,6 @@
 // the score for one flight, plus the little "+150" numbers that float up where it happened
-import { SCORE, LEVELS, PAL, TEXT } from '../config.js';
+import { SCORE, PAL, TEXT } from '../config.js';
+import { levelFor } from './version.js';
 import { drawText } from '../art/font.js';
 
 export class Points {
@@ -39,7 +40,7 @@ export class Points {
 
   // one star for everybody, then the level's thresholds
   get stars() {
-    const [two, three] = LEVELS[this.level].stars;
+    const [two, three] = levelFor(this.level).stars;
     return this.score >= three ? 3 : this.score >= two ? 2 : 1;
   }
 

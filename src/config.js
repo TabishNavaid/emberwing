@@ -274,6 +274,31 @@ export const STORE = {
   NEW_NIGHT_BY_DATE: true, // new calendar day = fresh sky
 };
 
+// the a/b test from the usability rounds. the normal url (and ?v=a) is A, ?v=b is B. every
+// difference between the two is in here
+export const AB = {
+  a: {
+    story: true, // the storybook tells the story and a ghost player shows how to play
+    length: 1, // hoops (and enemies, and seconds of flight) per level, times this
+    saveAs: '', // added to STORE.KEY. A keeps the key saves already use
+  },
+  b: {
+    story: false, // only the music page: no guide, no demo
+    length: 1.3, // about 30% longer, same spacing, size and speed so it plays as hard
+    saveAs: '.b', // its own sky, dragons and best scores
+  },
+};
+
+// the run log for the a/b test: one line per run, both versions in one list. the operator's L shows
+// it as a table, X clears it
+export const LOG = {
+  KEY: 'emberwing.runs.v1',
+  MAX: 500, // the oldest runs drop off past this
+  // a light this still this long on the start screen is nobody (same as INPUT.IDLE_RESET), so the next
+  // guest's start screen time counts from when it moves again. 5s cut off people reading the book
+  AWAY: 10.0,
+};
+
 // storm slate -> sea green -> gold / ember / aurora. the color arc tells the story
 export const PAL = {
   seaGreen: '#3f8a7a',

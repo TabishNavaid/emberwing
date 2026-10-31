@@ -9,6 +9,7 @@ import { drawSky, SKY, makeStars, drawStars, drawSea, drawLighthouse, drawStone,
 import { drawLantern, drawHorn, drawSoundLines, drawSparkle } from './icons.js';
 import { drawBaseAurora } from './aurora.js';
 import { drawTree } from './sprites.js';
+import { ab } from '../core/version.js';
 
 // narrower than it was so the level picker gets the room, and tucked up under the logo
 export const BOOK = { x: 10, y: 26, w: 216, h: 140 };
@@ -22,6 +23,8 @@ const PAGES = [
   { id: 'home', caption: 'GUIDE THEM HOME' },
   { id: 'music', caption: 'HEAR IT IN ACT II' },
 ];
+// B of the a/b test has no story and no ghost demo, only the music page (see AB in config.js)
+const SHOWN = ab.story ? PAGES : PAGES.filter((p) => p.id === 'music');
 
 export class Storybook {
   constructor() {
@@ -37,11 +40,11 @@ export class Storybook {
     this.pageT += dt;
     this.flip = Math.min(1, this.flip + dt / 0.55);
     // the ghost demo needs longer to play out
-    const length = PAGES[this.page].id === 'demo' ? DUR.ATTRACT_DEMO_PAGE : DUR.ATTRACT_PAGE;
-    if (this.pageT > length) {
+    const length = SHOWN[this.page].id === 'demo' ? DUR.ATTRACT_DEMO_PAGE : DUR.ATTRACT_PAGE;
+    if (this.pageT > length && SHOWN.length > 1) {
       this.ppg.clearRect(0, 0, BOOK.w, BOOK.h);
       this.ppg.drawImage(this.pageCanvas, 0, 0);
-      this.page = (this.page + 1) % PAGES.length;
+      this.page = (this.page + 1) % SHOWN.length;
       this.pageT = 0;
       this.flip = 0;
     }
@@ -51,8 +54,8 @@ export class Storybook {
   draw(ctx, g, flock) {
     const pg = this.pg;
     pg.clearRect(0, 0, BOOK.w, BOOK.h);
-    const id = PAGES[this.page].id;
-    const caption = this[id](pg, this.pageT, g, g.dragon, flock) ?? PAGES[this.page].caption;
+    const id = SHOWN[this.page].id;
+    const caption = this[id](pg, this.pageT, g, g.dragon, flock) ?? SHOWN[this.page].caption;
     // a small caption right on the picture, no bar behind it
     if (caption) drawText(pg, caption, BOOK.w / 2, BOOK.h - 18, { scale: TEXT.S, align: 'center', color: PAL.cream, edge: 'outline' });
 
@@ -72,13 +75,14 @@ export class Storybook {
       }
     }
     drawKnotFrame(ctx, BOOK.x, BOOK.y, BOOK.w, BOOK.h, { color: PAL.gold });
-    for (let i = 0; i < PAGES.length; i++) {
-      ctx.fillStyle = i === this.page ? PAL.gold : 'rgba(255,243,214,0.35)';
-      ctx.fillRect(BOOK.x + BOOK.w / 2 - PAGES.length * 5 + i * 10, BOOK.y + BOOK.h + 7, i === this.page ? 6 : 4, i === this.page ? 6 : 4);
-    }
-    // the frame's knots reach 6px past the page, and the page dots sit under it
+    // the frame's knots reach 6px past the page, and the page dots sit under it (one page, no dots)
     logShape('book', BOOK.x - 6, BOOK.y - 6, BOOK.w + 12, BOOK.h + 12);
-    logShape('page dots', BOOK.x + BOOK.w / 2 - PAGES.length * 5, BOOK.y + BOOK.h + 7, PAGES.length * 10, 6);
+    if (SHOWN.length < 2) return;
+    for (let i = 0; i < SHOWN.length; i++) {
+      ctx.fillStyle = i === this.page ? PAL.gold : 'rgba(255,243,214,0.35)';
+      ctx.fillRect(BOOK.x + BOOK.w / 2 - SHOWN.length * 5 + i * 10, BOOK.y + BOOK.h + 7, i === this.page ? 6 : 4, i === this.page ? 6 : 4);
+    }
+    logShape('page dots', BOOK.x + BOOK.w / 2 - SHOWN.length * 5, BOOK.y + BOOK.h + 7, SHOWN.length * 10, 6);
   }
 
 

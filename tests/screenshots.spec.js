@@ -50,6 +50,7 @@ const SHOTS = [
   ['celebration', 3, null, 'eight'], // the celebration: every dragon, fireworks, names
   ['celebration', 6.6, null, 'eight'], // the new star flies up into the sky
   ['end', 2.0, null, 'scored'], // the dragon card with a score and stars
+  ['attract', 3, null, 'v=b'], // version B of the a/b test: only the music page in the book
 ];
 // the projector, an iphone held sideways, and a small android held sideways
 // what a guest reads, not what the operator sees

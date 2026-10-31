@@ -8,6 +8,8 @@ import { Particles } from './core/Particles.js';
 import { SceneManager } from './core/SceneManager.js';
 import { Camera } from './core/Camera.js';
 import { NightStore } from './core/NightStore.js';
+import { RunLog } from './core/RunLog.js';
+import { version, levelFor } from './core/version.js';
 import { Audio } from './audio/Audio.js';
 import { Operator } from './core/Operator.js';
 import { Motion } from './core/Motion.js';
@@ -82,6 +84,7 @@ const game = {
   particles: new Particles(),
   cam: new Camera(),
   store: new NightStore(),
+  log: new RunLog(),
   rng: mulberry32(seed),
   time: 0,
   runStart: 0,
@@ -249,6 +252,7 @@ function layout() {
 window.__emberwing = {
   game,
   LEVELS,
+  levelFor,
   goto: (name, data) => game.scenes.enter(name, data || {}),
   pause: (p = true) => (paused = p),
   // fresh random numbers and a fresh beat clock, so a test that steps the game by hand gets the
@@ -278,6 +282,7 @@ window.__emberwing = {
     lost: game.lost.map((d) => d.name),
     route: game.route,
     level: game.level,
+    version,
     gate: game.gate,
     sound: game.audio.status,
     lowDetail: detail.low,

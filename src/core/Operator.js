@@ -1,11 +1,14 @@
 // the hidden operator keys (F fullscreen, R reset, S skip, D debug, C clear, M sound, G motion,
-// K calibrate, Q qr code) and what they put on screen: debug overlay, clear dialog, calibration, press any key
+// K calibrate, Q qr code, L run log, X clear the run log) and what they put on screen: debug
+// overlay, clear dialogs, calibration, the run log table, press any key
 import { VIEW, PAL, INPUT } from '../config.js';
 import { drawText } from '../art/font.js';
 import { drawKnotRing } from '../art/knotwork.js';
 import { ROUTES } from '../art/routes.js';
-import { glow, detail } from './util.js';
+import { glow, detail, makeCanvas } from './util.js';
 import { CAL_TARGETS, CAL_NAMES } from '../input/Calibration.js';
+import { LOG_SCREENS } from './RunLog.js';
+import { version } from './version.js';
 
 const QR_KEY = 'emberwing.qr.v1';
 
@@ -14,6 +17,8 @@ export class Operator {
     this.game = game;
     this.debug = new URLSearchParams(location.search).has('debug');
     this.confirm = 0; // seconds left on the "clear sky?" dialog, it times out so it can't get stuck open
+    this.clearing = 'sky'; // what that dialog clears: 'sky' (C) or 'log' (X)
+    this.table = false; // the run log (L)
     this.toast = '';
     this.toastT = 0;
     this.fps = 60;
@@ -36,7 +41,10 @@ export class Operator {
     const g = this.game;
     if (this.cal) return this.calKey(e.key);
     if (this.confirm > 0) {
-      if (k === 'y' || k === 'enter') {
+      if ((k === 'y' || k === 'enter') && this.clearing === 'log') {
+        g.log.clear();
+        this.say('RUN LOG CLEARED');
+      } else if (k === 'y' || k === 'enter') {
         g.store.clear();
         this.say('SKY CLEARED');
       } else {
@@ -54,8 +62,11 @@ export class Operator {
       g.scenes.current?.skip(g);
     } else if (k === 'd') {
       this.debug = !this.debug;
-    } else if (k === 'c') {
+    } else if (k === 'c' || k === 'x') {
       this.confirm = 8;
+      this.clearing = k === 'x' ? 'log' : 'sky';
+    } else if (k === 'l') {
+      this.table = !this.table;
     } else if (k === 'k') {
       this.cal = { step: 0, pts: [], hold: 0, ax: null, ay: null, armed: true, source: g.input.source };
     } else if (k === 'g') {
@@ -149,17 +160,63 @@ export class Operator {
       ctx.fillStyle = '#ff3fd0';
       ctx.fillRect(Math.round(g.input.rawX) - 3, Math.round(g.input.rawY), 7, 1);
       ctx.fillRect(Math.round(g.input.rawX), Math.round(g.input.rawY) - 3, 1, 7);
+      // which side of the a/b test this is, small in the corner
+      drawText(ctx, version.toUpperCase(), W - 3, H - 9, { align: 'right', color: '#9fffe0', outline: null });
     }
+    if (this.table) this.drawTable(ctx);
     if (this.confirm > 0) {
+      const log = this.clearing === 'log';
       ctx.fillStyle = 'rgba(5,7,13,0.85)';
       ctx.fillRect(0, 0, W, H);
-      drawText(ctx, 'CLEAR TONIGHT\'S SKY?', W / 2, H / 2 - 30, { scale: 3, align: 'center', color: PAL.gold });
+      drawText(ctx, log ? 'CLEAR THE RUN LOG?' : 'CLEAR TONIGHT\'S SKY?', W / 2, H / 2 - 30, { scale: 3, align: 'center', color: PAL.gold });
       drawText(ctx, 'Y = CLEAR    N = KEEP', W / 2, H / 2 + 10, { scale: 2, align: 'center' });
-      drawText(ctx, `${g.store.count} DRAGONS WILL BE ERASED`, W / 2, H / 2 + 40, { scale: 1, align: 'center', color: '#9fb4d0' });
+      const lost = log ? `${g.log.runs.length} RUNS (A AND B) WILL BE ERASED` : `${g.store.count} DRAGONS WILL BE ERASED`;
+      drawText(ctx, lost, W / 2, H / 2 + 40, { scale: 1, align: 'center', color: '#9fb4d0' });
     }
     if (this.cal) this.drawCal(ctx);
     if (this.toastT > 0) {
       drawText(ctx, this.toast, W - 8, 8, { scale: 2, align: 'right', color: PAL.gold, alpha: Math.min(1, this.toastT * 2) });
+    }
+  }
+
+  // the run log: averages for A and B on top, then the newest runs. seconds on each screen. it's a
+  // lot of little numbers, so it's drawn once into its own canvas and only again when a run is added
+  drawTable(ctx) {
+    const log = this.game.log;
+    const key = `${log.runs.length} ${log.runs[log.runs.length - 1]?.at}`;
+    if (this.tableKey !== key) {
+      this.tableKey = key;
+      this.tableCanvas ??= makeCanvas(VIEW.W, VIEW.H)[0];
+      this.paintTable(this.tableCanvas.getContext('2d'), log);
+    }
+    ctx.drawImage(this.tableCanvas, 0, 0);
+  }
+
+  paintTable(ctx, log) {
+    const { W, H } = VIEW;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(5,7,13,0.94)';
+    ctx.fillRect(0, 0, W, H);
+    drawText(ctx, `RUN LOG  ·  ${log.runs.length} RUNS  ·  L CLOSES  ·  X CLEARS`, 4, 4, { color: PAL.gold, outline: null });
+    const cols = [['V', 4], ['LEVEL', 16], ['START', 76], ['CHOOSE', 112], ['FIND', 152], ['FLIGHT', 184], ['HOME', 222], ['CARD', 256], ['TOTAL', 290], ['HOOPS', 326], ['END', 366]];
+    const row = (cells, y, color) => cells.forEach((c, i) => c !== null && c !== undefined && drawText(ctx, String(c), cols[i][1], y, { color, outline: null }));
+    const s = (n) => (n === null || n === undefined ? '-' : n.toFixed(1));
+    row(cols.map((c) => c[0]), 18, '#9fb4d0');
+    let y = 29;
+    for (const v of ['a', 'b']) {
+      const m = log.summary(v);
+      const hoops = m.of === null ? '-' : `${m.hits.toFixed(1)}/${m.of.toFixed(0)}`;
+      row([v.toUpperCase(), `AVG OF ${m.runs}`, ...LOG_SCREENS.map((k) => s(m.t[k])), s(m.total), hoops, `${m.done} DONE`], y, PAL.gold2);
+      y += 9;
+    }
+    ctx.fillStyle = 'rgba(255,243,214,0.25)';
+    ctx.fillRect(4, y + 1, W - 8, 1);
+    y += 5;
+    // newest first, as many as fit
+    for (let i = log.runs.length - 1; i >= 0 && y < H - 9; i--, y += 9) {
+      const r = log.runs[i];
+      const end = r.end === 'done' ? 'DONE' : `${r.end.toUpperCase()} ${(r.where ?? '').toUpperCase()}`;
+      row([r.v.toUpperCase(), r.level.toUpperCase(), ...LOG_SCREENS.map((k) => s(r.t[k])), s(r.total), r.of ? `${r.hits}/${r.of}` : '-', end], y, r.end === 'done' ? PAL.cream : PAL.rose);
     }
   }
 

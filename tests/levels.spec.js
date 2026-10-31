@@ -34,65 +34,68 @@ for (const level of ['hatchling', 'flier', 'storm']) {
   });
 }
 
-test('only the levels start a game: a light resting anywhere else for 10s never does, and nothing fills off a level', async ({ page }) => {
-  await boot(page);
-  const r = await page.evaluate((STEP) => {
-    const w = window.__emberwing;
-    const g = w.game;
-    w.pause(true);
-    // the storybook, the middle, the tally, the sea, the sky above the levels, the speaker corner
-    const spots = [[120, 90], [200, 120], [80, 190], [240, 245], [300, 15], [420, 250], [60, 250]];
-    const out = [];
-    for (const [x, y] of spots) {
-      w.goto('attract');
-      const a = g.scenes.current;
-      // someone raises the light (a smooth sweep, like a real hand) and then holds it still there
-      for (let i = 0; i <= 20; i++) { g.input.feed(x + (20 - i) * 3, y + (20 - i) * 2, 'mouse'); w.step(STEP); }
-      let filled = 0;
-      for (let i = 0; i < 10 / STEP; i++) {
-        g.input.feed(x + Math.sin(i) * 1.5, y + Math.cos(i * 1.3) * 1.5, 'mouse');
-        w.step(STEP);
-        filled = Math.max(filled, ...a.rows.map((row) => row.progress));
+// both sides of the a/b test: B's start screen has a different storybook, the levels are the same
+for (const [v, query] of [['A', ''], ['B', '&v=b']]) {
+  test(`${v}: only the levels start a game: a light resting anywhere else for 10s never does, and nothing fills off a level`, async ({ page }) => {
+    await boot(page, query);
+    const r = await page.evaluate((STEP) => {
+      const w = window.__emberwing;
+      const g = w.game;
+      w.pause(true);
+      // the storybook, the middle, the tally, the sea, the sky above the levels, the speaker corner
+      const spots = [[120, 90], [200, 120], [80, 190], [240, 245], [300, 15], [420, 250], [60, 250]];
+      const out = [];
+      for (const [x, y] of spots) {
+        w.goto('attract');
+        const a = g.scenes.current;
+        // someone raises the light (a smooth sweep, like a real hand) and then holds it still there
+        for (let i = 0; i <= 20; i++) { g.input.feed(x + (20 - i) * 3, y + (20 - i) * 2, 'mouse'); w.step(STEP); }
+        let filled = 0;
+        for (let i = 0; i < 10 / STEP; i++) {
+          g.input.feed(x + Math.sin(i) * 1.5, y + Math.cos(i * 1.3) * 1.5, 'mouse');
+          w.step(STEP);
+          filled = Math.max(filled, ...a.rows.map((row) => row.progress));
+        }
+        out.push({ x, y, scene: g.scenes.pending?.name ?? g.scenes.name, filled });
       }
-      out.push({ x, y, scene: g.scenes.pending?.name ?? g.scenes.name, filled });
-    }
-    return out;
-  }, STEP);
-  for (const spot of r) expect(spot).toEqual({ x: spot.x, y: spot.y, scene: 'attract', filled: 0 });
-});
+      return out;
+    }, STEP);
+    for (const spot of r) expect(spot).toEqual({ x: spot.x, y: spot.y, scene: 'attract', filled: 0 });
+  });
 
-test('handoff: a light left on a level by the last guest never starts the next game, moving it off and back does', async ({ page }) => {
-  await boot(page);
-  const r = await page.evaluate((STEP) => {
-    const w = window.__emberwing;
-    const g = w.game;
-    w.pause(true);
-    const at = g.scenes.scenes.attract.levelTarget('flier');
-    const rest = (secs) => {
-      for (let i = 0; i < secs / STEP; i++) {
-        g.input.feed(at.x + Math.sin(i) * 1.5, at.y + Math.cos(i * 1.3) * 1.5, 'mouse'); // a prop on a table jitters a little
-        w.step(STEP);
-      }
-    };
-    // the last guest's dragon card, with the prop already put down pointing at FLIER, and the
-    // start screen coming back on its own
-    w.goto('end');
-    for (let i = 0; i < 20 / STEP && g.scenes.name !== 'attract'; i++) rest(STEP);
-    const back = g.scenes.name;
-    rest(10);
-    const after10 = g.scenes.pending?.name ?? g.scenes.name;
-    const filled = g.scenes.current.rows.find((row) => row.id === 'flier').progress;
-    // the next guest picks it up: off the level, then back onto it
-    for (let i = 0; i < 10; i++) { g.input.feed(at.x - 60, at.y + 70, 'mouse'); w.step(STEP); }
-    for (let i = 0; i < 2 / STEP && !g.scenes.pending; i++) { g.input.feed(at.x + (i % 2), at.y, 'mouse'); w.step(STEP); }
-    return { back, after10, filled, next: g.scenes.pending?.name ?? g.scenes.name, level: g.level };
-  }, STEP);
-  expect(r.back).toBe('attract');
-  expect(r.after10).toBe('attract');
-  expect(r.filled).toBe(0);
-  expect(r.next).toBe('choose');
-  expect(r.level).toBe('flier');
-});
+  test(`${v}: handoff: a light left on a level by the last guest never starts the next game, moving it off and back does`, async ({ page }) => {
+    await boot(page, query);
+    const r = await page.evaluate((STEP) => {
+      const w = window.__emberwing;
+      const g = w.game;
+      w.pause(true);
+      const at = g.scenes.scenes.attract.levelTarget('flier');
+      const rest = (secs) => {
+        for (let i = 0; i < secs / STEP; i++) {
+          g.input.feed(at.x + Math.sin(i) * 1.5, at.y + Math.cos(i * 1.3) * 1.5, 'mouse'); // a prop on a table jitters a little
+          w.step(STEP);
+        }
+      };
+      // the last guest's dragon card, with the prop already put down pointing at FLIER, and the
+      // start screen coming back on its own
+      w.goto('end');
+      for (let i = 0; i < 20 / STEP && g.scenes.name !== 'attract'; i++) rest(STEP);
+      const back = g.scenes.name;
+      rest(10);
+      const after10 = g.scenes.pending?.name ?? g.scenes.name;
+      const filled = g.scenes.current.rows.find((row) => row.id === 'flier').progress;
+      // the next guest picks it up: off the level, then back onto it
+      for (let i = 0; i < 10; i++) { g.input.feed(at.x - 60, at.y + 70, 'mouse'); w.step(STEP); }
+      for (let i = 0; i < 2 / STEP && !g.scenes.pending; i++) { g.input.feed(at.x + (i % 2), at.y, 'mouse'); w.step(STEP); }
+      return { back, after10, filled, next: g.scenes.pending?.name ?? g.scenes.name, level: g.level };
+    }, STEP);
+    expect(r.back).toBe('attract');
+    expect(r.after10).toBe('attract');
+    expect(r.filled).toBe(0);
+    expect(r.next).toBe('choose');
+    expect(r.level).toBe('flier');
+  });
+}
 
 test('handoff: for 2s after the start screen comes back nothing fills, even a light moved onto a level', async ({ page }) => {
   await boot(page);

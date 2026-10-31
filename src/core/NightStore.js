@@ -2,6 +2,10 @@
 // flight per level. it's in localStorage so a refresh or a crashed tab doesn't wipe the wall
 import { STORE } from '../config.js';
 import { dragonFromSeed, standIn } from './dragons.js';
+import { ab } from './version.js';
+
+// each side of the a/b test keeps its own night
+const KEY = STORE.KEY + ab.saveAs;
 
 // storage can throw (private mode, blocked site data), then we just keep it in memory
 const today = () => {
@@ -17,7 +21,7 @@ export class NightStore {
   }
   load() {
     try {
-      const raw = localStorage.getItem(STORE.KEY);
+      const raw = localStorage.getItem(KEY);
       if (!raw) return;
       const d = JSON.parse(raw);
       if (!d || !Array.isArray(d.ribbons)) return;
@@ -30,7 +34,7 @@ export class NightStore {
   }
   save() {
     try {
-      localStorage.setItem(STORE.KEY, JSON.stringify(this.data));
+      localStorage.setItem(KEY, JSON.stringify(this.data));
     } catch (e) {
       console.warn('[emberwing] could not save aurora', e);
     }
