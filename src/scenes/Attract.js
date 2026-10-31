@@ -1,7 +1,7 @@
 // the attract screen: tonight's flock and aurora, the storybook, and the level picker. holding the
 // light on a level is how a run starts
 import { DUR, INPUT, PAL, FLOCK, LEVELS, LEVEL_ORDER, TEXT, QR, LOG } from '../config.js';
-import { glow, clamp, dwell, makeCanvas } from '../core/util.js';
+import { glow, dwell, makeCanvas } from '../core/util.js';
 import { makeQR } from '../core/qr.js';
 import { drawText, textWidth, logShape } from '../art/font.js';
 import { drawKnotRing } from '../art/knotwork.js';
@@ -10,8 +10,8 @@ import { flockOf, member, chirp, updateMember, drawMember } from '../art/flock.j
 import { fillLost } from '../core/dragons.js';
 import { ROUTES } from '../art/routes.js';
 import { drawSky, SKY, makeStars, drawStars, drawSea, drawWind } from '../art/world.js';
-import { drawFeet, drawCursorLight, drawSparkle, drawLevelIcon } from '../art/icons.js';
-import { drawBaseAurora, drawRibbon, ribbonSkyPoints, RIBBON_COLORS, drawCelebrationStars } from '../art/aurora.js';
+import { drawFeet, drawCursorLight, drawLevelIcon } from '../art/icons.js';
+import { drawBaseAurora, drawCelebrationStars } from '../art/aurora.js';
 import { Storybook, BOOK } from '../art/storybook.js';
 
 // the level picker is the right column (the storybook on the left is art/storybook.js). the levels
@@ -25,7 +25,6 @@ const ROWS = LEVEL_ORDER.map((id, i) => {
   const top = 58 + i * ROW_H;
   return { id, top, ring: { x: 255, y: top + 16, r: 16 }, x0: 236, x1: 479, y0: top - 6, y1: top + ROW_H - 6 };
 });
-const YOURS = { x: 400, y: 6 }; // the open sky in the top right corner
 const DIM = 'rgba(255,243,214,0.7)';
 
 // how many more dragons until the next celebration
@@ -34,7 +33,7 @@ const untilCelebration = (n) => FLOCK.CELEBRATE_EVERY - (n % FLOCK.CELEBRATE_EVE
 export class Attract {
   interactive = false;
 
-  enter(g, data = {}) {
+  enter(g) {
     // armed: the light has been seen properly off this level since the handoff, so landing on it
     // now is someone choosing it, not a prop left resting there
     this.rows = ROWS.map((r) => ({ ...r, progress: 0, hover: false, armed: false }));
@@ -44,16 +43,6 @@ export class Attract {
     this.flockVersion = -1;
     this.syncFlock(g);
     g.audio.section('attract');
-    // only after a finished run. an idle reset means nobody made it home this time
-    this.yoursT = 0;
-    const rs = g.store.ribbons;
-    if (data.reason === 'done' && rs.length) {
-      const rib = rs[rs.length - 1];
-      this.yoursT = DUR.YOURS_LABEL;
-      this.yoursColor = RIBBON_COLORS[rib.h % RIBBON_COLORS.length];
-      this.yoursPts = ribbonSkyPoints(rib, g.wall.top, g.wall.height);
-      this.yoursAt = pickVisiblePoint(this.yoursPts);
-    }
     this.book = new Storybook();
     this.stars = makeStars(7, 90, 150);
     this.starting = null;
@@ -117,7 +106,6 @@ export class Attract {
 
   update(g, dt) {
     this.syncFlock(g);
-    this.yoursT = Math.max(0, this.yoursT - dt);
     // every few seconds somebody in the flock calls out
     this.chirpT -= dt;
     if (this.chirpT <= 0 && this.flock.length) {
@@ -173,8 +161,6 @@ export class Attract {
     g.wall.draw(ctx, t);
     // one bright star for every celebration so far tonight
     drawCelebrationStars(ctx, Math.floor(g.store.count / FLOCK.CELEBRATE_EVERY), t);
-    // your ribbon glows a bit brighter than the rest while the label is up
-    if (this.yoursT > 0) drawRibbon(ctx, this.yoursPts, this.yoursColor, 0.45 * clamp(this.yoursT / 1.5), t, 34);
     this.syncFlock(g);
     for (const f of this.far) {
       const a = f.a + t * 0.12;
@@ -196,7 +182,6 @@ export class Attract {
     this.drawTally(ctx, g.store.count, t);
     if (g.op.qr && !g.touch) this.drawQR(ctx);
 
-    if (this.yoursT > 0) this.drawYours(ctx, t, g.beat.pulse);
     g.particles.draw(ctx);
     if (g.input.seen) drawCursorLight(ctx, g.input.x, g.input.y, t, 1);
   }
@@ -305,52 +290,5 @@ export class Attract {
     drawText(ctx, 'PLAY ON', x + c.width + 8, y + c.height / 2 - 17, { scale: TEXT.S, color: DIM });
     drawText(ctx, 'YOUR PHONE', x + c.width + 8, y + c.height / 2 + 1, { scale: TEXT.S, color: DIM });
   }
-
-  // the label lives in the open sky in the top right corner (anywhere else it landed on text or
-  // the book) and a dotted line of light leads to the ribbon itself
-  drawYours(ctx, t, pulse) {
-    const { x, y } = this.yoursAt;
-    const a = clamp(this.yoursT / 1.5); // fades out over the last 1.5s
-    const lx = YOURS.x;
-    const ly = YOURS.y + 18;
-    const d = Math.hypot(x - lx, y - ly);
-    ctx.fillStyle = PAL.gold2;
-    for (let s = (t * 30) % 5; s < d - 4; s += 5) {
-      ctx.globalAlpha = a * 0.8;
-      ctx.fillRect(Math.round(lx + ((x - lx) * s) / d), Math.round(ly + ((y - ly) * s) / d), 2, 2);
-    }
-    ctx.globalAlpha = 1;
-    glow(ctx, x, y, 14 + pulse * 6, this.yoursColor, 0.8 * a);
-    ctx.globalAlpha = a;
-    drawSparkle(ctx, x, y, 3 + Math.round(pulse * 2), PAL.gold2);
-    ctx.globalAlpha = 1;
-    const bob = Math.round(Math.sin(t * 4) * 1.5);
-    drawText(ctx, 'YOURS!', lx, YOURS.y + bob, { scale: TEXT.S, align: 'center', color: PAL.gold2, alpha: a });
-  }
 }
 
-// the aurora is mostly hidden behind the storybook and the level picker. pick a bit of the
-// ribbon you can see near the label: the open sky across the top first
-function pickVisiblePoint(pts) {
-  const zones = [
-    { x0: 236, x1: 470, y0: 10, y1: 26, aim: [YOURS.x, 20] },
-    { x0: 130, x1: 470, y0: 0, y1: 26, aim: [YOURS.x, 16] },
-  ];
-  for (const z of zones) {
-    let best = null;
-    let bestD = Infinity;
-    for (const [x, y] of pts) {
-      if (x < z.x0 || x > z.x1 || y < z.y0 || y > z.y1) continue;
-      const d = Math.hypot(x - z.aim[0], y - z.aim[1]);
-      if (d < bestD) {
-        bestD = d;
-        best = { x, y };
-      }
-    }
-    if (best) return best;
-  }
-  // nothing visible, point at whatever part is closest to the label
-  let best = { x: pts[0][0], y: pts[0][1] };
-  for (const [x, y] of pts) if (Math.hypot(x - YOURS.x, y - 20) < Math.hypot(best.x - YOURS.x, best.y - 20)) best = { x, y };
-  return best;
-}

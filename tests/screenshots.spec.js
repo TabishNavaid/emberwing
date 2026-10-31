@@ -7,7 +7,6 @@ const SHOTS = [
   ['attract', 10.4, null],
   ['attract', 13.5, null],
   ['attract', 22, null], // music page
-  ['attract', 3, 'yours'], // YOURS! label after a run
   ['attract', 1, 'calibrate'], // K screen
   ['find', 0.8, { x: 240, y: 90 }], // story beat
   ['find', 0.9, 'title'], // title card between scenes
@@ -102,10 +101,6 @@ for (const [label, viewport, dpr, touch] of SIZES) {
         if (ptr === 'calibrate') {
           w.game.op.cal = { step: 1, pts: [[40, 40]], hold: 0.6, ax: 300, ay: 60, armed: true, source: 'mocap' };
           inp.feed(330, 70, 'mocap');
-        }
-        if (ptr === 'yours') {
-          for (let i = 0; i < 6; i++) w.game.store.add([[0, 0.5], [0.3, 0.3 + i * 0.05], [0.6, 0.6], [1, 0.4]], i);
-          w.goto('attract', { reason: 'done' });
         }
         if (ptr && ptr.x && ptr.after === undefined) inp.feed(ptr.x, ptr.y, 'mouse');
         for (let i = 0; i < t * 20; i++) {

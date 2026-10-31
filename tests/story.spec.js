@@ -1,5 +1,5 @@
 // the story beats show up when they should: the act II line, one instruction at a time, the
-// brass swell, YOURS!, and the title cards between scenes
+// brass swell, and the title cards between scenes
 import { test, expect } from '@playwright/test';
 import { boot } from './helpers.js';
 
@@ -83,28 +83,6 @@ test('brass swell: wind-up, then it fires on time and the flock joins', async ({
   expect(after.fired).toBe(true);
   expect(after.flock).toBe(3);
   expect(after.flockX).toBeGreaterThan(0);
-});
-
-test('after a finished run attract points "YOURS!" at the newest ribbon for ~15s, never after an idle reset', async ({ page }) => {
-  await boot(page);
-  const r = await page.evaluate(() => {
-    const w = window.__emberwing;
-    w.pause(true);
-    w.game.store.add([[0, 0.4], [0.5, 0.7], [1, 0.3]], 0);
-    w.goto('attract', { reason: 'idle' });
-    const idle = w.game.scenes.current.yoursT;
-    w.goto('attract', { reason: 'done' });
-    const a = w.game.scenes.current;
-    const at = a.yoursAt;
-    const start = a.yoursT;
-    w.step(16);
-    return { idle, start, at, after: a.yoursT };
-  });
-  expect(r.idle).toBe(0);
-  expect(r.start).toBeGreaterThan(14);
-  expect(r.at.x).toBeGreaterThan(0);
-  expect(r.at.x).toBeLessThan(480);
-  expect(r.after).toBe(0);
 });
 
 test('title cards between scenes, and the next scene waits underneath them', async ({ page }) => {

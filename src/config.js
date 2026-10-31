@@ -32,7 +32,6 @@ export const DUR = {
   PICKED: 1.8, // after a pick: the name pops and the other two say NEXT TIME (0.9 was too quick to read)
   ATTRACT_PAGE: 4.5, // per storybook page
   ATTRACT_DEMO_PAGE: 6.5, // ghost demo needs longer to play out
-  YOURS_LABEL: 15, // "YOURS!" points at the newest ribbon after a run, so you can show your friends
 
   FIND_HOLD: 2.0, // steady light on the eyes this long fills the ring
   PROMPT_MIN: 2.0, // an instruction stays up at least this long before the next one can replace it
